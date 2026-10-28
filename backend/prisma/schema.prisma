@@ -1,0 +1,11 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Los modelos se generarán inicialmente desde la base PostgreSQL de desarrollo
+// mediante `npm run prisma:pull`, una vez aplicado database/sql/001_esquema_inicial.sql.
