@@ -5,6 +5,7 @@ import helmet from 'helmet';
 
 const app = express();
 const port = Number(process.env.PORT ?? 3000);
+const host = process.env.HOST ?? '0.0.0.0';
 
 app.use(helmet());
 app.use(cors({
@@ -30,6 +31,6 @@ app.get('/', (_req, res) => {
   });
 });
 
-app.listen(port, () => {
-  console.log(`Semilla API ejecutándose en el puerto ${port}`);
+app.listen(port, host, () => {
+  console.log(`Semilla API ejecutándose en http://${host}:${port}`);
 });
