@@ -6,18 +6,26 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "prisma:generate": "prisma generate",
+    "prisma:pull": "prisma db pull",
+    "prisma:studio": "prisma studio"
   },
   "dependencies": {
+    "@prisma/adapter-pg": "7.10.1",
+    "@prisma/client": "7.10.1",
     "cors": "latest",
     "dotenv": "latest",
     "express": "latest",
-    "helmet": "latest"
+    "helmet": "latest",
+    "pg": "latest"
   },
   "devDependencies": {
     "@types/cors": "latest",
     "@types/express": "latest",
     "@types/node": "latest",
+    "@types/pg": "latest",
+    "prisma": "7.10.1",
     "tsx": "latest",
     "typescript": "latest"
   }
