@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import { checkDatabaseConnection } from './config/database.js';
 
 const app = express();
 const port = Number(process.env.PORT ?? 3000);
@@ -14,11 +15,19 @@ app.use(cors({
 }));
 app.use(express.json());
 
-app.get('/api/health', (_req, res) => {
-  res.status(200).json({
-    status: 'ok',
+app.get('/api/health', async (_req, res) => {
+  const database = await checkDatabaseConnection();
+  const databaseConfigured = database.status !== 'not_configured';
+  const databaseAvailable = database.status === 'connected';
+
+  const status = databaseConfigured && !databaseAvailable ? 'degraded' : 'ok';
+  const httpStatus = status === 'degraded' ? 503 : 200;
+
+  res.status(httpStatus).json({
+    status,
     app: 'Semilla',
     environment: process.env.NODE_ENV ?? 'development',
+    database,
     timestamp: new Date().toISOString(),
   });
 });
