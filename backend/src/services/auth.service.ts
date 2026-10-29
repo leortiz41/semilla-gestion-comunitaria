@@ -214,7 +214,7 @@ export async function refreshSession(
           AND t.revocado_en IS NULL
           AND t.expira_en > NOW()
           AND u.activo = TRUE
-        FOR UPDATE`,
+        FOR UPDATE OF t, u`,
       [hashRefreshToken(refreshToken)],
     );
 
@@ -275,18 +275,21 @@ export async function logout(refreshToken: string | undefined, usuarioId?: strin
   }
 
   const pool = getPool();
-  await pool.query(
+  const result = await pool.query(
     `UPDATE tokens_refresco
         SET revocado_en = COALESCE(revocado_en, NOW())
-      WHERE hash_token = $1`,
+      WHERE hash_token = $1
+      RETURNING usuario_id`,
     [hashRefreshToken(refreshToken)],
   );
 
-  if (usuarioId) {
+  const auditedUserId = usuarioId ?? (result.rows[0] as { usuario_id?: string } | undefined)?.usuario_id;
+
+  if (auditedUserId) {
     await pool.query(
       `INSERT INTO bitacora_auditoria (usuario_id, accion, nombre_entidad, entidad_id)
        VALUES ($1, 'CIERRE_SESION', 'usuarios', $1)`,
-      [usuarioId],
+      [auditedUserId],
     );
   }
 }
