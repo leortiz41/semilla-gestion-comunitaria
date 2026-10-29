@@ -31,6 +31,10 @@ pnpm-debug.log*
 # Prisma
 backend/prisma/*.db
 backend/prisma/*.db-journal
+backend/src/generated/prisma/
+
+# Neon (contexto local de proyecto/rama)
+.neon/
 
 # Cobertura y pruebas
 coverage/
