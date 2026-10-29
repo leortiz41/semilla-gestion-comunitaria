@@ -34,6 +34,7 @@ backend/prisma/*.db-journal
 backend/src/generated/prisma/
 
 # Neon (contexto local de proyecto/rama)
+.neon
 .neon/
 
 # Cobertura y pruebas
