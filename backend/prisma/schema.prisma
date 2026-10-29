@@ -1,11 +1,511 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider        = "prisma-client"
+  output          = "../src/generated/prisma"
+  previewFeatures = ["partialIndexes"]
 }
 
 datasource db {
   provider = "postgresql"
 }
 
-// Los modelos se generarán inicialmente desde la base PostgreSQL de desarrollo
-// mediante `npm run prisma:pull`, una vez aplicado database/sql/001_esquema_inicial.sql.
+model roles {
+  id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre         String           @unique @db.VarChar(60)
+  descripcion    String?
+  activo         Boolean          @default(true)
+  creado_en      DateTime         @default(now()) @db.Timestamptz(6)
+  actualizado_en DateTime         @default(now()) @db.Timestamptz(6)
+  roles_permisos roles_permisos[]
+  usuarios_roles usuarios_roles[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model actividades_programadas {
+  id                  String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  equipo_misionero_id String             @db.Uuid
+  proyecto_id         String?            @db.Uuid
+  nombre              String             @db.VarChar(180)
+  descripcion         String?
+  fecha_inicio        DateTime?          @db.Date
+  fecha_fin           DateTime?          @db.Date
+  estado              String             @default("PLANIFICADA") @db.VarChar(20)
+  creado_en           DateTime           @default(now()) @db.Timestamptz(6)
+  actualizado_en      DateTime           @default(now()) @db.Timestamptz(6)
+  equipos_misioneros  equipos_misioneros @relation(fields: [equipo_misionero_id], references: [id], onDelete: Cascade)
+  proyectos           proyectos?         @relation(fields: [proyecto_id], references: [id])
+
+  @@index([equipo_misionero_id], map: "idx_actividades_equipo_id")
+  @@index([proyecto_id], map: "idx_actividades_proyecto_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model avances_proyecto {
+  id                     String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  proyecto_id            String               @db.Uuid
+  personal_contratado_id String?              @db.Uuid
+  porcentaje_avance      Decimal              @db.Decimal(5, 2)
+  fecha_avance           DateTime             @default(dbgenerated("CURRENT_DATE")) @db.Date
+  comentarios            String?
+  creado_en              DateTime             @default(now()) @db.Timestamptz(6)
+  actualizado_en         DateTime             @default(now()) @db.Timestamptz(6)
+  personal_contratado    personal_contratado? @relation(fields: [personal_contratado_id], references: [id])
+  proyectos              proyectos            @relation(fields: [proyecto_id], references: [id], onDelete: Cascade)
+  evidencias             evidencias[]
+  solicitudes_pago       solicitudes_pago[]
+
+  @@index([personal_contratado_id], map: "idx_avances_personal_id")
+  @@index([proyecto_id], map: "idx_avances_proyecto_id")
+}
+
+model bitacora_auditoria {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuario_id         String?   @db.Uuid
+  accion             String    @db.VarChar(80)
+  nombre_entidad     String    @db.VarChar(100)
+  entidad_id         String?   @db.Uuid
+  valores_anteriores Json?
+  valores_nuevos     Json?
+  direccion_ip       String?   @db.Inet
+  agente_usuario     String?
+  creado_en          DateTime  @default(now()) @db.Timestamptz(6)
+  usuarios           usuarios? @relation(fields: [usuario_id], references: [id])
+
+  @@index([nombre_entidad, entidad_id], map: "idx_bitacora_entidad")
+  @@index([usuario_id], map: "idx_bitacora_usuario_id")
+}
+
+model claves_idempotencia {
+  id                          String                       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuario_id                  String?                      @db.Uuid
+  dispositivo_id              String?                      @db.Uuid
+  clave_idempotencia          String                       @unique @db.VarChar(150)
+  metodo_solicitud            String                       @db.VarChar(10)
+  ruta_solicitud              String                       @db.VarChar(250)
+  hash_solicitud              String?                      @db.VarChar(128)
+  estado_respuesta            Int?
+  cuerpo_respuesta            Json?
+  expira_en                   DateTime?                    @db.Timestamptz(6)
+  creado_en                   DateTime                     @default(now()) @db.Timestamptz(6)
+  dispositivos_sincronizacion dispositivos_sincronizacion? @relation(fields: [dispositivo_id], references: [id])
+  usuarios                    usuarios?                    @relation(fields: [usuario_id], references: [id])
+
+  @@index([dispositivo_id], map: "idx_idempotencia_dispositivo_id")
+  @@index([usuario_id], map: "idx_idempotencia_usuario_id")
+}
+
+model comunidades {
+  id             String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  zona_id        String?     @db.Uuid
+  nombre         String      @db.VarChar(150)
+  barrio_colonia String?     @db.VarChar(150)
+  localidad      String?     @db.VarChar(150)
+  municipio      String      @db.VarChar(120)
+  departamento   String      @db.VarChar(120)
+  activo         Boolean     @default(true)
+  creado_en      DateTime    @default(now()) @db.Timestamptz(6)
+  actualizado_en DateTime    @default(now()) @db.Timestamptz(6)
+  zonas          zonas?      @relation(fields: [zona_id], references: [id])
+  familias       familias[]
+  proyectos      proyectos[]
+
+  @@unique([nombre, municipio, departamento])
+  @@index([zona_id], map: "idx_comunidades_zona_id")
+}
+
+model contactos {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  familia_id      String    @db.Uuid
+  persona_id      String?   @db.Uuid
+  nombre_contacto String    @db.VarChar(150)
+  telefono        String?   @db.VarChar(30)
+  email           String?   @db.VarChar(150)
+  es_principal    Boolean   @default(false)
+  observaciones   String?
+  creado_en       DateTime  @default(now()) @db.Timestamptz(6)
+  actualizado_en  DateTime  @default(now()) @db.Timestamptz(6)
+  familias        familias  @relation(fields: [familia_id], references: [id], onDelete: Cascade)
+  personas        personas? @relation(fields: [persona_id], references: [id])
+
+  @@index([familia_id], map: "idx_contactos_familia_id")
+  @@index([persona_id], map: "idx_contactos_persona_id")
+}
+
+model dispositivos_sincronizacion {
+  id                       String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuario_id               String                @db.Uuid
+  uuid_dispositivo         String                @unique @db.Uuid
+  nombre_dispositivo       String?               @db.VarChar(150)
+  plataforma               String?               @db.VarChar(50)
+  ultima_sincronizacion_en DateTime?             @db.Timestamptz(6)
+  activo                   Boolean               @default(true)
+  creado_en                DateTime              @default(now()) @db.Timestamptz(6)
+  actualizado_en           DateTime              @default(now()) @db.Timestamptz(6)
+  claves_idempotencia      claves_idempotencia[]
+  usuarios                 usuarios              @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+
+  @@index([usuario_id], map: "idx_dispositivos_usuario_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model empleados {
+  id               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  persona_id       String             @unique @db.Uuid
+  cargo            String             @db.VarChar(100)
+  fecha_ingreso    DateTime           @db.Date
+  estado           String             @default("ACTIVO") @db.VarChar(20)
+  observaciones    String?
+  creado_en        DateTime           @default(now()) @db.Timestamptz(6)
+  actualizado_en   DateTime           @default(now()) @db.Timestamptz(6)
+  personas         personas           @relation(fields: [persona_id], references: [id])
+  solicitudes_pago solicitudes_pago[]
+  usuarios         usuarios?
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model equipos_misioneros {
+  id                      String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  zona_id                 String?                   @db.Uuid
+  nombre                  String                    @db.VarChar(150)
+  estado                  String                    @default("PLANIFICADO") @db.VarChar(20)
+  presupuesto_total       Decimal                   @default(0) @db.Decimal(14, 2)
+  fecha_llegada           DateTime?                 @db.Date
+  fecha_salida            DateTime?                 @db.Date
+  observaciones           String?
+  creado_en               DateTime                  @default(now()) @db.Timestamptz(6)
+  actualizado_en          DateTime                  @default(now()) @db.Timestamptz(6)
+  actividades_programadas actividades_programadas[]
+  zonas                   zonas?                    @relation(fields: [zona_id], references: [id])
+  proyectos               proyectos[]
+
+  @@index([zona_id], map: "idx_equipos_misioneros_zona_id")
+}
+
+model evidencias {
+  id                    String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  proyecto_id           String            @db.Uuid
+  avance_proyecto_id    String?           @db.Uuid
+  solicitud_pago_id     String?           @db.Uuid
+  tipo_evidencia        String            @db.VarChar(40)
+  titulo                String?           @db.VarChar(180)
+  descripcion           String?
+  archivo_url           String
+  tipo_mime             String?           @db.VarChar(120)
+  capturado_en          DateTime?         @db.Timestamptz(6)
+  subido_por_usuario_id String?           @db.Uuid
+  creado_en             DateTime          @default(now()) @db.Timestamptz(6)
+  actualizado_en        DateTime          @default(now()) @db.Timestamptz(6)
+  avances_proyecto      avances_proyecto? @relation(fields: [avance_proyecto_id], references: [id])
+  proyectos             proyectos         @relation(fields: [proyecto_id], references: [id], onDelete: Cascade)
+  solicitudes_pago      solicitudes_pago? @relation(fields: [solicitud_pago_id], references: [id])
+  usuarios              usuarios?         @relation(fields: [subido_por_usuario_id], references: [id])
+
+  @@index([avance_proyecto_id], map: "idx_evidencias_avance_id")
+  @@index([proyecto_id], map: "idx_evidencias_proyecto_id")
+  @@index([solicitud_pago_id], map: "idx_evidencias_solicitud_id")
+}
+
+model familias {
+  id                   String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  comunidad_id         String             @db.Uuid
+  numero_casa          String?            @db.VarChar(30)
+  nombre_referencia    String?            @db.VarChar(180)
+  direccion_referencia String?
+  activo               Boolean            @default(true)
+  creado_en            DateTime           @default(now()) @db.Timestamptz(6)
+  actualizado_en       DateTime           @default(now()) @db.Timestamptz(6)
+  contactos            contactos[]
+  comunidades          comunidades        @relation(fields: [comunidad_id], references: [id])
+  miembros_familia     miembros_familia[]
+  perfiles_familia     perfiles_familia[]
+
+  @@index([comunidad_id], map: "idx_familias_comunidad_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model miembros_familia {
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  familia_id     String       @db.Uuid
+  persona_id     String       @db.Uuid
+  parentesco_id  String?      @db.Uuid
+  es_jefe_hogar  Boolean      @default(false)
+  fecha_ingreso  DateTime     @default(dbgenerated("CURRENT_DATE")) @db.Date
+  fecha_salida   DateTime?    @db.Date
+  creado_en      DateTime     @default(now()) @db.Timestamptz(6)
+  actualizado_en DateTime     @default(now()) @db.Timestamptz(6)
+  familias       familias     @relation(fields: [familia_id], references: [id], onDelete: Cascade)
+  parentescos    parentescos? @relation(fields: [parentesco_id], references: [id])
+  personas       personas     @relation(fields: [persona_id], references: [id])
+
+  @@unique([familia_id, persona_id])
+  @@index([familia_id], map: "idx_miembros_familia_familia_id")
+  @@index([parentesco_id], map: "idx_miembros_familia_parentesco_id")
+  @@index([persona_id], map: "idx_miembros_familia_persona_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model pagos {
+  id                   String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  solicitud_pago_id    String           @db.Uuid
+  tipo_pago            String           @db.VarChar(30)
+  monto                Decimal          @db.Decimal(14, 2)
+  fecha_pago           DateTime         @default(dbgenerated("CURRENT_DATE")) @db.Date
+  estado_pago          String           @default("REGISTRADO") @db.VarChar(20)
+  metodo_pago          String?          @db.VarChar(30)
+  referencia           String?          @db.VarChar(100)
+  foto_comprobante_url String?
+  observaciones        String?
+  creado_en            DateTime         @default(now()) @db.Timestamptz(6)
+  actualizado_en       DateTime         @default(now()) @db.Timestamptz(6)
+  solicitudes_pago     solicitudes_pago @relation(fields: [solicitud_pago_id], references: [id])
+
+  @@index([solicitud_pago_id], map: "idx_pagos_solicitud_id")
+}
+
+model parentescos {
+  id               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre           String             @unique @db.VarChar(50)
+  observaciones    String?
+  activo           Boolean            @default(true)
+  creado_en        DateTime           @default(now()) @db.Timestamptz(6)
+  miembros_familia miembros_familia[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model perfiles_familia {
+  id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  familia_id             String    @db.Uuid
+  proyecto_id            String    @db.Uuid
+  numero_integrantes     Int
+  nivel_riesgo           String    @db.VarChar(20)
+  numero_habitaciones    Int       @default(0)
+  area_util_construccion Decimal?  @db.Decimal(10, 2)
+  tipo_vivienda          String?   @db.VarChar(60)
+  fecha_perfil           DateTime  @default(dbgenerated("CURRENT_DATE")) @db.Date
+  foto_familia_url       String?
+  ingreso_mensual        Decimal?  @db.Decimal(14, 2)
+  observaciones          String?
+  estado                 String    @default("PENDIENTE") @db.VarChar(20)
+  creado_en              DateTime  @default(now()) @db.Timestamptz(6)
+  actualizado_en         DateTime  @default(now()) @db.Timestamptz(6)
+  familias               familias  @relation(fields: [familia_id], references: [id], onDelete: Cascade)
+  proyectos              proyectos @relation(fields: [proyecto_id], references: [id])
+
+  @@unique([familia_id, proyecto_id])
+  @@index([familia_id], map: "idx_perfiles_familia_familia_id")
+  @@index([proyecto_id], map: "idx_perfiles_familia_proyecto_id")
+}
+
+model permisos {
+  id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codigo         String           @unique @db.VarChar(100)
+  modulo         String           @db.VarChar(80)
+  descripcion    String?
+  creado_en      DateTime         @default(now()) @db.Timestamptz(6)
+  roles_permisos roles_permisos[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model personal_contratado {
+  id               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  persona_id       String             @db.Uuid
+  proyecto_id      String             @db.Uuid
+  cargo            String             @db.VarChar(100)
+  valor_contrato   Decimal            @db.Decimal(14, 2)
+  tipo_contrato    String             @db.VarChar(40)
+  fecha_inicio     DateTime?          @db.Date
+  fecha_fin        DateTime?          @db.Date
+  estado           String             @default("ACTIVO") @db.VarChar(20)
+  creado_en        DateTime           @default(now()) @db.Timestamptz(6)
+  actualizado_en   DateTime           @default(now()) @db.Timestamptz(6)
+  avances_proyecto avances_proyecto[]
+  personas         personas           @relation(fields: [persona_id], references: [id])
+  proyectos        proyectos          @relation(fields: [proyecto_id], references: [id])
+  solicitudes_pago solicitudes_pago[]
+
+  @@unique([persona_id, proyecto_id, cargo])
+  @@index([persona_id], map: "idx_personal_contratado_persona_id")
+  @@index([proyecto_id], map: "idx_personal_contratado_proyecto_id")
+}
+
+model personas {
+  id                  String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  identidad           String?               @unique @db.VarChar(20)
+  primer_nombre       String                @db.VarChar(100)
+  segundo_nombre      String?               @db.VarChar(100)
+  primer_apellido     String                @db.VarChar(100)
+  segundo_apellido    String?               @db.VarChar(100)
+  ocupacion           String?               @db.VarChar(120)
+  estado_civil        String?               @db.VarChar(30)
+  genero              String?               @db.VarChar(30)
+  telefono            String?               @db.VarChar(30)
+  email               String?               @db.VarChar(150)
+  fecha_nacimiento    DateTime?             @db.Date
+  tipo_persona        String?               @db.VarChar(30)
+  activo              Boolean               @default(true)
+  creado_en           DateTime              @default(now()) @db.Timestamptz(6)
+  actualizado_en      DateTime              @default(now()) @db.Timestamptz(6)
+  contactos           contactos[]
+  empleados           empleados?
+  miembros_familia    miembros_familia[]
+  personal_contratado personal_contratado[]
+}
+
+model proveedores {
+  id               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre_comercial String             @db.VarChar(150)
+  rtn              String?            @unique @db.VarChar(20)
+  propietario      String?            @db.VarChar(150)
+  direccion        String?
+  telefono         String?            @db.VarChar(30)
+  email            String?            @db.VarChar(150)
+  cuenta_bancaria  String?            @db.VarChar(50)
+  observaciones    String?
+  activo           Boolean            @default(true)
+  creado_en        DateTime           @default(now()) @db.Timestamptz(6)
+  actualizado_en   DateTime           @default(now()) @db.Timestamptz(6)
+  solicitudes_pago solicitudes_pago[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model proyectos {
+  id                      String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  comunidad_id            String                    @db.Uuid
+  equipo_misionero_id     String?                   @db.Uuid
+  nombre                  String                    @db.VarChar(200)
+  tipo                    String                    @db.VarChar(60)
+  estado                  String                    @default("PLANIFICADO") @db.VarChar(20)
+  presupuesto_asignado    Decimal                   @default(0) @db.Decimal(14, 2)
+  gastos_administrativos  Decimal                   @default(0) @db.Decimal(14, 2)
+  fecha_inicio            DateTime                  @db.Date
+  fecha_fin               DateTime?                 @db.Date
+  descripcion             String?
+  creado_en               DateTime                  @default(now()) @db.Timestamptz(6)
+  actualizado_en          DateTime                  @default(now()) @db.Timestamptz(6)
+  actividades_programadas actividades_programadas[]
+  avances_proyecto        avances_proyecto[]
+  evidencias              evidencias[]
+  perfiles_familia        perfiles_familia[]
+  personal_contratado     personal_contratado[]
+  comunidades             comunidades               @relation(fields: [comunidad_id], references: [id])
+  equipos_misioneros      equipos_misioneros?       @relation(fields: [equipo_misionero_id], references: [id])
+  servicios_basicos       servicios_basicos?
+  solicitudes_pago        solicitudes_pago[]
+
+  @@index([comunidad_id], map: "idx_proyectos_comunidad_id")
+  @@index([equipo_misionero_id], map: "idx_proyectos_equipo_misionero_id")
+}
+
+model roles_permisos {
+  rol_id      String   @db.Uuid
+  permiso_id  String   @db.Uuid
+  otorgado_en DateTime @default(now()) @db.Timestamptz(6)
+  permisos    permisos @relation(fields: [permiso_id], references: [id], onDelete: Cascade)
+  roles       roles    @relation(fields: [rol_id], references: [id], onDelete: Cascade)
+
+  @@id([rol_id, permiso_id])
+}
+
+model servicios_basicos {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  proyecto_id        String    @unique @db.Uuid
+  descripcion        String?
+  estado_terreno     String?   @db.VarChar(50)
+  tiene_electricidad Boolean   @default(false)
+  tiene_agua         Boolean   @default(false)
+  tiene_pila         Boolean   @default(false)
+  tiene_fosa         Boolean   @default(false)
+  estatus_ambiental  Boolean   @default(false)
+  foto_terreno_url   String?
+  observaciones      String?
+  creado_en          DateTime  @default(now()) @db.Timestamptz(6)
+  actualizado_en     DateTime  @default(now()) @db.Timestamptz(6)
+  proyectos          proyectos @relation(fields: [proyecto_id], references: [id], onDelete: Cascade)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model solicitudes_pago {
+  id                     String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  proyecto_id            String               @db.Uuid
+  avance_proyecto_id     String?              @db.Uuid
+  proveedor_id           String?              @db.Uuid
+  personal_contratado_id String?              @db.Uuid
+  empleado_id            String?              @db.Uuid
+  fecha_solicitud        DateTime             @default(dbgenerated("CURRENT_DATE")) @db.Date
+  concepto               String               @db.VarChar(250)
+  valor_solicitado       Decimal              @db.Decimal(14, 2)
+  anticipo               Decimal              @default(0) @db.Decimal(14, 2)
+  estado                 String               @default("SOLICITADA") @db.VarChar(20)
+  fecha_confirmacion     DateTime?            @db.Date
+  observaciones          String?
+  creado_en              DateTime             @default(now()) @db.Timestamptz(6)
+  actualizado_en         DateTime             @default(now()) @db.Timestamptz(6)
+  evidencias             evidencias[]
+  pagos                  pagos[]
+  avances_proyecto       avances_proyecto?    @relation(fields: [avance_proyecto_id], references: [id])
+  empleados              empleados?           @relation(fields: [empleado_id], references: [id], onDelete: Restrict)
+  personal_contratado    personal_contratado? @relation(fields: [personal_contratado_id], references: [id], onDelete: Restrict)
+  proveedores            proveedores?         @relation(fields: [proveedor_id], references: [id], onDelete: Restrict)
+  proyectos              proyectos            @relation(fields: [proyecto_id], references: [id])
+
+  @@index([avance_proyecto_id], map: "idx_solicitudes_pago_avance_id")
+  @@index([empleado_id], map: "idx_solicitudes_pago_empleado_id")
+  @@index([personal_contratado_id], map: "idx_solicitudes_pago_personal_id")
+  @@index([proveedor_id], map: "idx_solicitudes_pago_proveedor_id")
+  @@index([proyecto_id], map: "idx_solicitudes_pago_proyecto_id")
+}
+
+model tokens_refresco {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuario_id     String    @db.Uuid
+  hash_token     String    @unique
+  expira_en      DateTime  @db.Timestamptz(6)
+  revocado_en    DateTime? @db.Timestamptz(6)
+  direccion_ip   String?   @db.Inet
+  agente_usuario String?
+  creado_en      DateTime  @default(now()) @db.Timestamptz(6)
+  usuarios       usuarios  @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+
+  @@index([usuario_id], map: "idx_tokens_refresco_usuario_id")
+}
+
+model usuarios {
+  id                          String                        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  empleado_id                 String?                       @unique @db.Uuid
+  email                       String                        @unique @db.VarChar(150)
+  hash_contrasena             String
+  activo                      Boolean                       @default(true)
+  debe_cambiar_contrasena     Boolean                       @default(false)
+  ultimo_acceso_en            DateTime?                     @db.Timestamptz(6)
+  creado_en                   DateTime                      @default(now()) @db.Timestamptz(6)
+  actualizado_en              DateTime                      @default(now()) @db.Timestamptz(6)
+  bitacora_auditoria          bitacora_auditoria[]
+  claves_idempotencia         claves_idempotencia[]
+  dispositivos_sincronizacion dispositivos_sincronizacion[]
+  evidencias                  evidencias[]
+  tokens_refresco             tokens_refresco[]
+  empleados                   empleados?                    @relation(fields: [empleado_id], references: [id])
+  usuarios_roles              usuarios_roles[]
+
+  @@index([empleado_id], map: "idx_usuarios_empleado_id")
+}
+
+model usuarios_roles {
+  usuario_id  String   @db.Uuid
+  rol_id      String   @db.Uuid
+  asignado_en DateTime @default(now()) @db.Timestamptz(6)
+  roles       roles    @relation(fields: [rol_id], references: [id], onDelete: Cascade)
+  usuarios    usuarios @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+
+  @@id([usuario_id, rol_id])
+}
+
+model zonas {
+  id                 String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre             String               @unique @db.VarChar(100)
+  descripcion        String?
+  activo             Boolean              @default(true)
+  creado_en          DateTime             @default(now()) @db.Timestamptz(6)
+  actualizado_en     DateTime             @default(now()) @db.Timestamptz(6)
+  comunidades        comunidades[]
+  equipos_misioneros equipos_misioneros[]
+}
