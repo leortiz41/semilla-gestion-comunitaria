@@ -3,17 +3,21 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import { checkDatabaseConnection } from './config/database.js';
+import { authRouter } from './routes/auth.routes.js';
 
 const app = express();
 const port = Number(process.env.PORT ?? 3000);
 const host = process.env.HOST ?? '0.0.0.0';
 
+app.set('trust proxy', 1);
 app.use(helmet());
 app.use(cors({
   origin: process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',') : true,
   credentials: true,
 }));
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
+
+app.use('/api/auth', authRouter);
 
 app.get('/api/health', async (_req, res) => {
   const database = await checkDatabaseConnection();
@@ -37,6 +41,7 @@ app.get('/', (_req, res) => {
     name: 'Semilla API',
     slogan: 'Recursos que generan desarrollo',
     health: '/api/health',
+    auth: '/api/auth',
   });
 });
 
