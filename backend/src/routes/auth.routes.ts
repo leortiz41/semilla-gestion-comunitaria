@@ -52,7 +52,13 @@ function readCookie(req: Request, name: string): string | undefined {
 
     const key = item.slice(0, separatorIndex).trim();
     if (key === name) {
-      return decodeURIComponent(item.slice(separatorIndex + 1).trim());
+      const rawValue = item.slice(separatorIndex + 1).trim();
+
+      try {
+        return decodeURIComponent(rawValue);
+      } catch {
+        return undefined;
+      }
     }
   }
 
