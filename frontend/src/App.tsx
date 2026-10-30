@@ -393,7 +393,7 @@ function App() {
 
       <footer>
         <span>Semilla · Plataforma de Gestión Comunitaria</span>
-        <span>Frontend React + API Express + PostgreSQL Neon</span>
+        <span>Las transformaciones comunitarias Surgen con la gestión adecuada de los recursos</span>
       </footer>
     </main>
   );
