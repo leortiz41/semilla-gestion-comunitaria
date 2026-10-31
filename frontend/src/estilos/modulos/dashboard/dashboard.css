@@ -1,0 +1,29 @@
+.pagina-dashboard {
+  display: grid;
+  gap: 10px;
+  padding: 6px 0 10px;
+}
+
+.pagina-dashboard__etiqueta {
+  margin: 0;
+  color: #667665;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.pagina-dashboard__titulo {
+  margin: 0;
+  color: #294c2e;
+  font-size: clamp(2.6rem, 6vw, 4.8rem);
+  line-height: 0.96;
+  letter-spacing: -0.045em;
+}
+
+.pagina-dashboard__descripcion {
+  max-width: 760px;
+  margin: 2px 0 0;
+  color: #5f6f61;
+  line-height: 1.65;
+}
