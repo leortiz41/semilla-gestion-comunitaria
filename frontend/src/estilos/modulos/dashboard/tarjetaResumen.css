@@ -1,0 +1,33 @@
+.tarjeta-resumen {
+  display: grid;
+  gap: 8px;
+  padding: 20px;
+  border: 1px solid rgba(53, 92, 58, 0.1);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 14px 34px rgba(48, 69, 48, 0.05);
+}
+
+.tarjeta-resumen__titulo {
+  margin: 0;
+  color: #6b7b6c;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.tarjeta-resumen__valor {
+  margin: 0;
+  color: #294c2e;
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.tarjeta-resumen__descripcion {
+  margin: 0;
+  color: #6f7c70;
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
