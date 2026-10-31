@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import BarraLateral from './componentes/estructura/BarraLateral';
 import EstructuraAdministrativa from './componentes/estructura/EstructuraAdministrativa';
 import {
   cambiarContrasena,
@@ -266,6 +267,7 @@ function App() {
 
       {vista === 'sesion' && usuario && (
         <EstructuraAdministrativa
+          barraLateral={<BarraLateral />}
           contenido={(
             <section className="dashboard-shell">
               <div className="dashboard-heading">
