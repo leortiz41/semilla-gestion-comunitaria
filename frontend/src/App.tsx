@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import BarraLateral from './componentes/estructura/BarraLateral';
+import EncabezadoAdministrativo from './componentes/estructura/EncabezadoAdministrativo';
 import EstructuraAdministrativa from './componentes/estructura/EstructuraAdministrativa';
 import {
   cambiarContrasena,
@@ -160,23 +161,17 @@ function App() {
 
   return (
     <main className="page-shell">
-      <header className="topbar">
-        <div className="brand-inline">
-          <span className="brand-dot" aria-hidden="true">🌱</span>
-          <div>
-            <strong>Semilla</strong>
-            <span>Gestión comunitaria</span>
+      {vista !== 'sesion' && (
+        <header className="topbar">
+          <div className="brand-inline">
+            <span className="brand-dot" aria-hidden="true">🌱</span>
+            <div>
+              <strong>Semilla</strong>
+              <span>Gestión comunitaria</span>
+            </div>
           </div>
-        </div>
-        {usuario && (
-          <div className="session-actions">
-            <span className="user-chip">{usuario.email}</span>
-            <button className="ghost-button" type="button" onClick={handleLogout} disabled={procesando}>
-              Cerrar sesión
-            </button>
-          </div>
-        )}
-      </header>
+        </header>
+      )}
 
       {vista === 'inicio' && (
         <>
@@ -268,6 +263,13 @@ function App() {
       {vista === 'sesion' && usuario && (
         <EstructuraAdministrativa
           barraLateral={<BarraLateral />}
+          encabezado={(
+            <EncabezadoAdministrativo
+              correoUsuario={usuario.email}
+              procesando={procesando}
+              alCerrarSesion={handleLogout}
+            />
+          )}
           contenido={(
             <section className="dashboard-shell">
               <div className="dashboard-heading">
