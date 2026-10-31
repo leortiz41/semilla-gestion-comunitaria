@@ -1,4 +1,8 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import BarraLateral from './componentes/estructura/BarraLateral';
+import EncabezadoAdministrativo from './componentes/estructura/EncabezadoAdministrativo';
+import EstructuraAdministrativa from './componentes/estructura/EstructuraAdministrativa';
+import PaginaDashboard from './modulos/dashboard/PaginaDashboard';
 import {
   cambiarContrasena,
   cerrarSesion,
@@ -158,23 +162,17 @@ function App() {
 
   return (
     <main className="page-shell">
-      <header className="topbar">
-        <div className="brand-inline">
-          <span className="brand-dot" aria-hidden="true">🌱</span>
-          <div>
-            <strong>Semilla</strong>
-            <span>Gestión comunitaria</span>
+      {vista !== 'sesion' && (
+        <header className="topbar">
+          <div className="brand-inline">
+            <span className="brand-dot" aria-hidden="true">🌱</span>
+            <div>
+              <strong>Semilla</strong>
+              <span>Gestión comunitaria</span>
+            </div>
           </div>
-        </div>
-        {usuario && (
-          <div className="session-actions">
-            <span className="user-chip">{usuario.email}</span>
-            <button className="ghost-button" type="button" onClick={handleLogout} disabled={procesando}>
-              Cerrar sesión
-            </button>
-          </div>
-        )}
-      </header>
+        </header>
+      )}
 
       {vista === 'inicio' && (
         <>
@@ -264,136 +262,150 @@ function App() {
       )}
 
       {vista === 'sesion' && usuario && (
-        <section className="dashboard-shell">
-          <div className="dashboard-heading">
-            <div>
-              <p className="eyebrow">Sesión autenticada</p>
-              <h1 className="dashboard-title">Hola{usuario.nombre ? `, ${usuario.nombre}` : ''}</h1>
-              <p>
-                Esta vista nos permite comprobar visualmente la autenticación, los roles y los permisos
-                entregados por el backend.
-              </p>
-            </div>
-            <div className="status-badge">● Sesión activa</div>
-          </div>
-
-          {mensaje && <div className="notice success">{mensaje}</div>}
-          {error && <div className="notice error">{error}</div>}
-
-          {usuario.debeCambiarContrasena && (
-            <div className="notice warning">
-              Este usuario utiliza una contraseña temporal y debe cambiarla antes de continuar.
-            </div>
+        <EstructuraAdministrativa
+          barraLateral={<BarraLateral />}
+          encabezado={(
+            <EncabezadoAdministrativo
+              correoUsuario={usuario.email}
+              procesando={procesando}
+              alCerrarSesion={handleLogout}
+            />
           )}
+          contenido={(
+            <section className="dashboard-shell">
+              <PaginaDashboard tokenAcceso={accessToken} />
 
-          <div className="dashboard-grid">
-            <article className="panel-card account-panel">
-              <p className="eyebrow">Identidad</p>
-              <h2>{usuario.email}</h2>
-              <dl className="detail-list">
+              <div className="dashboard-heading">
                 <div>
-                  <dt>ID de usuario</dt>
-                  <dd>{usuario.id}</dd>
+                  <p className="eyebrow">Sesión autenticada</p>
+                  <h1 className="dashboard-title">Hola{usuario.nombre ? `, ${usuario.nombre}` : ''}</h1>
+                  <p>
+                    Esta vista nos permite comprobar visualmente la autenticación, los roles y los permisos
+                    entregados por el backend.
+                  </p>
                 </div>
-                <div>
-                  <dt>Roles</dt>
-                  <dd className="chip-row">
-                    {usuario.roles.map((rol) => <span className="role-chip" key={rol}>{rol}</span>)}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Cambio de contraseña</dt>
-                  <dd>{usuario.debeCambiarContrasena ? 'Pendiente' : 'Completado'}</dd>
-                </div>
-              </dl>
-
-              <div className="button-stack">
-                <button className="secondary-button" type="button" onClick={handleRefresh} disabled={procesando}>
-                  Renovar sesión
-                </button>
-                <button
-                  className="secondary-button"
-                  type="button"
-                  onClick={() => setMostrarCambioClave((actual) => !actual)}
-                >
-                  Cambiar contraseña
-                </button>
+                <div className="status-badge">● Sesión activa</div>
               </div>
-            </article>
 
-            <article className="panel-card permissions-panel">
-              <div className="panel-heading">
-                <div>
-                  <p className="eyebrow">RBAC</p>
-                  <h2>Permisos efectivos</h2>
+              {mensaje && <div className="notice success">{mensaje}</div>}
+              {error && <div className="notice error">{error}</div>}
+
+              {usuario.debeCambiarContrasena && (
+                <div className="notice warning">
+                  Este usuario utiliza una contraseña temporal y debe cambiarla antes de continuar.
                 </div>
-                <span className="count-badge">{permisosOrdenados.length}</span>
-              </div>
-              <div className="permission-list">
-                {permisosOrdenados.map((permiso) => (
-                  <div className="permission-item" key={permiso}>
-                    <span className="check-dot">✓</span>
-                    <code>{permiso}</code>
+              )}
+
+              <div className="dashboard-grid">
+                <article className="panel-card account-panel">
+                  <p className="eyebrow">Identidad</p>
+                  <h2>{usuario.email}</h2>
+                  <dl className="detail-list">
+                    <div>
+                      <dt>ID de usuario</dt>
+                      <dd>{usuario.id}</dd>
+                    </div>
+                    <div>
+                      <dt>Roles</dt>
+                      <dd className="chip-row">
+                        {usuario.roles.map((rol) => <span className="role-chip" key={rol}>{rol}</span>)}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Cambio de contraseña</dt>
+                      <dd>{usuario.debeCambiarContrasena ? 'Pendiente' : 'Completado'}</dd>
+                    </div>
+                  </dl>
+
+                  <div className="button-stack">
+                    <button className="secondary-button" type="button" onClick={handleRefresh} disabled={procesando}>
+                      Renovar sesión
+                    </button>
+                    <button
+                      className="secondary-button"
+                      type="button"
+                      onClick={() => setMostrarCambioClave((actual) => !actual)}
+                    >
+                      Cambiar contraseña
+                    </button>
                   </div>
-                ))}
-              </div>
-            </article>
-          </div>
+                </article>
 
-          {mostrarCambioClave && (
-            <form className="panel-card password-panel" onSubmit={handleCambioContrasena}>
-              <div>
-                <p className="eyebrow">Seguridad</p>
-                <h2>Cambiar contraseña</h2>
-                <p>Al cambiarla se revocarán las sesiones activas y deberás iniciar sesión nuevamente.</p>
-              </div>
-
-              <div className="password-grid">
-                <label>
-                  Contraseña actual
-                  <input
-                    type="password"
-                    value={contrasenaActual}
-                    onChange={(event) => setContrasenaActual(event.target.value)}
-                    autoComplete="current-password"
-                    required
-                  />
-                </label>
-                <label>
-                  Nueva contraseña
-                  <input
-                    type="password"
-                    value={contrasenaNueva}
-                    onChange={(event) => setContrasenaNueva(event.target.value)}
-                    autoComplete="new-password"
-                    minLength={12}
-                    required
-                  />
-                </label>
-                <label>
-                  Confirmar nueva contraseña
-                  <input
-                    type="password"
-                    value={confirmacionContrasena}
-                    onChange={(event) => setConfirmacionContrasena(event.target.value)}
-                    autoComplete="new-password"
-                    minLength={12}
-                    required
-                  />
-                </label>
+                <article className="panel-card permissions-panel">
+                  <div className="panel-heading">
+                    <div>
+                      <p className="eyebrow">RBAC</p>
+                      <h2>Permisos efectivos</h2>
+                    </div>
+                    <span className="count-badge">{permisosOrdenados.length}</span>
+                  </div>
+                  <div className="permission-list">
+                    {permisosOrdenados.map((permiso) => (
+                      <div className="permission-item" key={permiso}>
+                        <span className="check-dot">✓</span>
+                        <code>{permiso}</code>
+                      </div>
+                    ))}
+                  </div>
+                </article>
               </div>
 
-              <button className="primary-button" type="submit" disabled={procesando}>
-                {procesando ? 'Actualizando…' : 'Actualizar contraseña'}
-              </button>
-            </form>
+              {mostrarCambioClave && (
+                <form className="panel-card password-panel" onSubmit={handleCambioContrasena}>
+                  <div>
+                    <p className="eyebrow">Seguridad</p>
+                    <h2>Cambiar contraseña</h2>
+                    <p>Al cambiarla se revocarán las sesiones activas y deberás iniciar sesión nuevamente.</p>
+                  </div>
+
+                  <div className="password-grid">
+                    <label>
+                      Contraseña actual
+                      <input
+                        type="password"
+                        value={contrasenaActual}
+                        onChange={(event) => setContrasenaActual(event.target.value)}
+                        autoComplete="current-password"
+                        required
+                      />
+                    </label>
+                    <label>
+                      Nueva contraseña
+                      <input
+                        type="password"
+                        value={contrasenaNueva}
+                        onChange={(event) => setContrasenaNueva(event.target.value)}
+                        autoComplete="new-password"
+                        minLength={12}
+                        required
+                      />
+                    </label>
+                    <label>
+                      Confirmar nueva contraseña
+                      <input
+                        type="password"
+                        value={confirmacionContrasena}
+                        onChange={(event) => setConfirmacionContrasena(event.target.value)}
+                        autoComplete="new-password"
+                        minLength={12}
+                        required
+                      />
+                    </label>
+                  </div>
+
+                  <button className="primary-button" type="submit" disabled={procesando}>
+                    {procesando ? 'Actualizando…' : 'Actualizar contraseña'}
+                  </button>
+                </form>
+              )}
+            </section>
           )}
-        </section>
+        />
       )}
 
       <footer>
         <span>Semilla · Plataforma de Gestión Comunitaria</span>
-        <span>Frontend React + API Express + PostgreSQL Neon</span>
+        <span>Las transformaciones comunitarias Surgen con la gestión adecuada de los recursos</span>
       </footer>
     </main>
   );

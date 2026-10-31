@@ -4,6 +4,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import { checkDatabaseConnection } from './config/database.js';
 import { authRouter } from './routes/auth.routes.js';
+import { dashboardRouter } from './routes/dashboard.routes.js';
 
 const app = express();
 const port = Number(process.env.PORT ?? 3000);
@@ -18,6 +19,7 @@ app.use(cors({
 app.use(express.json({ limit: '1mb' }));
 
 app.use('/api/auth', authRouter);
+app.use('/api/dashboard', dashboardRouter);
 
 app.get('/api/health', async (_req, res) => {
   const database = await checkDatabaseConnection();
@@ -42,6 +44,7 @@ app.get('/', (_req, res) => {
     slogan: 'Recursos que generan desarrollo',
     health: '/api/health',
     auth: '/api/auth',
+    dashboard: '/api/dashboard',
   });
 });
 
