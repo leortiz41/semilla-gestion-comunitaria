@@ -1,0 +1,105 @@
+.estructura-administrativa {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.estructura-administrativa__lateral {
+  position: sticky;
+  top: 24px;
+}
+
+.estructura-administrativa__principal,
+.estructura-administrativa__contenido {
+  min-width: 0;
+}
+
+.barra-lateral {
+  display: grid;
+  gap: 28px;
+  padding: 22px;
+  border: 1px solid rgba(53, 92, 58, 0.1);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.76);
+  box-shadow: 0 18px 50px rgba(48, 69, 48, 0.06);
+}
+
+.barra-lateral__marca {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.barra-lateral__simbolo {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 12px;
+  background: #e7efe2;
+  font-size: 1.25rem;
+}
+
+.barra-lateral__marca strong,
+.barra-lateral__marca div > span {
+  display: block;
+}
+
+.barra-lateral__marca strong {
+  color: #294c2e;
+}
+
+.barra-lateral__marca div > span {
+  margin-top: 2px;
+  color: #7b867c;
+  font-size: 0.72rem;
+}
+
+.barra-lateral__titulo {
+  margin: 0 0 10px;
+  color: #839084;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.barra-lateral__lista {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.barra-lateral__opcion {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: #4d5f50;
+  font-size: 0.88rem;
+  font-weight: 650;
+  background: #f6f8f4;
+}
+
+@media (max-width: 980px) {
+  .estructura-administrativa {
+    grid-template-columns: 1fr;
+  }
+
+  .estructura-administrativa__lateral {
+    position: static;
+  }
+
+  .barra-lateral__lista {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .barra-lateral__lista {
+    grid-template-columns: 1fr;
+  }
+}
