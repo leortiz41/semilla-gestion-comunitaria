@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import BarraLateral from './componentes/estructura/BarraLateral';
 import EncabezadoAdministrativo from './componentes/estructura/EncabezadoAdministrativo';
 import EstructuraAdministrativa from './componentes/estructura/EstructuraAdministrativa';
+import PaginaDashboard from './modulos/dashboard/PaginaDashboard';
 import {
   cambiarContrasena,
   cerrarSesion,
@@ -272,6 +273,8 @@ function App() {
           )}
           contenido={(
             <section className="dashboard-shell">
+              <PaginaDashboard />
+
               <div className="dashboard-heading">
                 <div>
                   <p className="eyebrow">Sesión autenticada</p>
