@@ -1,3 +1,5 @@
+import '../../estilos/estructura/encabezadoAdministrativo.css';
+
 interface PropiedadesEncabezadoAdministrativo {
   correoUsuario: string;
   procesando?: boolean;
