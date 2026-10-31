@@ -27,3 +27,10 @@
   color: #5f6f61;
   line-height: 1.65;
 }
+
+.pagina-dashboard__resumen {
+  display: grid;
+  grid-template-columns: minmax(220px, 320px);
+  gap: 14px;
+  margin-top: 14px;
+}
