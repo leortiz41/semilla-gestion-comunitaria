@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import './estructuraAdministrativa.css';
 
 interface PropiedadesEstructuraAdministrativa {
   barraLateral?: ReactNode;
