@@ -273,7 +273,7 @@ function App() {
           )}
           contenido={(
             <section className="dashboard-shell">
-              <PaginaDashboard />
+              <PaginaDashboard tokenAcceso={accessToken} />
 
               <div className="dashboard-heading">
                 <div>
