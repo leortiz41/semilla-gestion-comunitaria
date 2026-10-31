@@ -2,6 +2,7 @@ const URL_API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 export interface ResumenDashboard {
   comunidadesRegistradas: number;
+  comunidadesActivas: number;
 }
 
 interface RespuestaErrorApi {
