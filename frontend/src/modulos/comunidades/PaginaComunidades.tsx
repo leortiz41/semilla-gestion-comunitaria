@@ -2,6 +2,29 @@ import { useState } from 'react';
 import '../../estilos/modulos/paginaModuloBase.css';
 import '../../estilos/modulos/comunidades/comunidades.css';
 
+const resumenVisual = [
+  {
+    etiqueta: 'Comunidades',
+    valor: '6',
+    detalle: 'Total registrado para validar la distribución visual.',
+  },
+  {
+    etiqueta: 'Activas',
+    valor: '6',
+    detalle: 'Comunidades actualmente consideradas activas.',
+  },
+  {
+    etiqueta: 'Zonas',
+    valor: '2',
+    detalle: 'Agrupaciones territoriales para organizar comunidades.',
+  },
+  {
+    etiqueta: 'Familias vinculadas',
+    valor: '—',
+    detalle: 'Se conectará con el módulo de Familias en la fase backend.',
+  },
+];
+
 function PaginaComunidades() {
   const [busqueda, setBusqueda] = useState('');
   const [zona, setZona] = useState('todas');
@@ -30,6 +53,16 @@ function PaginaComunidades() {
             + Nueva comunidad
           </button>
         </div>
+      </div>
+
+      <div className="pagina-comunidades__resumen" aria-label="Resumen visual de comunidades">
+        {resumenVisual.map((indicador) => (
+          <article className="pagina-comunidades__tarjeta" key={indicador.etiqueta}>
+            <p className="pagina-comunidades__tarjeta-etiqueta">{indicador.etiqueta}</p>
+            <strong className="pagina-comunidades__tarjeta-valor">{indicador.valor}</strong>
+            <p className="pagina-comunidades__tarjeta-detalle">{indicador.detalle}</p>
+          </article>
+        ))}
       </div>
 
       <div className="pagina-comunidades__herramientas" aria-label="Filtros de comunidades">
