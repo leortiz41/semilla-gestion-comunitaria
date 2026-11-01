@@ -3,8 +3,16 @@ import logoSemilla from './assets/logo-semilla-app.png';
 import BarraLateral from './componentes/estructura/BarraLateral';
 import EncabezadoAdministrativo from './componentes/estructura/EncabezadoAdministrativo';
 import EstructuraAdministrativa from './componentes/estructura/EstructuraAdministrativa';
+import PaginaAuditoria from './modulos/auditoria/PaginaAuditoria';
+import PaginaComunidades from './modulos/comunidades/PaginaComunidades';
 import PaginaDashboard from './modulos/dashboard/PaginaDashboard';
+import PaginaEvidencias from './modulos/evidencias/PaginaEvidencias';
+import PaginaFamilias from './modulos/familias/PaginaFamilias';
+import PaginaPagos from './modulos/pagos/PaginaPagos';
 import PaginaPerfilSeguridad from './modulos/perfil/PaginaPerfilSeguridad';
+import PaginaProyectos from './modulos/proyectos/PaginaProyectos';
+import PaginaUsuarios from './modulos/usuarios/PaginaUsuarios';
+import type { SeccionAdministrativa } from './tipos/navegacion';
 import {
   cambiarContrasena,
   cerrarSesion,
@@ -29,7 +37,6 @@ const pillars = [
 ];
 
 type Vista = 'inicio' | 'login' | 'sesion';
-type SeccionAdministrativa = 'dashboard' | 'perfil';
 
 function App() {
   const [vista, setVista] = useState<Vista>('inicio');
@@ -163,6 +170,50 @@ function App() {
     }
   }
 
+  function renderizarSeccionAdministrativa() {
+    switch (seccionAdministrativa) {
+      case 'comunidades':
+        return <PaginaComunidades />;
+      case 'familias':
+        return <PaginaFamilias />;
+      case 'proyectos':
+        return <PaginaProyectos />;
+      case 'evidencias':
+        return <PaginaEvidencias />;
+      case 'pagos':
+        return <PaginaPagos />;
+      case 'usuarios':
+        return <PaginaUsuarios />;
+      case 'auditoria':
+        return <PaginaAuditoria />;
+      case 'perfil':
+        if (!usuario) return null;
+
+        return (
+          <PaginaPerfilSeguridad
+            usuario={usuario}
+            mensaje={mensaje}
+            error={error}
+            procesando={procesando}
+            mostrarCambioClave={mostrarCambioClave}
+            contrasenaActual={contrasenaActual}
+            contrasenaNueva={contrasenaNueva}
+            confirmacionContrasena={confirmacionContrasena}
+            alVolverDashboard={() => setSeccionAdministrativa('dashboard')}
+            alRenovarSesion={handleRefresh}
+            alAlternarCambioClave={() => setMostrarCambioClave((actual) => !actual)}
+            alCambiarContrasena={handleCambioContrasena}
+            alCambiarContrasenaActual={setContrasenaActual}
+            alCambiarContrasenaNueva={setContrasenaNueva}
+            alCambiarConfirmacionContrasena={setConfirmacionContrasena}
+          />
+        );
+      case 'dashboard':
+      default:
+        return <PaginaDashboard tokenAcceso={accessToken} />;
+    }
+  }
+
   return (
     <main className={`page-shell${vista === 'inicio' ? ' page-shell--inicio' : ''}`}>
       {vista !== 'sesion' && (
@@ -266,7 +317,12 @@ function App() {
 
       {vista === 'sesion' && usuario && (
         <EstructuraAdministrativa
-          barraLateral={<BarraLateral />}
+          barraLateral={(
+            <BarraLateral
+              seccionActiva={seccionAdministrativa === 'perfil' ? undefined : seccionAdministrativa}
+              alCambiarSeccion={setSeccionAdministrativa}
+            />
+          )}
           encabezado={(
             <EncabezadoAdministrativo
               correoUsuario={usuario.email}
@@ -275,33 +331,7 @@ function App() {
               alCerrarSesion={handleLogout}
             />
           )}
-          contenido={(
-            <>
-              {seccionAdministrativa === 'dashboard' && (
-                <PaginaDashboard tokenAcceso={accessToken} />
-              )}
-
-              {seccionAdministrativa === 'perfil' && (
-                <PaginaPerfilSeguridad
-                  usuario={usuario}
-                  mensaje={mensaje}
-                  error={error}
-                  procesando={procesando}
-                  mostrarCambioClave={mostrarCambioClave}
-                  contrasenaActual={contrasenaActual}
-                  contrasenaNueva={contrasenaNueva}
-                  confirmacionContrasena={confirmacionContrasena}
-                  alVolverDashboard={() => setSeccionAdministrativa('dashboard')}
-                  alRenovarSesion={handleRefresh}
-                  alAlternarCambioClave={() => setMostrarCambioClave((actual) => !actual)}
-                  alCambiarContrasena={handleCambioContrasena}
-                  alCambiarContrasenaActual={setContrasenaActual}
-                  alCambiarContrasenaNueva={setContrasenaNueva}
-                  alCambiarConfirmacionContrasena={setConfirmacionContrasena}
-                />
-              )}
-            </>
-          )}
+          contenido={renderizarSeccionAdministrativa()}
         />
       )}
 
