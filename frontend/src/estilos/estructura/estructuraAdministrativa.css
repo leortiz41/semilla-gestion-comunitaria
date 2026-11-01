@@ -71,6 +71,11 @@
   list-style: none;
 }
 
+.barra-lateral__elemento {
+  display: grid;
+  gap: 5px;
+}
+
 .barra-lateral__opcion {
   width: 100%;
   display: block;
@@ -95,6 +100,38 @@
   border-color: rgba(53, 92, 58, 0.13);
   background: #e8f0e4;
   box-shadow: inset 3px 0 0 #6d9470;
+  font-weight: 800;
+}
+
+.barra-lateral__subnavegacion {
+  display: grid;
+  gap: 3px;
+  margin-left: 13px;
+  padding: 2px 0 2px 12px;
+  border-left: 1px solid rgba(53, 92, 58, 0.12);
+}
+
+.barra-lateral__subopcion {
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 8px;
+  color: #718073;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 650;
+  text-align: left;
+}
+
+.barra-lateral__subopcion:hover {
+  color: #3f5943;
+  background: rgba(232, 240, 228, 0.58);
+}
+
+.barra-lateral__subopcion--activa {
+  color: #294c2e;
+  background: rgba(232, 240, 228, 0.82);
   font-weight: 800;
 }
 
