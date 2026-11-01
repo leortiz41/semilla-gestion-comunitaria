@@ -32,14 +32,11 @@
 }
 
 .barra-lateral__simbolo {
-  width: 40px;
-  height: 40px;
-  display: grid;
-  place-items: center;
+  width: 46px;
+  height: 46px;
+  display: block;
   flex: 0 0 auto;
-  border-radius: 12px;
-  background: #e7efe2;
-  font-size: 1.25rem;
+  object-fit: contain;
 }
 
 .barra-lateral__marca strong,
