@@ -3,12 +3,14 @@ import '../../estilos/estructura/encabezadoAdministrativo.css';
 interface PropiedadesEncabezadoAdministrativo {
   correoUsuario: string;
   procesando?: boolean;
+  alAbrirPerfil?: () => void;
   alCerrarSesion: () => void;
 }
 
 function EncabezadoAdministrativo({
   correoUsuario,
   procesando = false,
+  alAbrirPerfil,
   alCerrarSesion,
 }: PropiedadesEncabezadoAdministrativo) {
   return (
@@ -19,7 +21,15 @@ function EncabezadoAdministrativo({
       </div>
 
       <div className="encabezado-administrativo__acciones">
-        <span className="encabezado-administrativo__usuario">{correoUsuario}</span>
+        <button
+          className="encabezado-administrativo__usuario"
+          type="button"
+          onClick={alAbrirPerfil}
+          disabled={!alAbrirPerfil}
+          title="Abrir perfil y seguridad"
+        >
+          {correoUsuario}
+        </button>
         <button
           className="encabezado-administrativo__cerrar-sesion"
           type="button"

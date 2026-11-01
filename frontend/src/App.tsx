@@ -1,8 +1,18 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
+import logoSemilla from './assets/logo-semilla-app.png';
 import BarraLateral from './componentes/estructura/BarraLateral';
 import EncabezadoAdministrativo from './componentes/estructura/EncabezadoAdministrativo';
 import EstructuraAdministrativa from './componentes/estructura/EstructuraAdministrativa';
+import PaginaAuditoria from './modulos/auditoria/PaginaAuditoria';
+import PaginaComunidades from './modulos/comunidades/PaginaComunidades';
 import PaginaDashboard from './modulos/dashboard/PaginaDashboard';
+import PaginaEvidencias from './modulos/evidencias/PaginaEvidencias';
+import PaginaFamilias from './modulos/familias/PaginaFamilias';
+import PaginaPagos from './modulos/pagos/PaginaPagos';
+import PaginaPerfilSeguridad from './modulos/perfil/PaginaPerfilSeguridad';
+import PaginaProyectos from './modulos/proyectos/PaginaProyectos';
+import PaginaUsuarios from './modulos/usuarios/PaginaUsuarios';
+import type { SeccionAdministrativa, SubseccionComunidades } from './tipos/navegacion';
 import {
   cambiarContrasena,
   cerrarSesion,
@@ -30,6 +40,8 @@ type Vista = 'inicio' | 'login' | 'sesion';
 
 function App() {
   const [vista, setVista] = useState<Vista>('inicio');
+  const [seccionAdministrativa, setSeccionAdministrativa] = useState<SeccionAdministrativa>('dashboard');
+  const [subseccionComunidades, setSubseccionComunidades] = useState<SubseccionComunidades>('listado');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [accessToken, setAccessToken] = useState<string | null>(null);
@@ -51,6 +63,8 @@ function App() {
         setAccessToken(sesion.accessToken);
         setUsuario(sesion.usuario);
         setVista('sesion');
+        setSeccionAdministrativa('dashboard');
+        setSubseccionComunidades('listado');
         setMostrarCambioClave(sesion.usuario.debeCambiarContrasena);
       })
       .catch(() => {
@@ -61,11 +75,6 @@ function App() {
       activo = false;
     };
   }, []);
-
-  const permisosOrdenados = useMemo(
-    () => [...(usuario?.permisos ?? [])].sort((a, b) => a.localeCompare(b)),
-    [usuario],
-  );
 
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -78,6 +87,8 @@ function App() {
       setAccessToken(sesion.accessToken);
       setUsuario(sesion.usuario);
       setVista('sesion');
+      setSeccionAdministrativa('dashboard');
+      setSubseccionComunidades('listado');
       setPassword('');
       setMostrarCambioClave(sesion.usuario.debeCambiarContrasena);
       setMensaje('Sesión iniciada correctamente.');
@@ -121,6 +132,8 @@ function App() {
       setEmail('');
       setPassword('');
       setMostrarCambioClave(false);
+      setSeccionAdministrativa('dashboard');
+      setSubseccionComunidades('listado');
       setVista('inicio');
       setProcesando(false);
     }
@@ -151,6 +164,8 @@ function App() {
       setContrasenaNueva('');
       setConfirmacionContrasena('');
       setMostrarCambioClave(false);
+      setSeccionAdministrativa('dashboard');
+      setSubseccionComunidades('listado');
       setVista('login');
       setMensaje('Contraseña actualizada. Inicia sesión nuevamente con tu nueva contraseña.');
     } catch (err) {
@@ -160,12 +175,61 @@ function App() {
     }
   }
 
+  function renderizarSeccionAdministrativa() {
+    switch (seccionAdministrativa) {
+      case 'comunidades':
+        return (
+          <PaginaComunidades
+            subseccion={subseccionComunidades}
+            alCambiarSubseccion={setSubseccionComunidades}
+          />
+        );
+      case 'familias':
+        return <PaginaFamilias />;
+      case 'proyectos':
+        return <PaginaProyectos />;
+      case 'evidencias':
+        return <PaginaEvidencias />;
+      case 'pagos':
+        return <PaginaPagos />;
+      case 'usuarios':
+        return <PaginaUsuarios />;
+      case 'auditoria':
+        return <PaginaAuditoria />;
+      case 'perfil':
+        if (!usuario) return null;
+
+        return (
+          <PaginaPerfilSeguridad
+            usuario={usuario}
+            mensaje={mensaje}
+            error={error}
+            procesando={procesando}
+            mostrarCambioClave={mostrarCambioClave}
+            contrasenaActual={contrasenaActual}
+            contrasenaNueva={contrasenaNueva}
+            confirmacionContrasena={confirmacionContrasena}
+            alVolverDashboard={() => setSeccionAdministrativa('dashboard')}
+            alRenovarSesion={handleRefresh}
+            alAlternarCambioClave={() => setMostrarCambioClave((actual) => !actual)}
+            alCambiarContrasena={handleCambioContrasena}
+            alCambiarContrasenaActual={setContrasenaActual}
+            alCambiarContrasenaNueva={setContrasenaNueva}
+            alCambiarConfirmacionContrasena={setConfirmacionContrasena}
+          />
+        );
+      case 'dashboard':
+      default:
+        return <PaginaDashboard tokenAcceso={accessToken} />;
+    }
+  }
+
   return (
-    <main className="page-shell">
+    <main className={`page-shell${vista === 'inicio' ? ' page-shell--inicio' : ''}`}>
       {vista !== 'sesion' && (
         <header className="topbar">
           <div className="brand-inline">
-            <span className="brand-dot" aria-hidden="true">🌱</span>
+            <img className="brand-dot" src={logoSemilla} alt="Logo de Semilla" />
             <div>
               <strong>Semilla</strong>
               <span>Gestión comunitaria</span>
@@ -177,7 +241,7 @@ function App() {
       {vista === 'inicio' && (
         <>
           <section className="hero">
-            <div className="brand-mark" aria-hidden="true">🌱</div>
+            <img className="brand-mark" src={logoSemilla} alt="Logo de Semilla" />
             <p className="eyebrow">Gestión comunitaria</p>
             <h1>Semilla</h1>
             <p className="tagline">Recursos que generan desarrollo</p>
@@ -263,149 +327,35 @@ function App() {
 
       {vista === 'sesion' && usuario && (
         <EstructuraAdministrativa
-          barraLateral={<BarraLateral />}
+          barraLateral={(
+            <BarraLateral
+              seccionActiva={seccionAdministrativa === 'perfil' ? undefined : seccionAdministrativa}
+              subseccionComunidades={subseccionComunidades}
+              alCambiarSeccion={setSeccionAdministrativa}
+              alCambiarSubseccionComunidades={setSubseccionComunidades}
+            />
+          )}
           encabezado={(
             <EncabezadoAdministrativo
               correoUsuario={usuario.email}
               procesando={procesando}
+              alAbrirPerfil={() => setSeccionAdministrativa('perfil')}
               alCerrarSesion={handleLogout}
             />
           )}
-          contenido={(
-            <section className="dashboard-shell">
-              <PaginaDashboard tokenAcceso={accessToken} />
-
-              <div className="dashboard-heading">
-                <div>
-                  <p className="eyebrow">Sesión autenticada</p>
-                  <h1 className="dashboard-title">Hola{usuario.nombre ? `, ${usuario.nombre}` : ''}</h1>
-                  <p>
-                    Esta vista nos permite comprobar visualmente la autenticación, los roles y los permisos
-                    entregados por el backend.
-                  </p>
-                </div>
-                <div className="status-badge">● Sesión activa</div>
-              </div>
-
-              {mensaje && <div className="notice success">{mensaje}</div>}
-              {error && <div className="notice error">{error}</div>}
-
-              {usuario.debeCambiarContrasena && (
-                <div className="notice warning">
-                  Este usuario utiliza una contraseña temporal y debe cambiarla antes de continuar.
-                </div>
-              )}
-
-              <div className="dashboard-grid">
-                <article className="panel-card account-panel">
-                  <p className="eyebrow">Identidad</p>
-                  <h2>{usuario.email}</h2>
-                  <dl className="detail-list">
-                    <div>
-                      <dt>ID de usuario</dt>
-                      <dd>{usuario.id}</dd>
-                    </div>
-                    <div>
-                      <dt>Roles</dt>
-                      <dd className="chip-row">
-                        {usuario.roles.map((rol) => <span className="role-chip" key={rol}>{rol}</span>)}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>Cambio de contraseña</dt>
-                      <dd>{usuario.debeCambiarContrasena ? 'Pendiente' : 'Completado'}</dd>
-                    </div>
-                  </dl>
-
-                  <div className="button-stack">
-                    <button className="secondary-button" type="button" onClick={handleRefresh} disabled={procesando}>
-                      Renovar sesión
-                    </button>
-                    <button
-                      className="secondary-button"
-                      type="button"
-                      onClick={() => setMostrarCambioClave((actual) => !actual)}
-                    >
-                      Cambiar contraseña
-                    </button>
-                  </div>
-                </article>
-
-                <article className="panel-card permissions-panel">
-                  <div className="panel-heading">
-                    <div>
-                      <p className="eyebrow">RBAC</p>
-                      <h2>Permisos efectivos</h2>
-                    </div>
-                    <span className="count-badge">{permisosOrdenados.length}</span>
-                  </div>
-                  <div className="permission-list">
-                    {permisosOrdenados.map((permiso) => (
-                      <div className="permission-item" key={permiso}>
-                        <span className="check-dot">✓</span>
-                        <code>{permiso}</code>
-                      </div>
-                    ))}
-                  </div>
-                </article>
-              </div>
-
-              {mostrarCambioClave && (
-                <form className="panel-card password-panel" onSubmit={handleCambioContrasena}>
-                  <div>
-                    <p className="eyebrow">Seguridad</p>
-                    <h2>Cambiar contraseña</h2>
-                    <p>Al cambiarla se revocarán las sesiones activas y deberás iniciar sesión nuevamente.</p>
-                  </div>
-
-                  <div className="password-grid">
-                    <label>
-                      Contraseña actual
-                      <input
-                        type="password"
-                        value={contrasenaActual}
-                        onChange={(event) => setContrasenaActual(event.target.value)}
-                        autoComplete="current-password"
-                        required
-                      />
-                    </label>
-                    <label>
-                      Nueva contraseña
-                      <input
-                        type="password"
-                        value={contrasenaNueva}
-                        onChange={(event) => setContrasenaNueva(event.target.value)}
-                        autoComplete="new-password"
-                        minLength={12}
-                        required
-                      />
-                    </label>
-                    <label>
-                      Confirmar nueva contraseña
-                      <input
-                        type="password"
-                        value={confirmacionContrasena}
-                        onChange={(event) => setConfirmacionContrasena(event.target.value)}
-                        autoComplete="new-password"
-                        minLength={12}
-                        required
-                      />
-                    </label>
-                  </div>
-
-                  <button className="primary-button" type="submit" disabled={procesando}>
-                    {procesando ? 'Actualizando…' : 'Actualizar contraseña'}
-                  </button>
-                </form>
-              )}
-            </section>
-          )}
+          contenido={renderizarSeccionAdministrativa()}
         />
       )}
 
       <footer>
-        <span>Semilla · Plataforma de Gestión Comunitaria</span>
-        <span>Las transformaciones comunitarias Surgen con la gestión adecuada de los recursos</span>
+        <div className="footer__identidad">
+          <span>Semilla · Plataforma de Gestión Comunitaria</span>
+          <span>Las transformaciones comunitarias Surgen con la gestión adecuada de los recursos</span>
+        </div>
+        <div className="footer__creditos">
+          <span>© 2026 Semilla · Todos los derechos reservados</span>
+          <span>Milton Ortiz · Fase I</span>
+        </div>
       </footer>
     </main>
   );

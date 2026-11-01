@@ -1,0 +1,42 @@
+.pagina-perfil-seguridad {
+  display: grid;
+  gap: 20px;
+}
+
+.pagina-perfil-seguridad__encabezado {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.pagina-perfil-seguridad__titulo {
+  margin: 0;
+  color: #294c2e;
+  font-size: clamp(2.2rem, 5vw, 3.8rem);
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.pagina-perfil-seguridad__descripcion {
+  max-width: 720px;
+  margin: 10px 0 0;
+  color: #5f6f61;
+  line-height: 1.6;
+}
+
+.pagina-perfil-seguridad__volver {
+  padding: 10px 14px;
+  border: 1px solid rgba(53, 92, 58, 0.15);
+  border-radius: 12px;
+  color: #355c3a;
+  background: rgba(255, 255, 255, 0.72);
+  cursor: pointer;
+  font-weight: 750;
+}
+
+@media (max-width: 760px) {
+  .pagina-perfil-seguridad__encabezado {
+    flex-direction: column;
+  }
+}

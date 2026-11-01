@@ -28,18 +28,15 @@
 .barra-lateral__marca {
   display: flex;
   align-items: center;
-  gap: 11px;
+  gap: 12px;
 }
 
 .barra-lateral__simbolo {
-  width: 40px;
-  height: 40px;
-  display: grid;
-  place-items: center;
+  width: 54px;
+  height: 54px;
+  display: block;
   flex: 0 0 auto;
-  border-radius: 12px;
-  background: #e7efe2;
-  font-size: 1.25rem;
+  object-fit: contain;
 }
 
 .barra-lateral__marca strong,
@@ -74,14 +71,68 @@
   list-style: none;
 }
 
+.barra-lateral__elemento {
+  display: grid;
+  gap: 5px;
+}
+
 .barra-lateral__opcion {
+  width: 100%;
   display: block;
   padding: 10px 12px;
+  border: 1px solid transparent;
   border-radius: 10px;
   color: #4d5f50;
+  background: #f6f8f4;
+  cursor: pointer;
   font-size: 0.88rem;
   font-weight: 650;
-  background: #f6f8f4;
+  text-align: left;
+}
+
+.barra-lateral__opcion:hover {
+  border-color: rgba(53, 92, 58, 0.12);
+  background: #eef3eb;
+}
+
+.barra-lateral__opcion--activa {
+  color: #294c2e;
+  border-color: rgba(53, 92, 58, 0.13);
+  background: #e8f0e4;
+  box-shadow: inset 3px 0 0 #6d9470;
+  font-weight: 800;
+}
+
+.barra-lateral__subnavegacion {
+  display: grid;
+  gap: 3px;
+  margin-left: 13px;
+  padding: 2px 0 2px 12px;
+  border-left: 1px solid rgba(53, 92, 58, 0.12);
+}
+
+.barra-lateral__subopcion {
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 8px;
+  color: #718073;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 650;
+  text-align: left;
+}
+
+.barra-lateral__subopcion:hover {
+  color: #3f5943;
+  background: rgba(232, 240, 228, 0.58);
+}
+
+.barra-lateral__subopcion--activa {
+  color: #294c2e;
+  background: rgba(232, 240, 228, 0.82);
+  font-weight: 800;
 }
 
 @media (max-width: 980px) {

@@ -56,6 +56,12 @@ function PaginaDashboard({ tokenAcceso }: PropiedadesPaginaDashboard) {
       ? 'Consultando información registrada en el sistema…'
       : 'Cantidad total de comunidades registradas en Semilla.';
 
+  const descripcionComunidadesActivas = errorResumen
+    ? errorResumen
+    : cargandoResumen
+      ? 'Consultando información registrada en el sistema…'
+      : 'Comunidades que actualmente se encuentran activas en el sistema.';
+
   return (
     <section className="pagina-dashboard" aria-labelledby="titulo-dashboard">
       <p className="pagina-dashboard__etiqueta">Dashboard</p>
@@ -71,6 +77,11 @@ function PaginaDashboard({ tokenAcceso }: PropiedadesPaginaDashboard) {
           titulo="Comunidades registradas"
           valor={cargandoResumen ? '…' : (resumen?.comunidadesRegistradas ?? '—')}
           descripcion={descripcionComunidades}
+        />
+        <TarjetaResumen
+          titulo="Comunidades activas"
+          valor={cargandoResumen ? '…' : (resumen?.comunidadesActivas ?? '—')}
+          descripcion={descripcionComunidadesActivas}
         />
       </div>
     </section>
