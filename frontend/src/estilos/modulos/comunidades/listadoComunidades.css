@@ -1,0 +1,158 @@
+.listado-comunidades {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid rgba(53, 92, 58, 0.09);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 16px 36px rgba(48, 69, 48, 0.05);
+}
+
+.listado-comunidades__encabezado {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.listado-comunidades__etiqueta {
+  margin: 0 0 4px;
+  color: #7b867c;
+  font-size: 0.68rem;
+  font-weight: 850;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.listado-comunidades__encabezado h2 {
+  margin: 0;
+  color: #294c2e;
+  font-size: 1.05rem;
+}
+
+.listado-comunidades__conteo {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  border-radius: 999px;
+  color: #526154;
+  background: #edf3ea;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.listado-comunidades__tabla {
+  overflow: hidden;
+  border: 1px solid rgba(53, 92, 58, 0.07);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.listado-comunidades__fila {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(100px, 0.55fr) minmax(100px, 0.45fr);
+  gap: 16px;
+  align-items: center;
+  min-height: 62px;
+  padding: 12px 15px;
+  border-top: 1px solid rgba(53, 92, 58, 0.06);
+  color: #536055;
+  font-size: 0.84rem;
+}
+
+.listado-comunidades__fila:first-child {
+  border-top: 0;
+}
+
+.listado-comunidades__fila--encabezado {
+  min-height: 42px;
+  color: #7c877d;
+  background: #f6f8f4;
+  font-size: 0.68rem;
+  font-weight: 850;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.listado-comunidades__nombre {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.listado-comunidades__nombre strong {
+  color: #334337;
+  font-size: 0.9rem;
+}
+
+.listado-comunidades__nombre span {
+  color: #889289;
+  font-size: 0.72rem;
+}
+
+.listado-comunidades__estado {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 9px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.listado-comunidades__estado::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.listado-comunidades__estado--activa {
+  color: #3f7547;
+  background: #e7f1e4;
+}
+
+.listado-comunidades__estado--inactiva {
+  color: #8a6460;
+  background: #f4e9e7;
+}
+
+.listado-comunidades__vacio {
+  display: grid;
+  gap: 5px;
+  padding: 28px 20px;
+  border: 1px dashed rgba(53, 92, 58, 0.16);
+  border-radius: 14px;
+  text-align: center;
+}
+
+.listado-comunidades__vacio strong {
+  color: #405344;
+}
+
+.listado-comunidades__vacio span {
+  color: #7b867c;
+  font-size: 0.82rem;
+}
+
+@media (max-width: 680px) {
+  .listado-comunidades__encabezado {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .listado-comunidades__fila--encabezado {
+    display: none;
+  }
+
+  .listado-comunidades__fila {
+    grid-template-columns: 1fr auto;
+    gap: 8px 14px;
+    padding: 14px;
+  }
+
+  .listado-comunidades__nombre {
+    grid-column: 1 / -1;
+  }
+}
