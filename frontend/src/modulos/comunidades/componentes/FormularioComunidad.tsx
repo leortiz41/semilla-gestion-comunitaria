@@ -5,6 +5,18 @@ const categoriasVisionDesarrollo = [
   'Infraestructura',
 ];
 
+const tiposOrganizacionComunitaria = [
+  'Patronato',
+  'Junta de agua',
+  'Iglesias',
+  'Comité de pescadores',
+  'Comité de mujeres',
+  'Comité de jóvenes',
+  'Cooperativa',
+  'Asociación de productores',
+  'Caja rural',
+];
+
 interface PropiedadesFormularioComunidad {
   alCerrar: () => void;
 }
@@ -159,6 +171,53 @@ function FormularioComunidad({ alCerrar }: PropiedadesFormularioComunidad) {
                 </article>
               );
             })}
+          </div>
+        </div>
+      </details>
+
+      <details className="formulario-comunidad__acordeon">
+        <summary className="formulario-comunidad__acordeon-resumen">
+          <div className="formulario-comunidad__seccion-encabezado">
+            <span className="formulario-comunidad__numero">04</span>
+            <div>
+              <h3>Organizaciones comunitarias activas</h3>
+              <p>Identifica las estructuras locales que participan en la organización y representación comunitaria.</p>
+            </div>
+          </div>
+          <span className="formulario-comunidad__acordeon-indicador" aria-hidden="true">⌄</span>
+        </summary>
+
+        <div className="formulario-comunidad__acordeon-contenido">
+          <fieldset className="formulario-comunidad__selecciones">
+            <legend>Tipos de organización presentes</legend>
+            <div className="formulario-comunidad__selecciones-grid">
+              {tiposOrganizacionComunitaria.map((tipo) => (
+                <label className="formulario-comunidad__seleccion" key={tipo}>
+                  <input type="checkbox" name="organizaciones-comunitarias" value={tipo} />
+                  <span>{tipo}</span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+
+          <div className="formulario-comunidad__campos formulario-comunidad__campos--dos">
+            <div className="pagina-comunidades__campo">
+              <label htmlFor="otras-organizaciones">Otras organizaciones</label>
+              <input
+                id="otras-organizaciones"
+                type="text"
+                placeholder="Ej. comité ambiental, grupo deportivo..."
+              />
+            </div>
+
+            <div className="pagina-comunidades__campo">
+              <label htmlFor="detalle-organizaciones">Observaciones</label>
+              <textarea
+                id="detalle-organizaciones"
+                rows={3}
+                placeholder="Nombres, alcance, nivel de actividad u otra información relevante."
+              />
+            </div>
           </div>
         </div>
       </details>
