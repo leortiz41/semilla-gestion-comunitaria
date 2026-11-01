@@ -1,3 +1,10 @@
+const categoriasVisionDesarrollo = [
+  'Evangelismo',
+  'Educación formal',
+  'Educación comunitaria',
+  'Infraestructura',
+];
+
 interface PropiedadesFormularioComunidad {
   alCerrar: () => void;
 }
@@ -92,6 +99,66 @@ function FormularioComunidad({ alCerrar }: PropiedadesFormularioComunidad) {
               rows={3}
               placeholder="Ej. bloque, adobe, madera, bahareque, techo de zinc..."
             />
+          </div>
+        </div>
+      </details>
+
+      <details className="formulario-comunidad__acordeon">
+        <summary className="formulario-comunidad__acordeon-resumen">
+          <div className="formulario-comunidad__seccion-encabezado">
+            <span className="formulario-comunidad__numero">03</span>
+            <div>
+              <h3>Visión de desarrollo</h3>
+              <p>Define la situación actual, la prioridad y la visión futura de cada área de desarrollo.</p>
+            </div>
+          </div>
+          <span className="formulario-comunidad__acordeon-indicador" aria-hidden="true">⌄</span>
+        </summary>
+
+        <div className="formulario-comunidad__acordeon-contenido">
+          <div className="formulario-comunidad__vision">
+            {categoriasVisionDesarrollo.map((categoria, indice) => {
+              const identificador = `vision-${indice}`;
+
+              return (
+                <article className="formulario-comunidad__vision-item" key={categoria}>
+                  <div className="formulario-comunidad__vision-titulo">
+                    <span>{String(indice + 1).padStart(2, '0')}</span>
+                    <h4>{categoria}</h4>
+                  </div>
+
+                  <div className="formulario-comunidad__campos formulario-comunidad__campos--dos">
+                    <div className="pagina-comunidades__campo">
+                      <label htmlFor={`${identificador}-situacion`}>Situación actual</label>
+                      <textarea
+                        id={`${identificador}-situacion`}
+                        rows={3}
+                        placeholder="Describe brevemente la situación actual de esta área."
+                      />
+                    </div>
+
+                    <div className="pagina-comunidades__campo">
+                      <label htmlFor={`${identificador}-vision`}>Visión o meta de desarrollo</label>
+                      <textarea
+                        id={`${identificador}-vision`}
+                        rows={3}
+                        placeholder="¿Cómo espera la comunidad avanzar en esta área?"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pagina-comunidades__campo formulario-comunidad__prioridad">
+                    <label htmlFor={`${identificador}-prioridad`}>Prioridad</label>
+                    <select id={`${identificador}-prioridad`} defaultValue="">
+                      <option value="" disabled>Seleccionar prioridad</option>
+                      <option value="alta">Alta</option>
+                      <option value="media">Media</option>
+                      <option value="baja">Baja</option>
+                    </select>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         </div>
       </details>
