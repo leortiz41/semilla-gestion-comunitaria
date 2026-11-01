@@ -1,3 +1,59 @@
+.page-shell--inicio {
+  min-height: 100dvh;
+  padding-top: 14px;
+  padding-bottom: 16px;
+}
+
+.page-shell--inicio .topbar {
+  min-height: 44px;
+}
+
+.page-shell--inicio .brand-dot {
+  width: 38px;
+  height: 38px;
+}
+
+.page-shell--inicio .hero {
+  gap: 7px;
+  margin: 14px 0 18px;
+}
+
+.page-shell--inicio .brand-mark {
+  width: 92px;
+  height: 92px;
+}
+
+.page-shell--inicio .hero h1 {
+  font-size: clamp(3.8rem, 9vw, 6.4rem);
+  line-height: 0.86;
+}
+
+.page-shell--inicio .tagline {
+  font-size: clamp(1.15rem, 2vw, 1.55rem);
+}
+
+.page-shell--inicio .hero-copy {
+  margin-top: 2px;
+  line-height: 1.5;
+}
+
+.page-shell--inicio .actions {
+  margin-top: 6px;
+}
+
+.page-shell--inicio .pillars {
+  gap: 14px;
+}
+
+.page-shell--inicio .pillar-card {
+  padding: 18px 20px;
+}
+
+.page-shell--inicio footer {
+  padding-top: 18px;
+  font-size: 0.78rem;
+}
+
 .pillar-card {
   --sombra-acento: rgba(53, 92, 58, 0.12);
   --brillo-acento: rgba(53, 92, 58, 0.12);
@@ -60,6 +116,17 @@
 .pillar-card:hover::after {
   opacity: 0.72;
   transform: translate(-8px, -8px) scale(1.12);
+}
+
+@media (max-width: 760px) {
+  .page-shell--inicio {
+    padding-top: 12px;
+    padding-bottom: 18px;
+  }
+
+  .page-shell--inicio .hero {
+    margin-top: 18px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
