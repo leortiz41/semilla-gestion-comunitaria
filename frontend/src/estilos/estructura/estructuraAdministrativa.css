@@ -28,12 +28,12 @@
 .barra-lateral__marca {
   display: flex;
   align-items: center;
-  gap: 11px;
+  gap: 12px;
 }
 
 .barra-lateral__simbolo {
-  width: 46px;
-  height: 46px;
+  width: 54px;
+  height: 54px;
   display: block;
   flex: 0 0 auto;
   object-fit: contain;
