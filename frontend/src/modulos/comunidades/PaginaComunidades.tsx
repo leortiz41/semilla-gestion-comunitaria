@@ -1,36 +1,66 @@
 import { useState } from 'react';
 import '../../estilos/modulos/paginaModuloBase.css';
 import '../../estilos/modulos/comunidades/comunidades.css';
+import type { ComunidadVisual } from '../../tipos/comunidades';
 import FormularioComunidad from './componentes/FormularioComunidad';
+import ListadoComunidades from './componentes/ListadoComunidades';
 
-const resumenVisual = [
-  {
-    etiqueta: 'Comunidades',
-    valor: '6',
-    detalle: 'Total registrado para validar la distribución visual.',
-  },
-  {
-    etiqueta: 'Activas',
-    valor: '6',
-    detalle: 'Comunidades actualmente consideradas activas.',
-  },
-  {
-    etiqueta: 'Zonas',
-    valor: '2',
-    detalle: 'Agrupaciones territoriales para organizar comunidades.',
-  },
-  {
-    etiqueta: 'Familias vinculadas',
-    valor: '—',
-    detalle: 'Se conectará con el módulo de Familias en la fase backend.',
-  },
+const comunidadesVisuales: ComunidadVisual[] = [
+  { id: 'agua-azul-rancho', nombre: 'Agua Azul Rancho', zona: 'zona-1', nombreZona: 'Zona 1', estado: 'activa' },
+  { id: 'agua-amarilla', nombre: 'Agua Amarilla', zona: 'zona-1', nombreZona: 'Zona 1', estado: 'activa' },
+  { id: 'el-bambu', nombre: 'El Bambú', zona: 'zona-1', nombreZona: 'Zona 1', estado: 'activa' },
+  { id: 'las-marias', nombre: 'Las Marías', zona: 'zona-2', nombreZona: 'Zona 2', estado: 'activa' },
+  { id: 'el-novillo', nombre: 'El Novillo', zona: 'zona-2', nombreZona: 'Zona 2', estado: 'activa' },
+  { id: 'los-cocos', nombre: 'Los Cocos', zona: 'zona-2', nombreZona: 'Zona 2', estado: 'activa' },
 ];
+
+function normalizarTexto(texto: string) {
+  return texto
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
 
 function PaginaComunidades() {
   const [busqueda, setBusqueda] = useState('');
   const [zona, setZona] = useState('todas');
   const [estado, setEstado] = useState('todos');
   const [mostrarRegistro, setMostrarRegistro] = useState(false);
+
+  const comunidadesFiltradas = comunidadesVisuales.filter((comunidad) => {
+    const coincideBusqueda = normalizarTexto(comunidad.nombre).includes(normalizarTexto(busqueda));
+    const coincideZona = zona === 'todas' || comunidad.zona === zona;
+    const coincideEstado = estado === 'todos' || comunidad.estado === estado;
+
+    return coincideBusqueda && coincideZona && coincideEstado;
+  });
+
+  const totalActivas = comunidadesVisuales.filter((comunidad) => comunidad.estado === 'activa').length;
+  const totalZonas = new Set(comunidadesVisuales.map((comunidad) => comunidad.zona)).size;
+
+  const resumenVisual = [
+    {
+      etiqueta: 'Comunidades',
+      valor: String(comunidadesVisuales.length),
+      detalle: 'Total registrado para validar la distribución visual.',
+    },
+    {
+      etiqueta: 'Activas',
+      valor: String(totalActivas),
+      detalle: 'Comunidades actualmente consideradas activas.',
+    },
+    {
+      etiqueta: 'Zonas',
+      valor: String(totalZonas),
+      detalle: 'Agrupaciones territoriales para organizar comunidades.',
+    },
+    {
+      etiqueta: 'Familias vinculadas',
+      valor: '—',
+      detalle: 'Se conectará con el módulo de Familias en la fase backend.',
+    },
+  ];
 
   return (
     <section className="pagina-modulo pagina-comunidades" aria-labelledby="titulo-comunidades">
@@ -99,11 +129,13 @@ function PaginaComunidades() {
             onChange={(event) => setEstado(event.target.value)}
           >
             <option value="todos">Todos</option>
-            <option value="activas">Activas</option>
-            <option value="inactivas">Inactivas</option>
+            <option value="activa">Activas</option>
+            <option value="inactiva">Inactivas</option>
           </select>
         </div>
       </div>
+
+      <ListadoComunidades comunidades={comunidadesFiltradas} />
 
       {mostrarRegistro && (
         <FormularioComunidad alCerrar={() => setMostrarRegistro(false)} />
