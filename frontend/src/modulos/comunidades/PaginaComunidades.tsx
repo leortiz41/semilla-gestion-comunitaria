@@ -2,6 +2,7 @@ import { useState } from 'react';
 import '../../estilos/modulos/paginaModuloBase.css';
 import '../../estilos/modulos/comunidades/comunidades.css';
 import type { ComunidadVisual } from '../../tipos/comunidades';
+import type { SubseccionComunidades } from '../../tipos/navegacion';
 import FormularioComunidad from './componentes/FormularioComunidad';
 import ListadoComunidades from './componentes/ListadoComunidades';
 
@@ -14,6 +15,11 @@ const comunidadesVisuales: ComunidadVisual[] = [
   { id: 'los-cocos', nombre: 'Los Cocos', zona: 'zona-2', nombreZona: 'Zona 2', estado: 'activa' },
 ];
 
+interface PropiedadesPaginaComunidades {
+  subseccion: SubseccionComunidades;
+  alCambiarSubseccion: (subseccion: SubseccionComunidades) => void;
+}
+
 function normalizarTexto(texto: string) {
   return texto
     .normalize('NFD')
@@ -22,11 +28,10 @@ function normalizarTexto(texto: string) {
     .trim();
 }
 
-function PaginaComunidades() {
+function PaginaComunidades({ subseccion, alCambiarSubseccion }: PropiedadesPaginaComunidades) {
   const [busqueda, setBusqueda] = useState('');
   const [zona, setZona] = useState('todas');
   const [estado, setEstado] = useState('todos');
-  const [mostrarRegistro, setMostrarRegistro] = useState(false);
 
   const comunidadesFiltradas = comunidadesVisuales.filter((comunidad) => {
     const coincideBusqueda = normalizarTexto(comunidad.nombre).includes(normalizarTexto(busqueda));
@@ -62,6 +67,34 @@ function PaginaComunidades() {
     },
   ];
 
+  if (subseccion === 'nueva') {
+    return (
+      <section className="pagina-modulo pagina-comunidades" aria-labelledby="titulo-nueva-comunidad">
+        <div className="pagina-comunidades__vista-superior">
+          <div>
+            <p className="pagina-modulo__etiqueta">Comunidades / Registro</p>
+            <h1 id="titulo-nueva-comunidad" className="pagina-modulo__titulo">
+              Nueva comunidad
+            </h1>
+            <p className="pagina-modulo__descripcion">
+              Completa el expediente comunitario por secciones para registrar la información de forma ordenada.
+            </p>
+          </div>
+
+          <button
+            className="pagina-comunidades__boton-secundario"
+            type="button"
+            onClick={() => alCambiarSubseccion('listado')}
+          >
+            ← Volver al listado
+          </button>
+        </div>
+
+        <FormularioComunidad alCerrar={() => alCambiarSubseccion('listado')} />
+      </section>
+    );
+  }
+
   return (
     <section className="pagina-modulo pagina-comunidades" aria-labelledby="titulo-comunidades">
       <div className="pagina-comunidades__superior">
@@ -79,7 +112,7 @@ function PaginaComunidades() {
           <button
             className="pagina-comunidades__boton-nuevo"
             type="button"
-            onClick={() => setMostrarRegistro(true)}
+            onClick={() => alCambiarSubseccion('nueva')}
           >
             + Nueva comunidad
           </button>
@@ -136,10 +169,6 @@ function PaginaComunidades() {
       </div>
 
       <ListadoComunidades comunidades={comunidadesFiltradas} />
-
-      {mostrarRegistro && (
-        <FormularioComunidad alCerrar={() => setMostrarRegistro(false)} />
-      )}
     </section>
   );
 }
