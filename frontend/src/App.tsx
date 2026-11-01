@@ -305,8 +305,14 @@ function App() {
       )}
 
       <footer>
-        <span>Semilla · Plataforma de Gestión Comunitaria</span>
-        <span>Las transformaciones comunitarias Surgen con la gestión adecuada de los recursos</span>
+        <div className="footer__identidad">
+          <span>Semilla · Plataforma de Gestión Comunitaria</span>
+          <span>Las transformaciones comunitarias Surgen con la gestión adecuada de los recursos</span>
+        </div>
+        <div className="footer__creditos">
+          <span>© 2026 Semilla · Todos los derechos reservados</span>
+          <span>Milton Ortiz · Fase I</span>
+        </div>
       </footer>
     </main>
   );
