@@ -7,7 +7,7 @@ interface OpcionNavegacion {
 }
 
 interface PropiedadesBarraLateral {
-  seccionActiva: SeccionBarraLateral;
+  seccionActiva?: SeccionBarraLateral;
   alCambiarSeccion: (seccion: SeccionBarraLateral) => void;
 }
 
