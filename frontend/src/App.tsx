@@ -164,7 +164,7 @@ function App() {
   }
 
   return (
-    <main className="page-shell">
+    <main className={`page-shell${vista === 'inicio' ? ' page-shell--inicio' : ''}`}>
       {vista !== 'sesion' && (
         <header className="topbar">
           <div className="brand-inline">
