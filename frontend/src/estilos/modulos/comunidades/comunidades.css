@@ -3,26 +3,46 @@
   gap: 22px;
 }
 
-.pagina-comunidades__superior {
+.pagina-comunidades__superior,
+.pagina-comunidades__vista-superior {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
   gap: 22px;
 }
 
+.pagina-comunidades__vista-superior {
+  align-items: flex-start;
+}
+
 .pagina-comunidades__acciones {
   flex: 0 0 auto;
 }
 
-.pagina-comunidades__boton-nuevo {
+.pagina-comunidades__boton-nuevo,
+.pagina-comunidades__boton-secundario {
   padding: 11px 16px;
-  border: 0;
   border-radius: 12px;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.pagina-comunidades__boton-nuevo {
+  border: 0;
   color: #fff;
   background: #355c3a;
   box-shadow: 0 12px 24px rgba(53, 92, 58, 0.16);
-  cursor: pointer;
-  font-weight: 800;
+}
+
+.pagina-comunidades__boton-secundario {
+  flex: 0 0 auto;
+  border: 1px solid rgba(53, 92, 58, 0.13);
+  color: #3f5943;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.pagina-comunidades__boton-secundario:hover {
+  background: #eef3eb;
 }
 
 .pagina-comunidades__resumen {
@@ -387,12 +407,14 @@
 }
 
 @media (max-width: 860px) {
-  .pagina-comunidades__superior {
+  .pagina-comunidades__superior,
+  .pagina-comunidades__vista-superior {
     align-items: stretch;
     flex-direction: column;
   }
 
-  .pagina-comunidades__acciones {
+  .pagina-comunidades__acciones,
+  .pagina-comunidades__boton-secundario {
     align-self: flex-start;
   }
 
