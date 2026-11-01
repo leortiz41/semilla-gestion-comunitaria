@@ -276,6 +276,49 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.formulario-comunidad__vision {
+  display: grid;
+  gap: 12px;
+  padding-top: 16px;
+}
+
+.formulario-comunidad__vision-item {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid rgba(53, 92, 58, 0.08);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.66);
+}
+
+.formulario-comunidad__vision-titulo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.formulario-comunidad__vision-titulo span {
+  min-width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  color: #9b6118;
+  background: rgba(230, 138, 31, 0.11);
+  font-size: 0.68rem;
+  font-weight: 850;
+}
+
+.formulario-comunidad__vision-titulo h4 {
+  margin: 0;
+  color: #334337;
+  font-size: 0.94rem;
+}
+
+.formulario-comunidad__prioridad {
+  max-width: 220px;
+}
+
 .formulario-comunidad__aviso {
   margin: 2px 0 0;
   color: #7b6b4a;
