@@ -17,6 +17,19 @@ const tiposOrganizacionComunitaria = [
   'Caja rural',
 ];
 
+const tiposActividadProductiva = [
+  'Agricultura',
+  'Ganadería',
+  'Pesca',
+  'Agroindustria',
+  'Pulperías',
+  'Comercio',
+  'Microempresas',
+  'Artesanías',
+  'Turismo',
+  'Servicios',
+];
+
 interface PropiedadesFormularioComunidad {
   alCerrar: () => void;
 }
@@ -218,6 +231,62 @@ function FormularioComunidad({ alCerrar }: PropiedadesFormularioComunidad) {
                 placeholder="Nombres, alcance, nivel de actividad u otra información relevante."
               />
             </div>
+          </div>
+        </div>
+      </details>
+
+      <details className="formulario-comunidad__acordeon">
+        <summary className="formulario-comunidad__acordeon-resumen">
+          <div className="formulario-comunidad__seccion-encabezado">
+            <span className="formulario-comunidad__numero">05</span>
+            <div>
+              <h3>Productividad local</h3>
+              <p>Registra las principales actividades económicas, productos, servicios y oportunidades de la comunidad.</p>
+            </div>
+          </div>
+          <span className="formulario-comunidad__acordeon-indicador" aria-hidden="true">⌄</span>
+        </summary>
+
+        <div className="formulario-comunidad__acordeon-contenido">
+          <fieldset className="formulario-comunidad__selecciones">
+            <legend>Actividades productivas presentes</legend>
+            <div className="formulario-comunidad__selecciones-grid">
+              {tiposActividadProductiva.map((tipo) => (
+                <label className="formulario-comunidad__seleccion" key={tipo}>
+                  <input type="checkbox" name="actividades-productivas" value={tipo} />
+                  <span>{tipo}</span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+
+          <div className="formulario-comunidad__campos formulario-comunidad__campos--dos">
+            <div className="pagina-comunidades__campo">
+              <label htmlFor="productos-servicios-principales">Productos o servicios principales</label>
+              <textarea
+                id="productos-servicios-principales"
+                rows={3}
+                placeholder="Ej. café, granos básicos, tilapia, productos lácteos, abarrotes..."
+              />
+            </div>
+
+            <div className="pagina-comunidades__campo">
+              <label htmlFor="otras-actividades-productivas">Otras actividades económicas</label>
+              <textarea
+                id="otras-actividades-productivas"
+                rows={3}
+                placeholder="Registra otras actividades que no aparecen en la lista."
+              />
+            </div>
+          </div>
+
+          <div className="pagina-comunidades__campo">
+            <label htmlFor="potencial-productivo">Potencial u oportunidades de desarrollo productivo</label>
+            <textarea
+              id="potencial-productivo"
+              rows={3}
+              placeholder="Describe oportunidades, capacidades o necesidades que podrían fortalecer la economía local."
+            />
           </div>
         </div>
       </details>
