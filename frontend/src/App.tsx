@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useState } from 'react';
+import logoSemilla from './assets/logo-semilla-app.png';
 import BarraLateral from './componentes/estructura/BarraLateral';
 import EncabezadoAdministrativo from './componentes/estructura/EncabezadoAdministrativo';
 import EstructuraAdministrativa from './componentes/estructura/EstructuraAdministrativa';
@@ -167,7 +168,7 @@ function App() {
       {vista !== 'sesion' && (
         <header className="topbar">
           <div className="brand-inline">
-            <span className="brand-dot" aria-hidden="true">🌱</span>
+            <img className="brand-dot" src={logoSemilla} alt="Logo de Semilla" />
             <div>
               <strong>Semilla</strong>
               <span>Gestión comunitaria</span>
@@ -179,7 +180,7 @@ function App() {
       {vista === 'inicio' && (
         <>
           <section className="hero">
-            <div className="brand-mark" aria-hidden="true">🌱</div>
+            <img className="brand-mark" src={logoSemilla} alt="Logo de Semilla" />
             <p className="eyebrow">Gestión comunitaria</p>
             <h1>Semilla</h1>
             <p className="tagline">Recursos que generan desarrollo</p>
