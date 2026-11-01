@@ -1,8 +1,9 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import BarraLateral from './componentes/estructura/BarraLateral';
 import EncabezadoAdministrativo from './componentes/estructura/EncabezadoAdministrativo';
 import EstructuraAdministrativa from './componentes/estructura/EstructuraAdministrativa';
 import PaginaDashboard from './modulos/dashboard/PaginaDashboard';
+import PaginaPerfilSeguridad from './modulos/perfil/PaginaPerfilSeguridad';
 import {
   cambiarContrasena,
   cerrarSesion,
@@ -27,9 +28,11 @@ const pillars = [
 ];
 
 type Vista = 'inicio' | 'login' | 'sesion';
+type SeccionAdministrativa = 'dashboard' | 'perfil';
 
 function App() {
   const [vista, setVista] = useState<Vista>('inicio');
+  const [seccionAdministrativa, setSeccionAdministrativa] = useState<SeccionAdministrativa>('dashboard');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [accessToken, setAccessToken] = useState<string | null>(null);
@@ -51,6 +54,7 @@ function App() {
         setAccessToken(sesion.accessToken);
         setUsuario(sesion.usuario);
         setVista('sesion');
+        setSeccionAdministrativa('dashboard');
         setMostrarCambioClave(sesion.usuario.debeCambiarContrasena);
       })
       .catch(() => {
@@ -61,11 +65,6 @@ function App() {
       activo = false;
     };
   }, []);
-
-  const permisosOrdenados = useMemo(
-    () => [...(usuario?.permisos ?? [])].sort((a, b) => a.localeCompare(b)),
-    [usuario],
-  );
 
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -78,6 +77,7 @@ function App() {
       setAccessToken(sesion.accessToken);
       setUsuario(sesion.usuario);
       setVista('sesion');
+      setSeccionAdministrativa('dashboard');
       setPassword('');
       setMostrarCambioClave(sesion.usuario.debeCambiarContrasena);
       setMensaje('Sesión iniciada correctamente.');
@@ -121,6 +121,7 @@ function App() {
       setEmail('');
       setPassword('');
       setMostrarCambioClave(false);
+      setSeccionAdministrativa('dashboard');
       setVista('inicio');
       setProcesando(false);
     }
@@ -151,6 +152,7 @@ function App() {
       setContrasenaNueva('');
       setConfirmacionContrasena('');
       setMostrarCambioClave(false);
+      setSeccionAdministrativa('dashboard');
       setVista('login');
       setMensaje('Contraseña actualizada. Inicia sesión nuevamente con tu nueva contraseña.');
     } catch (err) {
@@ -268,137 +270,36 @@ function App() {
             <EncabezadoAdministrativo
               correoUsuario={usuario.email}
               procesando={procesando}
+              alAbrirPerfil={() => setSeccionAdministrativa('perfil')}
               alCerrarSesion={handleLogout}
             />
           )}
           contenido={(
-            <section className="dashboard-shell">
-              <PaginaDashboard tokenAcceso={accessToken} />
-
-              <div className="dashboard-heading">
-                <div>
-                  <p className="eyebrow">Sesión autenticada</p>
-                  <h1 className="dashboard-title">Hola{usuario.nombre ? `, ${usuario.nombre}` : ''}</h1>
-                  <p>
-                    Esta vista nos permite comprobar visualmente la autenticación, los roles y los permisos
-                    entregados por el backend.
-                  </p>
-                </div>
-                <div className="status-badge">● Sesión activa</div>
-              </div>
-
-              {mensaje && <div className="notice success">{mensaje}</div>}
-              {error && <div className="notice error">{error}</div>}
-
-              {usuario.debeCambiarContrasena && (
-                <div className="notice warning">
-                  Este usuario utiliza una contraseña temporal y debe cambiarla antes de continuar.
-                </div>
+            <>
+              {seccionAdministrativa === 'dashboard' && (
+                <PaginaDashboard tokenAcceso={accessToken} />
               )}
 
-              <div className="dashboard-grid">
-                <article className="panel-card account-panel">
-                  <p className="eyebrow">Identidad</p>
-                  <h2>{usuario.email}</h2>
-                  <dl className="detail-list">
-                    <div>
-                      <dt>ID de usuario</dt>
-                      <dd>{usuario.id}</dd>
-                    </div>
-                    <div>
-                      <dt>Roles</dt>
-                      <dd className="chip-row">
-                        {usuario.roles.map((rol) => <span className="role-chip" key={rol}>{rol}</span>)}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>Cambio de contraseña</dt>
-                      <dd>{usuario.debeCambiarContrasena ? 'Pendiente' : 'Completado'}</dd>
-                    </div>
-                  </dl>
-
-                  <div className="button-stack">
-                    <button className="secondary-button" type="button" onClick={handleRefresh} disabled={procesando}>
-                      Renovar sesión
-                    </button>
-                    <button
-                      className="secondary-button"
-                      type="button"
-                      onClick={() => setMostrarCambioClave((actual) => !actual)}
-                    >
-                      Cambiar contraseña
-                    </button>
-                  </div>
-                </article>
-
-                <article className="panel-card permissions-panel">
-                  <div className="panel-heading">
-                    <div>
-                      <p className="eyebrow">RBAC</p>
-                      <h2>Permisos efectivos</h2>
-                    </div>
-                    <span className="count-badge">{permisosOrdenados.length}</span>
-                  </div>
-                  <div className="permission-list">
-                    {permisosOrdenados.map((permiso) => (
-                      <div className="permission-item" key={permiso}>
-                        <span className="check-dot">✓</span>
-                        <code>{permiso}</code>
-                      </div>
-                    ))}
-                  </div>
-                </article>
-              </div>
-
-              {mostrarCambioClave && (
-                <form className="panel-card password-panel" onSubmit={handleCambioContrasena}>
-                  <div>
-                    <p className="eyebrow">Seguridad</p>
-                    <h2>Cambiar contraseña</h2>
-                    <p>Al cambiarla se revocarán las sesiones activas y deberás iniciar sesión nuevamente.</p>
-                  </div>
-
-                  <div className="password-grid">
-                    <label>
-                      Contraseña actual
-                      <input
-                        type="password"
-                        value={contrasenaActual}
-                        onChange={(event) => setContrasenaActual(event.target.value)}
-                        autoComplete="current-password"
-                        required
-                      />
-                    </label>
-                    <label>
-                      Nueva contraseña
-                      <input
-                        type="password"
-                        value={contrasenaNueva}
-                        onChange={(event) => setContrasenaNueva(event.target.value)}
-                        autoComplete="new-password"
-                        minLength={12}
-                        required
-                      />
-                    </label>
-                    <label>
-                      Confirmar nueva contraseña
-                      <input
-                        type="password"
-                        value={confirmacionContrasena}
-                        onChange={(event) => setConfirmacionContrasena(event.target.value)}
-                        autoComplete="new-password"
-                        minLength={12}
-                        required
-                      />
-                    </label>
-                  </div>
-
-                  <button className="primary-button" type="submit" disabled={procesando}>
-                    {procesando ? 'Actualizando…' : 'Actualizar contraseña'}
-                  </button>
-                </form>
+              {seccionAdministrativa === 'perfil' && (
+                <PaginaPerfilSeguridad
+                  usuario={usuario}
+                  mensaje={mensaje}
+                  error={error}
+                  procesando={procesando}
+                  mostrarCambioClave={mostrarCambioClave}
+                  contrasenaActual={contrasenaActual}
+                  contrasenaNueva={contrasenaNueva}
+                  confirmacionContrasena={confirmacionContrasena}
+                  alVolverDashboard={() => setSeccionAdministrativa('dashboard')}
+                  alRenovarSesion={handleRefresh}
+                  alAlternarCambioClave={() => setMostrarCambioClave((actual) => !actual)}
+                  alCambiarContrasena={handleCambioContrasena}
+                  alCambiarContrasenaActual={setContrasenaActual}
+                  alCambiarContrasenaNueva={setContrasenaNueva}
+                  alCambiarConfirmacionContrasena={setConfirmacionContrasena}
+                />
               )}
-            </section>
+            </>
           )}
         />
       )}
