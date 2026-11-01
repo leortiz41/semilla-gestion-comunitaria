@@ -1,4 +1,4 @@
-import logoSemilla from '../../assets/logo-semilla-app.png';
+import logoSemilla from '../../assets/logo-semilla-sidebar.svg';
 
 interface OpcionNavegacion {
   clave: string;
