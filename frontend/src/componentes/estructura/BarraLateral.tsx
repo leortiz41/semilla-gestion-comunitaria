@@ -1,5 +1,5 @@
 import logoSemilla from '../../assets/logo-semilla-app.png';
-import type { SeccionBarraLateral } from '../../tipos/navegacion';
+import type { SeccionBarraLateral, SubseccionComunidades } from '../../tipos/navegacion';
 
 interface OpcionNavegacion {
   clave: SeccionBarraLateral;
@@ -8,7 +8,9 @@ interface OpcionNavegacion {
 
 interface PropiedadesBarraLateral {
   seccionActiva?: SeccionBarraLateral;
+  subseccionComunidades: SubseccionComunidades;
   alCambiarSeccion: (seccion: SeccionBarraLateral) => void;
+  alCambiarSubseccionComunidades: (subseccion: SubseccionComunidades) => void;
 }
 
 const opcionesNavegacion: OpcionNavegacion[] = [
@@ -22,7 +24,17 @@ const opcionesNavegacion: OpcionNavegacion[] = [
   { clave: 'auditoria', etiqueta: 'Auditoría' },
 ];
 
-function BarraLateral({ seccionActiva, alCambiarSeccion }: PropiedadesBarraLateral) {
+function BarraLateral({
+  seccionActiva,
+  subseccionComunidades,
+  alCambiarSeccion,
+  alCambiarSubseccionComunidades,
+}: PropiedadesBarraLateral) {
+  function abrirComunidades(subseccion: SubseccionComunidades) {
+    alCambiarSeccion('comunidades');
+    alCambiarSubseccionComunidades(subseccion);
+  }
+
   return (
     <div className="barra-lateral">
       <div className="barra-lateral__marca">
@@ -42,17 +54,40 @@ function BarraLateral({ seccionActiva, alCambiarSeccion }: PropiedadesBarraLater
         <ul className="barra-lateral__lista">
           {opcionesNavegacion.map((opcion) => {
             const estaActiva = seccionActiva === opcion.clave;
+            const esComunidades = opcion.clave === 'comunidades';
 
             return (
               <li key={opcion.clave} className="barra-lateral__elemento">
                 <button
                   className={`barra-lateral__opcion${estaActiva ? ' barra-lateral__opcion--activa' : ''}`}
                   type="button"
-                  onClick={() => alCambiarSeccion(opcion.clave)}
+                  onClick={() => {
+                    alCambiarSeccion(opcion.clave);
+                    if (esComunidades) alCambiarSubseccionComunidades('listado');
+                  }}
                   aria-current={estaActiva ? 'page' : undefined}
                 >
                   {opcion.etiqueta}
                 </button>
+
+                {esComunidades && estaActiva && (
+                  <div className="barra-lateral__subnavegacion" aria-label="Opciones de comunidades">
+                    <button
+                      className={`barra-lateral__subopcion${subseccionComunidades === 'listado' ? ' barra-lateral__subopcion--activa' : ''}`}
+                      type="button"
+                      onClick={() => abrirComunidades('listado')}
+                    >
+                      Listado
+                    </button>
+                    <button
+                      className={`barra-lateral__subopcion${subseccionComunidades === 'nueva' ? ' barra-lateral__subopcion--activa' : ''}`}
+                      type="button"
+                      onClick={() => abrirComunidades('nueva')}
+                    >
+                      Nueva comunidad
+                    </button>
+                  </div>
+                )}
               </li>
             );
           })}
