@@ -1,3 +1,5 @@
+import logoSemilla from '../../assets/logo-semilla-app.png';
+
 interface OpcionNavegacion {
   clave: string;
   etiqueta: string;
@@ -18,9 +20,11 @@ function BarraLateral() {
   return (
     <div className="barra-lateral">
       <div className="barra-lateral__marca">
-        <span className="barra-lateral__simbolo" aria-hidden="true">
-          🌱
-        </span>
+        <img
+          className="barra-lateral__simbolo"
+          src={logoSemilla}
+          alt="Logo de Semilla"
+        />
         <div>
           <strong>Semilla</strong>
           <span>Gestión comunitaria</span>
