@@ -319,6 +319,55 @@
   max-width: 220px;
 }
 
+.formulario-comunidad__selecciones {
+  min-width: 0;
+  margin: 0;
+  padding: 16px 0 0;
+  border: 0;
+}
+
+.formulario-comunidad__selecciones legend {
+  margin-bottom: 10px;
+  color: #6d7a6e;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.formulario-comunidad__selecciones-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.formulario-comunidad__seleccion {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 42px;
+  padding: 9px 11px;
+  border: 1px solid rgba(53, 92, 58, 0.09);
+  border-radius: 11px;
+  color: #4f6052;
+  background: rgba(255, 255, 255, 0.72);
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.formulario-comunidad__seleccion:hover {
+  border-color: rgba(53, 92, 58, 0.18);
+  background: rgba(232, 240, 228, 0.58);
+}
+
+.formulario-comunidad__seleccion input {
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  accent-color: #355c3a;
+}
+
 .formulario-comunidad__aviso {
   margin: 2px 0 0;
   color: #7b6b4a;
@@ -331,8 +380,9 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .formulario-comunidad__campos--tres {
-    grid-template-columns: 1fr;
+  .formulario-comunidad__campos--tres,
+  .formulario-comunidad__selecciones-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -353,7 +403,8 @@
 }
 
 @media (max-width: 560px) {
-  .pagina-comunidades__resumen {
+  .pagina-comunidades__resumen,
+  .formulario-comunidad__selecciones-grid {
     grid-template-columns: 1fr;
   }
 
