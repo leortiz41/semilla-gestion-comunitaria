@@ -75,7 +75,6 @@ button:disabled {
 
 .brand-inline,
 .brand-inline > div,
-.brand-mark,
 .actions,
 .chip-row,
 .button-stack,
@@ -109,16 +108,15 @@ button:disabled {
 
 .brand-dot,
 .brand-mark {
-  display: grid;
-  place-items: center;
-  color: #48754e;
-  background: #ecf3e7;
+  display: block;
+  object-fit: contain;
+  object-position: center;
 }
 
 .brand-dot {
-  width: 42px;
-  height: 42px;
-  border-radius: 13px;
+  width: 46px;
+  height: 46px;
+  flex: 0 0 auto;
 }
 
 .hero {
@@ -129,11 +127,8 @@ button:disabled {
 }
 
 .brand-mark {
-  width: 76px;
-  height: 76px;
-  border-radius: 22px;
-  font-size: 2rem;
-  box-shadow: var(--shadow);
+  width: 112px;
+  height: 112px;
 }
 
 .eyebrow {
