@@ -72,13 +72,30 @@
 }
 
 .barra-lateral__opcion {
+  width: 100%;
   display: block;
   padding: 10px 12px;
+  border: 1px solid transparent;
   border-radius: 10px;
   color: #4d5f50;
+  background: #f6f8f4;
+  cursor: pointer;
   font-size: 0.88rem;
   font-weight: 650;
-  background: #f6f8f4;
+  text-align: left;
+}
+
+.barra-lateral__opcion:hover {
+  border-color: rgba(53, 92, 58, 0.12);
+  background: #eef3eb;
+}
+
+.barra-lateral__opcion--activa {
+  color: #294c2e;
+  border-color: rgba(53, 92, 58, 0.13);
+  background: #e8f0e4;
+  box-shadow: inset 3px 0 0 #6d9470;
+  font-weight: 800;
 }
 
 @media (max-width: 980px) {
