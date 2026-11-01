@@ -12,7 +12,7 @@ import PaginaPagos from './modulos/pagos/PaginaPagos';
 import PaginaPerfilSeguridad from './modulos/perfil/PaginaPerfilSeguridad';
 import PaginaProyectos from './modulos/proyectos/PaginaProyectos';
 import PaginaUsuarios from './modulos/usuarios/PaginaUsuarios';
-import type { SeccionAdministrativa } from './tipos/navegacion';
+import type { SeccionAdministrativa, SubseccionComunidades } from './tipos/navegacion';
 import {
   cambiarContrasena,
   cerrarSesion,
@@ -41,6 +41,7 @@ type Vista = 'inicio' | 'login' | 'sesion';
 function App() {
   const [vista, setVista] = useState<Vista>('inicio');
   const [seccionAdministrativa, setSeccionAdministrativa] = useState<SeccionAdministrativa>('dashboard');
+  const [subseccionComunidades, setSubseccionComunidades] = useState<SubseccionComunidades>('listado');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [accessToken, setAccessToken] = useState<string | null>(null);
@@ -63,6 +64,7 @@ function App() {
         setUsuario(sesion.usuario);
         setVista('sesion');
         setSeccionAdministrativa('dashboard');
+        setSubseccionComunidades('listado');
         setMostrarCambioClave(sesion.usuario.debeCambiarContrasena);
       })
       .catch(() => {
@@ -86,6 +88,7 @@ function App() {
       setUsuario(sesion.usuario);
       setVista('sesion');
       setSeccionAdministrativa('dashboard');
+      setSubseccionComunidades('listado');
       setPassword('');
       setMostrarCambioClave(sesion.usuario.debeCambiarContrasena);
       setMensaje('Sesión iniciada correctamente.');
@@ -130,6 +133,7 @@ function App() {
       setPassword('');
       setMostrarCambioClave(false);
       setSeccionAdministrativa('dashboard');
+      setSubseccionComunidades('listado');
       setVista('inicio');
       setProcesando(false);
     }
@@ -161,6 +165,7 @@ function App() {
       setConfirmacionContrasena('');
       setMostrarCambioClave(false);
       setSeccionAdministrativa('dashboard');
+      setSubseccionComunidades('listado');
       setVista('login');
       setMensaje('Contraseña actualizada. Inicia sesión nuevamente con tu nueva contraseña.');
     } catch (err) {
@@ -173,7 +178,12 @@ function App() {
   function renderizarSeccionAdministrativa() {
     switch (seccionAdministrativa) {
       case 'comunidades':
-        return <PaginaComunidades />;
+        return (
+          <PaginaComunidades
+            subseccion={subseccionComunidades}
+            alCambiarSubseccion={setSubseccionComunidades}
+          />
+        );
       case 'familias':
         return <PaginaFamilias />;
       case 'proyectos':
@@ -320,7 +330,9 @@ function App() {
           barraLateral={(
             <BarraLateral
               seccionActiva={seccionAdministrativa === 'perfil' ? undefined : seccionAdministrativa}
+              subseccionComunidades={subseccionComunidades}
               alCambiarSeccion={setSeccionAdministrativa}
+              alCambiarSubseccionComunidades={setSubseccionComunidades}
             />
           )}
           encabezado={(
