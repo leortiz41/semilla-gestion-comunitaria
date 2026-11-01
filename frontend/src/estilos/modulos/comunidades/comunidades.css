@@ -116,7 +116,8 @@
 }
 
 .pagina-comunidades__campo input,
-.pagina-comunidades__campo select {
+.pagina-comunidades__campo select,
+.pagina-comunidades__campo textarea {
   width: 100%;
   min-height: 42px;
   padding: 10px 12px;
@@ -125,68 +126,125 @@
   outline: none;
   color: #334337;
   background: rgba(255, 255, 255, 0.92);
+  resize: vertical;
 }
 
 .pagina-comunidades__campo input:focus,
-.pagina-comunidades__campo select:focus {
+.pagina-comunidades__campo select:focus,
+.pagina-comunidades__campo textarea:focus {
   border-color: #79a47d;
   box-shadow: 0 0 0 4px rgba(72, 117, 78, 0.09);
 }
 
-.pagina-comunidades__registro {
+.formulario-comunidad {
   display: grid;
-  gap: 16px;
-  padding: 20px;
+  gap: 18px;
+  padding: 22px;
   border: 1px solid rgba(230, 138, 31, 0.14);
-  border-radius: 18px;
+  border-radius: 20px;
   background:
     radial-gradient(circle at top right, rgba(230, 138, 31, 0.09), transparent 34%),
-    rgba(255, 255, 255, 0.76);
+    rgba(255, 255, 255, 0.78);
   box-shadow: 0 18px 38px rgba(83, 67, 42, 0.06);
 }
 
-.pagina-comunidades__registro-encabezado {
+.formulario-comunidad__encabezado {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
+  gap: 18px;
 }
 
-.pagina-comunidades__registro h2 {
+.formulario-comunidad__etiqueta {
+  margin: 0 0 5px;
+  color: #a86819;
+  font-size: 0.7rem;
+  font-weight: 850;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.formulario-comunidad__encabezado h2 {
   margin: 0;
   color: #294c2e;
-  font-size: 1.15rem;
+  font-size: 1.35rem;
 }
 
-.pagina-comunidades__registro p {
+.formulario-comunidad__encabezado p,
+.formulario-comunidad__seccion-encabezado p {
   margin: 5px 0 0;
   color: #6d7a6e;
   line-height: 1.55;
 }
 
-.pagina-comunidades__cerrar {
+.formulario-comunidad__cerrar {
   border: 0;
   color: #687568;
   background: transparent;
   cursor: pointer;
-  font-size: 1.1rem;
+  font-size: 1.2rem;
 }
 
-.pagina-comunidades__registro-campos {
+.formulario-comunidad__seccion {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid rgba(53, 92, 58, 0.08);
+  border-radius: 16px;
+  background: rgba(248, 250, 247, 0.76);
+}
+
+.formulario-comunidad__seccion-encabezado {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.formulario-comunidad__numero {
+  min-width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  color: #355c3a;
+  background: #e8f0e4;
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+
+.formulario-comunidad__seccion h3 {
+  margin: 0;
+  color: #334337;
+  font-size: 0.98rem;
+}
+
+.formulario-comunidad__campos {
+  display: grid;
   gap: 14px;
 }
 
-.pagina-comunidades__registro-aviso {
+.formulario-comunidad__campos--dos {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.formulario-comunidad__campos--tres {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.formulario-comunidad__aviso {
   margin: 0;
   color: #7b6b4a;
   font-size: 0.8rem;
+  line-height: 1.5;
 }
 
 @media (max-width: 980px) {
   .pagina-comunidades__resumen {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .formulario-comunidad__campos--tres {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -201,7 +259,7 @@
   }
 
   .pagina-comunidades__herramientas,
-  .pagina-comunidades__registro-campos {
+  .formulario-comunidad__campos--dos {
     grid-template-columns: 1fr;
   }
 }
@@ -209,5 +267,9 @@
 @media (max-width: 560px) {
   .pagina-comunidades__resumen {
     grid-template-columns: 1fr;
+  }
+
+  .formulario-comunidad {
+    padding: 18px;
   }
 }
