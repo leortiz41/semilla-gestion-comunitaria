@@ -1,3 +1,4 @@
+import '../../../estilos/modulos/comunidades/listadoComunidades.css';
 import type { ComunidadVisual } from '../../../tipos/comunidades';
 
 interface PropiedadesListadoComunidades {
