@@ -1,8 +1,14 @@
 import logoSemilla from '../../assets/logo-semilla-app.png';
+import type { SeccionBarraLateral } from '../../tipos/navegacion';
 
 interface OpcionNavegacion {
-  clave: string;
+  clave: SeccionBarraLateral;
   etiqueta: string;
+}
+
+interface PropiedadesBarraLateral {
+  seccionActiva: SeccionBarraLateral;
+  alCambiarSeccion: (seccion: SeccionBarraLateral) => void;
 }
 
 const opcionesNavegacion: OpcionNavegacion[] = [
@@ -16,7 +22,7 @@ const opcionesNavegacion: OpcionNavegacion[] = [
   { clave: 'auditoria', etiqueta: 'Auditoría' },
 ];
 
-function BarraLateral() {
+function BarraLateral({ seccionActiva, alCambiarSeccion }: PropiedadesBarraLateral) {
   return (
     <div className="barra-lateral">
       <div className="barra-lateral__marca">
@@ -34,11 +40,22 @@ function BarraLateral() {
       <nav className="barra-lateral__navegacion" aria-label="Navegación administrativa">
         <p className="barra-lateral__titulo">Módulos</p>
         <ul className="barra-lateral__lista">
-          {opcionesNavegacion.map((opcion) => (
-            <li key={opcion.clave} className="barra-lateral__elemento">
-              <span className="barra-lateral__opcion">{opcion.etiqueta}</span>
-            </li>
-          ))}
+          {opcionesNavegacion.map((opcion) => {
+            const estaActiva = seccionActiva === opcion.clave;
+
+            return (
+              <li key={opcion.clave} className="barra-lateral__elemento">
+                <button
+                  className={`barra-lateral__opcion${estaActiva ? ' barra-lateral__opcion--activa' : ''}`}
+                  type="button"
+                  onClick={() => alCambiarSeccion(opcion.clave)}
+                  aria-current={estaActiva ? 'page' : undefined}
+                >
+                  {opcion.etiqueta}
+                </button>
+              </li>
+            );
+          })}
         </ul>
       </nav>
     </div>
