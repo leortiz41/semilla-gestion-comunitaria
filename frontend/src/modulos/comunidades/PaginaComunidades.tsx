@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import '../../estilos/modulos/paginaModuloBase.css';
 import '../../estilos/modulos/comunidades/comunidades.css';
+import FormularioComunidad from './componentes/FormularioComunidad';
 
 const resumenVisual = [
   {
@@ -105,44 +106,7 @@ function PaginaComunidades() {
       </div>
 
       {mostrarRegistro && (
-        <div className="pagina-comunidades__registro">
-          <div className="pagina-comunidades__registro-encabezado">
-            <div>
-              <h2>Nueva comunidad</h2>
-              <p>
-                Estamos preparando la estructura visual del registro antes de conectarla con la base de datos.
-              </p>
-            </div>
-            <button
-              className="pagina-comunidades__cerrar"
-              type="button"
-              onClick={() => setMostrarRegistro(false)}
-              aria-label="Cerrar registro de comunidad"
-            >
-              ×
-            </button>
-          </div>
-
-          <div className="pagina-comunidades__registro-campos">
-            <div className="pagina-comunidades__campo">
-              <label htmlFor="nombre-comunidad">Nombre de la comunidad</label>
-              <input id="nombre-comunidad" type="text" placeholder="Ej. Agua Azul Rancho" />
-            </div>
-
-            <div className="pagina-comunidades__campo">
-              <label htmlFor="zona-comunidad">Zona</label>
-              <select id="zona-comunidad" defaultValue="">
-                <option value="" disabled>Seleccionar zona</option>
-                <option value="zona-1">Zona 1</option>
-                <option value="zona-2">Zona 2</option>
-              </select>
-            </div>
-          </div>
-
-          <p className="pagina-comunidades__registro-aviso">
-            Este formulario todavía es visual. El guardado se habilitará cuando trabajemos el backend del módulo.
-          </p>
-        </div>
+        <FormularioComunidad alCerrar={() => setMostrarRegistro(false)} />
       )}
     </section>
   );
