@@ -29,6 +29,18 @@ export interface ZonaResumen {
   activo: boolean;
 }
 
+export interface ComunidadResumen {
+  id: string;
+  zonaId: string | null;
+  nombre: string;
+  barrioColonia: string | null;
+  localidad: string | null;
+  municipio: string;
+  departamento: string;
+  activo: boolean;
+  nombreZona: string | null;
+}
+
 interface ApiErrorResponse {
   message?: string;
 }
@@ -116,6 +128,24 @@ export function cambiarEstadoZona(
       Authorization: `Bearer ${accessToken}`,
     },
     body: JSON.stringify({ activo }),
+  });
+}
+
+export function crearComunidad(
+  accessToken: string,
+  datos: {
+    nombre: string;
+    zonaId: string;
+    municipio: string;
+    departamento: string;
+  },
+): Promise<{ comunidad: ComunidadResumen }> {
+  return request<{ comunidad: ComunidadResumen }>('/comunidades', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(datos),
   });
 }
 
