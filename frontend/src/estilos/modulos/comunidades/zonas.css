@@ -70,7 +70,7 @@
 
 .pagina-zonas__fila {
   display: grid;
-  grid-template-columns: minmax(160px, 0.8fr) minmax(260px, 1.6fr) 110px;
+  grid-template-columns: minmax(150px, 0.75fr) minmax(240px, 1.5fr) 100px 120px;
   gap: 14px;
   align-items: center;
   padding: 13px 15px;
@@ -96,6 +96,41 @@
 
 .pagina-zonas__estado--activo {
   color: #35623b;
+}
+
+.pagina-zonas__estado--inactivo {
+  color: #8a6b48;
+}
+
+.pagina-zonas__acciones-fila {
+  display: flex;
+  align-items: center;
+}
+
+.pagina-zonas__boton-estado {
+  min-width: 104px;
+  padding: 8px 11px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.pagina-zonas__boton-estado:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.pagina-zonas__boton-estado--desactivar {
+  border: 1px solid rgba(151, 95, 45, 0.2);
+  color: #80532d;
+  background: rgba(206, 151, 96, 0.09);
+}
+
+.pagina-zonas__boton-estado--reactivar {
+  border: 1px solid rgba(53, 92, 58, 0.18);
+  color: #355c3a;
+  background: rgba(73, 130, 81, 0.09);
 }
 
 .pagina-zonas__vacio {
