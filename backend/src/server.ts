@@ -4,6 +4,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import { checkDatabaseConnection } from './config/database.js';
 import { authRouter } from './routes/auth.routes.js';
+import { comunidadesRouter } from './routes/comunidades.routes.js';
 import { dashboardRouter } from './routes/dashboard.routes.js';
 
 const app = express();
@@ -19,6 +20,7 @@ app.use(cors({
 app.use(express.json({ limit: '1mb' }));
 
 app.use('/api/auth', authRouter);
+app.use('/api/comunidades', comunidadesRouter);
 app.use('/api/dashboard', dashboardRouter);
 
 app.get('/api/health', async (_req, res) => {
@@ -44,6 +46,7 @@ app.get('/', (_req, res) => {
     slogan: 'Recursos que generan desarrollo',
     health: '/api/health',
     auth: '/api/auth',
+    comunidades: '/api/comunidades',
     dashboard: '/api/dashboard',
   });
 });
