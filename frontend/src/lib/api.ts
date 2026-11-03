@@ -105,6 +105,20 @@ export function crearZona(
   });
 }
 
+export function cambiarEstadoZona(
+  accessToken: string,
+  zonaId: string,
+  activo: boolean,
+): Promise<{ zona: ZonaResumen }> {
+  return request<{ zona: ZonaResumen }>(`/zonas/${zonaId}/estado`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ activo }),
+  });
+}
+
 export function cambiarContrasena(
   accessToken: string,
   contrasenaActual: string,
