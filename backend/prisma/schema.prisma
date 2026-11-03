@@ -21,6 +21,7 @@ model organizaciones {
   creado_en         DateTime   @default(now()) @db.Timestamptz(6)
   actualizado_en    DateTime   @default(now()) @db.Timestamptz(6)
   usuarios          usuarios[]
+  zonas             zonas[]
 }
 
 model roles {
@@ -372,7 +373,7 @@ model proveedores {
   propietario      String?            @db.VarChar(150)
   direccion        String?
   telefono         String?            @db.VarChar(30)
-  email            String?            @db.VarChar(150)
+  email             String?            @db.VarChar(150)
   cuenta_bancaria  String?            @db.VarChar(50)
   observaciones    String?
   activo           Boolean            @default(true)
@@ -519,11 +520,16 @@ model usuarios_roles {
 
 model zonas {
   id                 String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  nombre             String               @unique @db.VarChar(100)
+  organizacion_id    String               @db.Uuid
+  nombre             String               @db.VarChar(100)
   descripcion        String?
   activo             Boolean              @default(true)
   creado_en          DateTime             @default(now()) @db.Timestamptz(6)
   actualizado_en     DateTime             @default(now()) @db.Timestamptz(6)
   comunidades        comunidades[]
   equipos_misioneros equipos_misioneros[]
+  organizaciones     organizaciones        @relation(fields: [organizacion_id], references: [id], onDelete: Restrict)
+
+  @@unique([id, organizacion_id], map: "uq_zonas_id_organizacion")
+  @@index([organizacion_id], map: "idx_zonas_organizacion_id")
 }
