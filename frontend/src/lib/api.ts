@@ -118,6 +118,20 @@ export function crearZona(
   });
 }
 
+export function editarZona(
+  accessToken: string,
+  zonaId: string,
+  datos: { nombre: string; descripcion?: string | null },
+): Promise<{ zona: ZonaResumen }> {
+  return request<{ zona: ZonaResumen }>(`/zonas/${zonaId}`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(datos),
+  });
+}
+
 export function cambiarEstadoZona(
   accessToken: string,
   zonaId: string,
