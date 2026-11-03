@@ -9,17 +9,18 @@ datasource db {
 }
 
 model organizaciones {
-  id                String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  nombre            String     @db.VarChar(180)
-  slug              String     @unique @db.VarChar(120)
-  nombre_legal      String?    @db.VarChar(220)
-  email_contacto    String?    @db.VarChar(150)
-  telefono_contacto String?    @db.VarChar(40)
-  pais              String     @default("Honduras") @db.VarChar(100)
-  moneda            String     @default("HNL") @db.VarChar(10)
-  activo            Boolean    @default(true)
-  creado_en         DateTime   @default(now()) @db.Timestamptz(6)
-  actualizado_en    DateTime   @default(now()) @db.Timestamptz(6)
+  id                String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre            String       @db.VarChar(180)
+  slug              String       @unique @db.VarChar(120)
+  nombre_legal      String?      @db.VarChar(220)
+  email_contacto    String?      @db.VarChar(150)
+  telefono_contacto String?      @db.VarChar(40)
+  pais              String       @default("Honduras") @db.VarChar(100)
+  moneda            String       @default("HNL") @db.VarChar(10)
+  activo            Boolean      @default(true)
+  creado_en         DateTime     @default(now()) @db.Timestamptz(6)
+  actualizado_en    DateTime     @default(now()) @db.Timestamptz(6)
+  comunidades       comunidades[]
   usuarios          usuarios[]
   zonas             zonas[]
 }
@@ -110,21 +111,23 @@ model claves_idempotencia {
 }
 
 model comunidades {
-  id             String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  zona_id        String?     @db.Uuid
-  nombre         String      @db.VarChar(150)
-  barrio_colonia String?     @db.VarChar(150)
-  localidad      String?     @db.VarChar(150)
-  municipio      String      @db.VarChar(120)
-  departamento   String      @db.VarChar(120)
-  activo         Boolean     @default(true)
-  creado_en      DateTime    @default(now()) @db.Timestamptz(6)
-  actualizado_en DateTime    @default(now()) @db.Timestamptz(6)
-  zonas          zonas?      @relation(fields: [zona_id], references: [id])
-  familias       familias[]
-  proyectos      proyectos[]
+  id               String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizacion_id  String          @db.Uuid
+  zona_id          String?         @db.Uuid
+  nombre           String          @db.VarChar(150)
+  barrio_colonia   String?         @db.VarChar(150)
+  localidad        String?         @db.VarChar(150)
+  municipio        String          @db.VarChar(120)
+  departamento     String          @db.VarChar(120)
+  activo           Boolean         @default(true)
+  creado_en        DateTime        @default(now()) @db.Timestamptz(6)
+  actualizado_en   DateTime        @default(now()) @db.Timestamptz(6)
+  organizaciones   organizaciones  @relation(fields: [organizacion_id], references: [id], onDelete: Restrict)
+  zonas            zonas?          @relation(fields: [zona_id, organizacion_id], references: [id, organizacion_id], onDelete: Restrict)
+  familias         familias[]
+  proyectos        proyectos[]
 
-  @@unique([nombre, municipio, departamento])
+  @@index([organizacion_id], map: "idx_comunidades_organizacion_id")
   @@index([zona_id], map: "idx_comunidades_zona_id")
 }
 
@@ -373,7 +376,7 @@ model proveedores {
   propietario      String?            @db.VarChar(150)
   direccion        String?
   telefono         String?            @db.VarChar(30)
-  email             String?            @db.VarChar(150)
+  email            String?            @db.VarChar(150)
   cuenta_bancaria  String?            @db.VarChar(50)
   observaciones    String?
   activo           Boolean            @default(true)
