@@ -86,6 +86,13 @@ function BarraLateral({
                     >
                       Nueva comunidad
                     </button>
+                    <button
+                      className={`barra-lateral__subopcion${subseccionComunidades === 'zonas' ? ' barra-lateral__subopcion--activa' : ''}`}
+                      type="button"
+                      onClick={() => abrirComunidades('zonas')}
+                    >
+                      Zonas
+                    </button>
                   </div>
                 )}
               </li>
