@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import {
   cambiarEstadoZona,
   crearZona,
+  editarZona,
   listarZonas,
   type ZonaResumen,
 } from '../../lib/api';
@@ -11,6 +12,13 @@ interface PropiedadesPaginaZonas {
   tokenAcceso: string;
 }
 
+function ordenarZonas(zonas: ZonaResumen[]) {
+  return [...zonas].sort((a, b) => {
+    if (a.activo !== b.activo) return a.activo ? -1 : 1;
+    return a.nombre.localeCompare(b.nombre, 'es');
+  });
+}
+
 function PaginaZonas({ tokenAcceso }: PropiedadesPaginaZonas) {
   const [zonas, setZonas] = useState<ZonaResumen[]>([]);
   const [nombre, setNombre] = useState('');
@@ -18,6 +26,9 @@ function PaginaZonas({ tokenAcceso }: PropiedadesPaginaZonas) {
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [zonaProcesandoId, setZonaProcesandoId] = useState<string | null>(null);
+  const [zonaEditandoId, setZonaEditandoId] = useState<string | null>(null);
+  const [nombreEdicion, setNombreEdicion] = useState('');
+  const [descripcionEdicion, setDescripcionEdicion] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [mensaje, setMensaje] = useState<string | null>(null);
 
@@ -64,9 +75,7 @@ function PaginaZonas({ tokenAcceso }: PropiedadesPaginaZonas) {
         descripcion: descripcion.trim() || null,
       });
 
-      setZonas((actuales) =>
-        [...actuales, respuesta.zona].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')),
-      );
+      setZonas((actuales) => ordenarZonas([...actuales, respuesta.zona]));
       setNombre('');
       setDescripcion('');
       setMensaje('Zona registrada correctamente.');
@@ -74,6 +83,51 @@ function PaginaZonas({ tokenAcceso }: PropiedadesPaginaZonas) {
       setError(err instanceof Error ? err.message : 'No fue posible registrar la zona.');
     } finally {
       setGuardando(false);
+    }
+  }
+
+  function iniciarEdicion(zona: ZonaResumen) {
+    setError(null);
+    setMensaje(null);
+    setZonaEditandoId(zona.id);
+    setNombreEdicion(zona.nombre);
+    setDescripcionEdicion(zona.descripcion || '');
+  }
+
+  function cancelarEdicion() {
+    setZonaEditandoId(null);
+    setNombreEdicion('');
+    setDescripcionEdicion('');
+  }
+
+  async function handleGuardarEdicion(zona: ZonaResumen) {
+    const nombreLimpio = nombreEdicion.trim();
+    if (!nombreLimpio) {
+      setError('El nombre de la zona es obligatorio.');
+      return;
+    }
+
+    setError(null);
+    setMensaje(null);
+    setZonaProcesandoId(zona.id);
+
+    try {
+      const respuesta = await editarZona(tokenAcceso, zona.id, {
+        nombre: nombreLimpio,
+        descripcion: descripcionEdicion.trim() || null,
+      });
+
+      setZonas((actuales) =>
+        ordenarZonas(
+          actuales.map((actual) => (actual.id === respuesta.zona.id ? respuesta.zona : actual)),
+        ),
+      );
+      cancelarEdicion();
+      setMensaje('Zona actualizada correctamente.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No fue posible actualizar la zona.');
+    } finally {
+      setZonaProcesandoId(null);
     }
   }
 
@@ -85,12 +139,9 @@ function PaginaZonas({ tokenAcceso }: PropiedadesPaginaZonas) {
     try {
       const respuesta = await cambiarEstadoZona(tokenAcceso, zona.id, !zona.activo);
       setZonas((actuales) =>
-        actuales
-          .map((actual) => (actual.id === respuesta.zona.id ? respuesta.zona : actual))
-          .sort((a, b) => {
-            if (a.activo !== b.activo) return a.activo ? -1 : 1;
-            return a.nombre.localeCompare(b.nombre, 'es');
-          }),
+        ordenarZonas(
+          actuales.map((actual) => (actual.id === respuesta.zona.id ? respuesta.zona : actual)),
+        ),
       );
       setMensaje(
         respuesta.zona.activo
@@ -184,40 +235,103 @@ function PaginaZonas({ tokenAcceso }: PropiedadesPaginaZonas) {
               <span role="columnheader">Acciones</span>
             </div>
 
-            {zonas.map((zona) => (
-              <div className="pagina-zonas__fila" role="row" key={zona.id}>
-                <strong role="cell">{zona.nombre}</strong>
-                <span role="cell">{zona.descripcion || 'Sin descripción'}</span>
-                <span
-                  role="cell"
-                  className={
-                    zona.activo
-                      ? 'pagina-zonas__estado pagina-zonas__estado--activo'
-                      : 'pagina-zonas__estado pagina-zonas__estado--inactivo'
-                  }
-                >
-                  {zona.activo ? 'Activa' : 'Inactiva'}
-                </span>
-                <div role="cell" className="pagina-zonas__acciones-fila">
-                  <button
+            {zonas.map((zona) => {
+              const editando = zonaEditandoId === zona.id;
+              const procesando = zonaProcesandoId === zona.id;
+
+              return (
+                <div className="pagina-zonas__fila" role="row" key={zona.id}>
+                  <div role="cell">
+                    {editando ? (
+                      <input
+                        className="pagina-zonas__input-edicion"
+                        type="text"
+                        value={nombreEdicion}
+                        onChange={(event) => setNombreEdicion(event.target.value)}
+                        maxLength={100}
+                      />
+                    ) : (
+                      <strong>{zona.nombre}</strong>
+                    )}
+                  </div>
+
+                  <div role="cell">
+                    {editando ? (
+                      <input
+                        className="pagina-zonas__input-edicion"
+                        type="text"
+                        value={descripcionEdicion}
+                        onChange={(event) => setDescripcionEdicion(event.target.value)}
+                        placeholder="Sin descripción"
+                      />
+                    ) : (
+                      <span>{zona.descripcion || 'Sin descripción'}</span>
+                    )}
+                  </div>
+
+                  <span
+                    role="cell"
                     className={
                       zona.activo
-                        ? 'pagina-zonas__boton-estado pagina-zonas__boton-estado--desactivar'
-                        : 'pagina-zonas__boton-estado pagina-zonas__boton-estado--reactivar'
+                        ? 'pagina-zonas__estado pagina-zonas__estado--activo'
+                        : 'pagina-zonas__estado pagina-zonas__estado--inactivo'
                     }
-                    type="button"
-                    disabled={zonaProcesandoId === zona.id}
-                    onClick={() => handleCambiarEstado(zona)}
                   >
-                    {zonaProcesandoId === zona.id
-                      ? 'Procesando…'
-                      : zona.activo
-                        ? 'Desactivar'
-                        : 'Reactivar'}
-                  </button>
+                    {zona.activo ? 'Activa' : 'Inactiva'}
+                  </span>
+
+                  <div role="cell" className="pagina-zonas__acciones-fila">
+                    {editando ? (
+                      <>
+                        <button
+                          className="pagina-zonas__boton-editar pagina-zonas__boton-editar--guardar"
+                          type="button"
+                          disabled={procesando}
+                          onClick={() => void handleGuardarEdicion(zona)}
+                        >
+                          {procesando ? 'Guardando…' : 'Guardar'}
+                        </button>
+                        <button
+                          className="pagina-zonas__boton-editar"
+                          type="button"
+                          disabled={procesando}
+                          onClick={cancelarEdicion}
+                        >
+                          Cancelar
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          className="pagina-zonas__boton-editar"
+                          type="button"
+                          disabled={procesando || zonaEditandoId !== null}
+                          onClick={() => iniciarEdicion(zona)}
+                        >
+                          Editar
+                        </button>
+                        <button
+                          className={
+                            zona.activo
+                              ? 'pagina-zonas__boton-estado pagina-zonas__boton-estado--desactivar'
+                              : 'pagina-zonas__boton-estado pagina-zonas__boton-estado--reactivar'
+                          }
+                          type="button"
+                          disabled={procesando || zonaEditandoId !== null}
+                          onClick={() => void handleCambiarEstado(zona)}
+                        >
+                          {procesando
+                            ? 'Procesando…'
+                            : zona.activo
+                              ? 'Desactivar'
+                              : 'Reactivar'}
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>
