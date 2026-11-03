@@ -119,6 +119,11 @@
   background: #f4e9e7;
 }
 
+.listado-comunidades__estado--zona-inactiva {
+  color: #8b6a34;
+  background: #f7efdf;
+}
+
 .listado-comunidades__vacio {
   display: grid;
   gap: 5px;
