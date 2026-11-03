@@ -26,6 +26,12 @@ function normalizarTexto(texto: string) {
     .trim();
 }
 
+function obtenerEstadoEfectivo(comunidad: ComunidadResumen) {
+  if (!comunidad.activo) return 'inactiva';
+  if (comunidad.zonaActiva === false) return 'zona-inactiva';
+  return 'activa';
+}
+
 function PaginaComunidades({ subseccion, tokenAcceso, alCambiarSubseccion }: PropiedadesPaginaComunidades) {
   const [comunidades, setComunidades] = useState<ComunidadResumen[]>([]);
   const [zonas, setZonas] = useState<ZonaResumen[]>([]);
@@ -65,17 +71,15 @@ function PaginaComunidades({ subseccion, tokenAcceso, alCambiarSubseccion }: Pro
       comunidades.filter((comunidad) => {
         const coincideBusqueda = normalizarTexto(comunidad.nombre).includes(normalizarTexto(busqueda));
         const coincideZona = zona === 'todas' || comunidad.zonaId === zona;
-        const coincideEstado =
-          estado === 'todos' ||
-          (estado === 'activa' && comunidad.activo) ||
-          (estado === 'inactiva' && !comunidad.activo);
+        const estadoEfectivo = obtenerEstadoEfectivo(comunidad);
+        const coincideEstado = estado === 'todos' || estadoEfectivo === estado;
 
         return coincideBusqueda && coincideZona && coincideEstado;
       }),
     [comunidades, busqueda, zona, estado],
   );
 
-  const totalActivas = comunidades.filter((comunidad) => comunidad.activo).length;
+  const totalActivas = comunidades.filter((comunidad) => obtenerEstadoEfectivo(comunidad) === 'activa').length;
   const totalZonasActivas = zonas.filter((zonaRegistrada) => zonaRegistrada.activo).length;
 
   const resumenVisual = [
@@ -87,7 +91,7 @@ function PaginaComunidades({ subseccion, tokenAcceso, alCambiarSubseccion }: Pro
     {
       etiqueta: 'Activas',
       valor: String(totalActivas),
-      detalle: 'Comunidades actualmente consideradas activas.',
+      detalle: 'Comunidades activas y ubicadas en zonas habilitadas.',
     },
     {
       etiqueta: 'Zonas',
@@ -219,6 +223,7 @@ function PaginaComunidades({ subseccion, tokenAcceso, alCambiarSubseccion }: Pro
             <option value="todos">Todos</option>
             <option value="activa">Activas</option>
             <option value="inactiva">Inactivas</option>
+            <option value="zona-inactiva">Zona inactiva</option>
           </select>
         </div>
       </div>
