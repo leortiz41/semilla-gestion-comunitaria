@@ -1,5 +1,10 @@
 import { FormEvent, useEffect, useState } from 'react';
-import { crearZona, listarZonas, type ZonaResumen } from '../../lib/api';
+import {
+  cambiarEstadoZona,
+  crearZona,
+  listarZonas,
+  type ZonaResumen,
+} from '../../lib/api';
 import '../../estilos/modulos/comunidades/zonas.css';
 
 interface PropiedadesPaginaZonas {
@@ -12,6 +17,7 @@ function PaginaZonas({ tokenAcceso }: PropiedadesPaginaZonas) {
   const [descripcion, setDescripcion] = useState('');
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
+  const [zonaProcesandoId, setZonaProcesandoId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [mensaje, setMensaje] = useState<string | null>(null);
 
@@ -68,6 +74,33 @@ function PaginaZonas({ tokenAcceso }: PropiedadesPaginaZonas) {
       setError(err instanceof Error ? err.message : 'No fue posible registrar la zona.');
     } finally {
       setGuardando(false);
+    }
+  }
+
+  async function handleCambiarEstado(zona: ZonaResumen) {
+    setError(null);
+    setMensaje(null);
+    setZonaProcesandoId(zona.id);
+
+    try {
+      const respuesta = await cambiarEstadoZona(tokenAcceso, zona.id, !zona.activo);
+      setZonas((actuales) =>
+        actuales
+          .map((actual) => (actual.id === respuesta.zona.id ? respuesta.zona : actual))
+          .sort((a, b) => {
+            if (a.activo !== b.activo) return a.activo ? -1 : 1;
+            return a.nombre.localeCompare(b.nombre, 'es');
+          }),
+      );
+      setMensaje(
+        respuesta.zona.activo
+          ? 'Zona reactivada correctamente.'
+          : 'Zona desactivada correctamente.',
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No fue posible cambiar el estado de la zona.');
+    } finally {
+      setZonaProcesandoId(null);
     }
   }
 
@@ -148,15 +181,41 @@ function PaginaZonas({ tokenAcceso }: PropiedadesPaginaZonas) {
               <span role="columnheader">Zona</span>
               <span role="columnheader">Descripción</span>
               <span role="columnheader">Estado</span>
+              <span role="columnheader">Acciones</span>
             </div>
 
             {zonas.map((zona) => (
               <div className="pagina-zonas__fila" role="row" key={zona.id}>
                 <strong role="cell">{zona.nombre}</strong>
                 <span role="cell">{zona.descripcion || 'Sin descripción'}</span>
-                <span role="cell" className={zona.activo ? 'pagina-zonas__estado pagina-zonas__estado--activo' : 'pagina-zonas__estado'}>
+                <span
+                  role="cell"
+                  className={
+                    zona.activo
+                      ? 'pagina-zonas__estado pagina-zonas__estado--activo'
+                      : 'pagina-zonas__estado pagina-zonas__estado--inactivo'
+                  }
+                >
                   {zona.activo ? 'Activa' : 'Inactiva'}
                 </span>
+                <div role="cell" className="pagina-zonas__acciones-fila">
+                  <button
+                    className={
+                      zona.activo
+                        ? 'pagina-zonas__boton-estado pagina-zonas__boton-estado--desactivar'
+                        : 'pagina-zonas__boton-estado pagina-zonas__boton-estado--reactivar'
+                    }
+                    type="button"
+                    disabled={zonaProcesandoId === zona.id}
+                    onClick={() => handleCambiarEstado(zona)}
+                  >
+                    {zonaProcesandoId === zona.id
+                      ? 'Procesando…'
+                      : zona.activo
+                        ? 'Desactivar'
+                        : 'Reactivar'}
+                  </button>
+                </div>
               </div>
             ))}
           </div>
