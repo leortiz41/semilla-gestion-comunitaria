@@ -62,6 +62,7 @@ La segunda fase comienza por las entidades territoriales porque Comunidades ser�
 8. Se agregaron índices por `organizacion_id` para las consultas territoriales.
 9. El resumen del Dashboard ahora filtra las comunidades mediante `req.auth.organizacionId`.
 10. Se documentó la clasificación entre tablas globales, directamente organizacionales y aisladas por relación en `docs/arquitectura/multi-organizacion.md`.
+11. Se agregó una validación SQL no destructiva en `database/sql/validaciones/001_validar_aislamiento_territorial.sql`.
 
 ### Ejemplo de aislamiento
 
@@ -87,6 +88,17 @@ Comunidad.organizacion_id = Zona.organizacion_id
 
 Esto reduce el riesgo de contaminación de información entre ONG por un error de programación posterior.
 
+## Prueba de aislamiento territorial
+
+El archivo `database/sql/validaciones/001_validar_aislamiento_territorial.sql` crea temporalmente una segunda organización, una zona por organización y verifica dos casos:
+
+1. **Permitido:** una comunidad de la ONG de prueba usa una zona de la misma ONG.
+2. **Prohibido:** una comunidad de la ONG de prueba intenta usar una zona de Ministerio Sal y Luz.
+
+El segundo caso debe producir una violación de clave foránea y se captura como resultado esperado.
+
+La prueba finaliza con `ROLLBACK`, por lo que no deja la organización, zonas ni comunidades temporales almacenadas.
+
 ## Clasificación arquitectónica
 
 Se definió como regla que los módulos nuevos —Donantes, Donaciones, Asignaciones, Territorio, Evidencias y portales externos— deben construirse desde el inicio bajo contexto multi-organización.
@@ -108,6 +120,8 @@ Los catálogos técnicos como `permisos` y `parentescos` pueden mantenerse globa
 - `2fd0fc3` - `backend: filtrar dashboard por organizacion`
 - `e0b41c3` - `backend: usar organizacion autenticada en dashboard`
 - `36d5c07` - `docs: definir alcance multi-organizacion por tabla`
+- `092921b` - `docs: registrar fase 2 de aislamiento territorial`
+- `b6bd23c` - `test: agregar validacion de aislamiento territorial`
 
 ## Pendiente del issue #19
 
@@ -116,7 +130,7 @@ El issue permanece abierto. Todavía falta:
 - alinear completamente `schema.prisma` con las nuevas columnas y relaciones;
 - aplicar aislamiento a personas, proveedores, equipos misioneros, proyectos y auditoría;
 - revisar las entidades dependientes;
-- crear una segunda organización de prueba;
-- probar explícitamente intentos de acceso cruzado;
+- crear una segunda organización de prueba para pruebas de API;
+- probar explícitamente intentos de acceso cruzado desde endpoints;
 - validar los scripts en Neon y el backend desplegado;
 - actualizar las bitácoras académicas al cerrar el bloque.
