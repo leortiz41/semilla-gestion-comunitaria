@@ -1,0 +1,169 @@
+import { FormEvent, useEffect, useState } from 'react';
+import { crearZona, listarZonas, type ZonaResumen } from '../../lib/api';
+import '../../estilos/modulos/comunidades/zonas.css';
+
+interface PropiedadesPaginaZonas {
+  tokenAcceso: string;
+}
+
+function PaginaZonas({ tokenAcceso }: PropiedadesPaginaZonas) {
+  const [zonas, setZonas] = useState<ZonaResumen[]>([]);
+  const [nombre, setNombre] = useState('');
+  const [descripcion, setDescripcion] = useState('');
+  const [cargando, setCargando] = useState(true);
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [mensaje, setMensaje] = useState<string | null>(null);
+
+  useEffect(() => {
+    let activo = true;
+
+    setCargando(true);
+    setError(null);
+
+    listarZonas(tokenAcceso)
+      .then((respuesta) => {
+        if (!activo) return;
+        setZonas(respuesta.zonas);
+      })
+      .catch((err) => {
+        if (!activo) return;
+        setError(err instanceof Error ? err.message : 'No fue posible cargar las zonas.');
+      })
+      .finally(() => {
+        if (activo) setCargando(false);
+      });
+
+    return () => {
+      activo = false;
+    };
+  }, [tokenAcceso]);
+
+  async function handleCrearZona(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    setMensaje(null);
+
+    const nombreLimpio = nombre.trim();
+    if (!nombreLimpio) {
+      setError('El nombre de la zona es obligatorio.');
+      return;
+    }
+
+    setGuardando(true);
+
+    try {
+      const respuesta = await crearZona(tokenAcceso, {
+        nombre: nombreLimpio,
+        descripcion: descripcion.trim() || null,
+      });
+
+      setZonas((actuales) =>
+        [...actuales, respuesta.zona].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')),
+      );
+      setNombre('');
+      setDescripcion('');
+      setMensaje('Zona registrada correctamente.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No fue posible registrar la zona.');
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  return (
+    <section className="pagina-zonas" aria-labelledby="titulo-zonas">
+      <div className="pagina-comunidades__superior">
+        <div className="pagina-modulo__encabezado">
+          <p className="pagina-modulo__etiqueta">Comunidades / Configuración territorial</p>
+          <h1 id="titulo-zonas" className="pagina-modulo__titulo">Zonas</h1>
+          <p className="pagina-modulo__descripcion">
+            Administra las agrupaciones territoriales que se utilizarán para organizar las comunidades de la organización activa.
+          </p>
+        </div>
+      </div>
+
+      <form className="pagina-zonas__formulario" onSubmit={handleCrearZona}>
+        <div className="pagina-zonas__formulario-encabezado">
+          <div>
+            <p className="formulario-comunidad__etiqueta">Nueva zona</p>
+            <h2>Registrar zona territorial</h2>
+            <p>El nombre será visible posteriormente al registrar y filtrar comunidades.</p>
+          </div>
+        </div>
+
+        {mensaje && <div className="pagina-zonas__aviso pagina-zonas__aviso--exito">{mensaje}</div>}
+        {error && <div className="pagina-zonas__aviso pagina-zonas__aviso--error">{error}</div>}
+
+        <div className="pagina-zonas__campos">
+          <div className="pagina-comunidades__campo">
+            <label htmlFor="nombre-zona">Nombre de la zona</label>
+            <input
+              id="nombre-zona"
+              type="text"
+              value={nombre}
+              onChange={(event) => setNombre(event.target.value)}
+              placeholder="Ej. Zona Norte"
+              maxLength={100}
+              required
+            />
+          </div>
+
+          <div className="pagina-comunidades__campo">
+            <label htmlFor="descripcion-zona">Descripción</label>
+            <input
+              id="descripcion-zona"
+              type="text"
+              value={descripcion}
+              onChange={(event) => setDescripcion(event.target.value)}
+              placeholder="Descripción opcional de la cobertura territorial"
+            />
+          </div>
+
+          <button className="pagina-comunidades__boton-nuevo" type="submit" disabled={guardando}>
+            {guardando ? 'Guardando…' : '+ Crear zona'}
+          </button>
+        </div>
+      </form>
+
+      <section className="pagina-zonas__listado" aria-labelledby="titulo-zonas-registradas">
+        <div className="pagina-zonas__listado-encabezado">
+          <div>
+            <p className="listado-comunidades__etiqueta">Organización territorial</p>
+            <h2 id="titulo-zonas-registradas">Zonas registradas</h2>
+          </div>
+          <span>{zonas.length} {zonas.length === 1 ? 'zona' : 'zonas'}</span>
+        </div>
+
+        {cargando ? (
+          <div className="pagina-zonas__vacio">Cargando zonas…</div>
+        ) : zonas.length === 0 ? (
+          <div className="pagina-zonas__vacio">
+            <strong>Aún no hay zonas registradas.</strong>
+            <span>Crea la primera zona para comenzar a organizar las comunidades.</span>
+          </div>
+        ) : (
+          <div className="pagina-zonas__tabla" role="table" aria-label="Listado de zonas">
+            <div className="pagina-zonas__fila pagina-zonas__fila--encabezado" role="row">
+              <span role="columnheader">Zona</span>
+              <span role="columnheader">Descripción</span>
+              <span role="columnheader">Estado</span>
+            </div>
+
+            {zonas.map((zona) => (
+              <div className="pagina-zonas__fila" role="row" key={zona.id}>
+                <strong role="cell">{zona.nombre}</strong>
+                <span role="cell">{zona.descripcion || 'Sin descripción'}</span>
+                <span role="cell" className={zona.activo ? 'pagina-zonas__estado pagina-zonas__estado--activo' : 'pagina-zonas__estado'}>
+                  {zona.activo ? 'Activa' : 'Inactiva'}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+    </section>
+  );
+}
+
+export default PaginaZonas;
