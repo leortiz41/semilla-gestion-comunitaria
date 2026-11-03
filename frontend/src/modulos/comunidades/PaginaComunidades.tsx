@@ -60,10 +60,6 @@ function PaginaComunidades({ subseccion, tokenAcceso, alCambiarSubseccion }: Pro
     }
   }, [subseccion, cargarDatos]);
 
-  if (subseccion === 'zonas') {
-    return <PaginaZonas tokenAcceso={tokenAcceso} />;
-  }
-
   const comunidadesFiltradas = useMemo(
     () =>
       comunidades.filter((comunidad) => {
@@ -104,6 +100,10 @@ function PaginaComunidades({ subseccion, tokenAcceso, alCambiarSubseccion }: Pro
       detalle: 'Se conectará con el módulo de Familias en una fase posterior.',
     },
   ];
+
+  if (subseccion === 'zonas') {
+    return <PaginaZonas tokenAcceso={tokenAcceso} />;
+  }
 
   if (subseccion === 'nueva') {
     return (
