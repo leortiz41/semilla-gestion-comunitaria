@@ -58,11 +58,34 @@ semilla-gestion-comunitaria/
 ├── database/
 ├── docs/
 │   ├── vision.md
+│   ├── mapa-historias.md
+│   ├── plan.md
+│   ├── seguridad-autenticacion.md
 │   └── bitacora/
-│       └── semana-1.md
+│       ├── semana-1.md
+│       └── semana-2.md
 ├── .gitignore
 └── README.md
 ```
+
+## Documentación académica
+
+### Base del proyecto
+
+- [Visión del proyecto](docs/vision.md)
+- [Seguridad y autenticación](docs/seguridad-autenticacion.md)
+
+### Semana 1
+
+- [Bitácora - Semana 1](docs/bitacora/semana-1.md)
+- Release: `semana-1`
+
+### Semana 2 - Del cliente al backlog
+
+- [Mapa de historias de usuario](docs/mapa-historias.md)
+- [Plan de trabajo y backlog priorizado](docs/plan.md)
+- [Bitácora - Semana 2](docs/bitacora/semana-2.md)
+- Release requerido: `semana-2`
 
 ## Flujo de ramas
 
@@ -70,9 +93,21 @@ semilla-gestion-comunitaria/
 - `develop`: integración y desarrollo.
 - `feature/*`: nuevas funcionalidades.
 
+## Estado funcional actual
+
+La aplicación ya cuenta con una base de autenticación y autorización, estructura administrativa, Dashboard con indicadores conectados a PostgreSQL/Neon y una primera capa de experiencia de usuario para el módulo de Comunidades.
+
+El expediente completo de Comunidades todavía requiere completar su persistencia de punta a punta en el backend y la base de datos.
+
 ## Enfoque offline-first
 
 Semilla está diseñada para apoyar trabajo en comunidades rurales con conectividad limitada. La aplicación podrá almacenar temporalmente información de campo en el dispositivo y sincronizarla con el servidor cuando vuelva a existir conexión.
+
+## Despliegues
+
+- Frontend: `https://semilla-gestion-comunitaria.vercel.app`
+- Backend: `https://semilla-api.onrender.com`
+- Health check: `https://semilla-api.onrender.com/api/health`
 
 ## Proyecto académico
 
