@@ -1,3 +1,6 @@
+import { useEffect, useState } from 'react';
+import { listarZonas, type ZonaResumen } from '../../../lib/api';
+
 const categoriasVisionDesarrollo = [
   'Evangelismo',
   'Educación formal',
@@ -31,10 +34,37 @@ const tiposActividadProductiva = [
 ];
 
 interface PropiedadesFormularioComunidad {
+  tokenAcceso: string;
   alCerrar: () => void;
 }
 
-function FormularioComunidad({ alCerrar }: PropiedadesFormularioComunidad) {
+function FormularioComunidad({ tokenAcceso, alCerrar }: PropiedadesFormularioComunidad) {
+  const [zonas, setZonas] = useState<ZonaResumen[]>([]);
+  const [cargandoZonas, setCargandoZonas] = useState(true);
+  const [errorZonas, setErrorZonas] = useState<string | null>(null);
+
+  useEffect(() => {
+    let activo = true;
+
+    listarZonas(tokenAcceso)
+      .then(({ zonas: zonasRegistradas }) => {
+        if (!activo) return;
+        setZonas(zonasRegistradas.filter((zona) => zona.activo));
+        setErrorZonas(null);
+      })
+      .catch((error) => {
+        if (!activo) return;
+        setErrorZonas(error instanceof Error ? error.message : 'No fue posible cargar las zonas.');
+      })
+      .finally(() => {
+        if (activo) setCargandoZonas(false);
+      });
+
+    return () => {
+      activo = false;
+    };
+  }, [tokenAcceso]);
+
   return (
     <form className="formulario-comunidad">
       <div className="formulario-comunidad__encabezado">
@@ -77,11 +107,23 @@ function FormularioComunidad({ alCerrar }: PropiedadesFormularioComunidad) {
 
             <div className="pagina-comunidades__campo">
               <label htmlFor="zona-comunidad">Zona</label>
-              <select id="zona-comunidad" defaultValue="">
-                <option value="" disabled>Seleccionar zona</option>
-                <option value="zona-1">Zona 1</option>
-                <option value="zona-2">Zona 2</option>
+              <select id="zona-comunidad" defaultValue="" disabled={cargandoZonas || Boolean(errorZonas)}>
+                <option value="" disabled>
+                  {cargandoZonas
+                    ? 'Cargando zonas...'
+                    : errorZonas
+                      ? 'No fue posible cargar las zonas'
+                      : zonas.length === 0
+                        ? 'No hay zonas activas registradas'
+                        : 'Seleccionar zona'}
+                </option>
+                {zonas.map((zona) => (
+                  <option value={zona.id} key={zona.id}>
+                    {zona.nombre}
+                  </option>
+                ))}
               </select>
+              {errorZonas && <span className="formulario-comunidad__aviso">{errorZonas}</span>}
             </div>
           </div>
         </div>
@@ -292,7 +334,7 @@ function FormularioComunidad({ alCerrar }: PropiedadesFormularioComunidad) {
       </details>
 
       <p className="formulario-comunidad__aviso">
-        Este formulario todavía es visual. Los datos se conectarán a la organización activa cuando trabajemos el backend multi-organización.
+        Este formulario todavía es visual. Los datos se conectarán progresivamente con el backend de Semilla.
       </p>
     </form>
   );
