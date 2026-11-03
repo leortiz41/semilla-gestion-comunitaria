@@ -11,4 +11,4 @@ export type SeccionAdministrativa =
 
 export type SeccionBarraLateral = Exclude<SeccionAdministrativa, 'perfil'>;
 
-export type SubseccionComunidades = 'listado' | 'nueva';
+export type SubseccionComunidades = 'listado' | 'nueva' | 'zonas';
