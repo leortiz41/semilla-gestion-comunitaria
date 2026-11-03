@@ -3,7 +3,7 @@ import '../../estilos/modulos/paginaModuloBase.css';
 import '../../estilos/modulos/comunidades/comunidades.css';
 import type { ComunidadVisual } from '../../tipos/comunidades';
 import type { SubseccionComunidades } from '../../tipos/navegacion';
-import FormularioComunidad from './componentes/FormularioComunidad';
+import FormularioRegistroBasicoComunidad from './componentes/FormularioRegistroBasicoComunidad';
 import ListadoComunidades from './componentes/ListadoComunidades';
 import PaginaZonas from './PaginaZonas';
 
@@ -83,7 +83,7 @@ function PaginaComunidades({ subseccion, tokenAcceso, alCambiarSubseccion }: Pro
               Nueva comunidad
             </h1>
             <p className="pagina-modulo__descripcion">
-              Completa el expediente comunitario por secciones para registrar la información de forma ordenada.
+              Crea primero el registro territorial básico. Después completaremos el expediente comunitario por secciones.
             </p>
           </div>
 
@@ -96,7 +96,7 @@ function PaginaComunidades({ subseccion, tokenAcceso, alCambiarSubseccion }: Pro
           </button>
         </div>
 
-        <FormularioComunidad
+        <FormularioRegistroBasicoComunidad
           tokenAcceso={tokenAcceso}
           alCerrar={() => alCambiarSubseccion('listado')}
         />
