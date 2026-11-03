@@ -22,6 +22,13 @@ export interface SesionResponse {
   usuario: UsuarioSesion;
 }
 
+export interface ZonaResumen {
+  id: string;
+  nombre: string;
+  descripcion: string | null;
+  activo: boolean;
+}
+
 interface ApiErrorResponse {
   message?: string;
 }
@@ -74,6 +81,27 @@ export function obtenerUsuario(accessToken: string): Promise<{ usuario: UsuarioS
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
+  });
+}
+
+export function listarZonas(accessToken: string): Promise<{ zonas: ZonaResumen[] }> {
+  return request<{ zonas: ZonaResumen[] }>('/zonas', {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+}
+
+export function crearZona(
+  accessToken: string,
+  datos: { nombre: string; descripcion?: string | null },
+): Promise<{ zona: ZonaResumen }> {
+  return request<{ zona: ZonaResumen }>('/zonas', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(datos),
   });
 }
 
