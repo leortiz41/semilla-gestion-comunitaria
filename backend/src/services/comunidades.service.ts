@@ -10,6 +10,7 @@ export interface ComunidadListado {
   departamento: string;
   activo: boolean;
   nombreZona: string | null;
+  zonaActiva: boolean | null;
 }
 
 interface ComunidadFila {
@@ -22,6 +23,7 @@ interface ComunidadFila {
   departamento: string;
   activo: boolean;
   nombre_zona: string | null;
+  zona_activa: boolean | null;
 }
 
 function obtenerPool() {
@@ -43,6 +45,7 @@ function mapearComunidad(comunidad: ComunidadFila): ComunidadListado {
     departamento: comunidad.departamento,
     activo: comunidad.activo,
     nombreZona: comunidad.nombre_zona,
+    zonaActiva: comunidad.zona_activa,
   };
 }
 
@@ -61,7 +64,8 @@ export async function listarComunidadesPorOrganizacion(
        c.municipio,
        c.departamento,
        c.activo,
-       z.nombre AS nombre_zona
+       z.nombre AS nombre_zona,
+       z.activo AS zona_activa
      FROM comunidades c
      LEFT JOIN zonas z
        ON z.id = c.zona_id
@@ -118,7 +122,8 @@ export async function crearComunidadBasica(
        c.municipio,
        c.departamento,
        c.activo,
-       z.nombre AS nombre_zona
+       z.nombre AS nombre_zona,
+       z.activo AS zona_activa
      FROM nueva_comunidad c
      LEFT JOIN zonas z
        ON z.id = c.zona_id
