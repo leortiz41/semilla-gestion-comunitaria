@@ -63,16 +63,17 @@
 }
 
 .pagina-zonas__tabla {
-  overflow: hidden;
+  overflow-x: auto;
   border: 1px solid rgba(53, 92, 58, 0.08);
   border-radius: 14px;
 }
 
 .pagina-zonas__fila {
   display: grid;
-  grid-template-columns: minmax(150px, 0.75fr) minmax(240px, 1.5fr) 100px 120px;
+  grid-template-columns: minmax(150px, 0.75fr) minmax(240px, 1.5fr) 100px minmax(190px, auto);
   gap: 14px;
   align-items: center;
+  min-width: 860px;
   padding: 13px 15px;
   border-top: 1px solid rgba(53, 92, 58, 0.07);
 }
@@ -105,10 +106,13 @@
 .pagina-zonas__acciones-fila {
   display: flex;
   align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
-.pagina-zonas__boton-estado {
-  min-width: 104px;
+.pagina-zonas__boton-estado,
+.pagina-zonas__boton-editar {
+  min-width: 88px;
   padding: 8px 11px;
   border-radius: 10px;
   cursor: pointer;
@@ -116,9 +120,22 @@
   font-weight: 800;
 }
 
-.pagina-zonas__boton-estado:disabled {
+.pagina-zonas__boton-estado:disabled,
+.pagina-zonas__boton-editar:disabled {
   cursor: wait;
   opacity: 0.6;
+}
+
+.pagina-zonas__boton-editar {
+  border: 1px solid rgba(53, 92, 58, 0.16);
+  color: #405b43;
+  background: #ffffff;
+}
+
+.pagina-zonas__boton-editar--guardar {
+  color: #ffffff;
+  border-color: #35623b;
+  background: #35623b;
 }
 
 .pagina-zonas__boton-estado--desactivar {
@@ -133,6 +150,21 @@
   background: rgba(73, 130, 81, 0.09);
 }
 
+.pagina-zonas__input-edicion {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid rgba(53, 92, 58, 0.2);
+  border-radius: 9px;
+  color: #334337;
+  background: #ffffff;
+  font: inherit;
+}
+
+.pagina-zonas__input-edicion:focus {
+  outline: 2px solid rgba(53, 98, 59, 0.14);
+  border-color: rgba(53, 98, 59, 0.42);
+}
+
 .pagina-zonas__vacio {
   display: grid;
   gap: 5px;
@@ -144,8 +176,7 @@
 }
 
 @media (max-width: 860px) {
-  .pagina-zonas__campos,
-  .pagina-zonas__fila {
+  .pagina-zonas__campos {
     grid-template-columns: 1fr;
   }
 
