@@ -4,11 +4,13 @@ import { crearComunidad, listarZonas, type ZonaResumen } from '../../../lib/api'
 interface PropiedadesFormularioRegistroBasicoComunidad {
   tokenAcceso: string;
   alCerrar: () => void;
+  alGuardar: () => void;
 }
 
 function FormularioRegistroBasicoComunidad({
   tokenAcceso,
   alCerrar,
+  alGuardar,
 }: PropiedadesFormularioRegistroBasicoComunidad) {
   const [zonas, setZonas] = useState<ZonaResumen[]>([]);
   const [nombre, setNombre] = useState('');
@@ -18,7 +20,6 @@ function FormularioRegistroBasicoComunidad({
   const [cargandoZonas, setCargandoZonas] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [mensaje, setMensaje] = useState<string | null>(null);
 
   useEffect(() => {
     let activo = true;
@@ -44,7 +45,6 @@ function FormularioRegistroBasicoComunidad({
   async function handleGuardar(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
-    setMensaje(null);
 
     if (!nombre.trim() || !zonaId || !municipio.trim() || !departamento.trim()) {
       setError('Nombre, zona, municipio y departamento son obligatorios.');
@@ -61,11 +61,7 @@ function FormularioRegistroBasicoComunidad({
         departamento: departamento.trim(),
       });
 
-      setNombre('');
-      setZonaId('');
-      setMunicipio('');
-      setDepartamento('');
-      setMensaje('Comunidad registrada correctamente.');
+      alGuardar();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No fue posible registrar la comunidad.');
     } finally {
@@ -94,7 +90,6 @@ function FormularioRegistroBasicoComunidad({
         </button>
       </div>
 
-      {mensaje && <div className="pagina-zonas__aviso pagina-zonas__aviso--exito">{mensaje}</div>}
       {error && <div className="pagina-zonas__aviso pagina-zonas__aviso--error">{error}</div>}
 
       <details className="formulario-comunidad__acordeon" open>
