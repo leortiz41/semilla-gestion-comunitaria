@@ -131,6 +131,14 @@ export function cambiarEstadoZona(
   });
 }
 
+export function listarComunidades(accessToken: string): Promise<{ comunidades: ComunidadResumen[] }> {
+  return request<{ comunidades: ComunidadResumen[] }>('/comunidades', {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+}
+
 export function crearComunidad(
   accessToken: string,
   datos: {
