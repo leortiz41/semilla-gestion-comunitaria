@@ -111,6 +111,22 @@ Para mantener el proyecto ordenado se continuará trabajando con el siguiente fl
 8. Cerrar el issue únicamente cuando el cambio esté terminado y respaldado por los commits correspondientes.
 9. Integrar bloques estables a `main` mediante Pull Request.
 
+## Backlog vinculado en GitHub
+
+Las decisiones de esta etapa se transformaron en historias y tareas rastreables:
+
+- **#11** Persistir expediente comunitario y preparar información territorial.
+- **#12** Implementar módulo Territorio con mapa interactivo.
+- **#13** Diseñar módulo Donantes, Donaciones y Asignaciones.
+- **#14** Vincular donaciones con proyectos, actividades y familias beneficiarias.
+- **#15** Gestionar avances y aprobación de evidencias de proyectos.
+- **#16** Crear portal simplificado para líderes comunitarios.
+- **#17** Crear portal de seguimiento para donantes.
+- **#18** Incorporar vista de impacto con React Flow en Dashboard.
+- **#19** Implementar aislamiento multi-organización.
+
+Cada issue se cerrará únicamente cuando sus criterios de aceptación estén cumplidos y existan commits que respalden la implementación.
+
 ## Conceptos que ayudan a defender el proyecto
 
 Se deja registrado para futuras presentaciones el siguiente concepto:
