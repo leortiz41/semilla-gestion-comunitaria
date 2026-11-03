@@ -20,12 +20,22 @@ interface UsuarioRow {
   activo: boolean;
   debe_cambiar_contrasena: boolean;
   nombre: string | null;
+  organizacion_id: string;
+  organizacion_nombre: string;
+  organizacion_slug: string;
+}
+
+export interface OrganizacionAutenticada {
+  id: string;
+  nombre: string;
+  slug: string;
 }
 
 export interface UsuarioAutenticado {
   id: string;
   email: string;
   nombre: string | null;
+  organizacion: OrganizacionAutenticada;
   roles: string[];
   permisos: string[];
   debeCambiarContrasena: boolean;
@@ -106,7 +116,16 @@ async function insertRefreshToken(
 }
 
 function toAuthenticatedUser(
-  usuario: Pick<UsuarioRow, 'id' | 'email' | 'nombre' | 'debe_cambiar_contrasena'>,
+  usuario: Pick<
+    UsuarioRow,
+    | 'id'
+    | 'email'
+    | 'nombre'
+    | 'debe_cambiar_contrasena'
+    | 'organizacion_id'
+    | 'organizacion_nombre'
+    | 'organizacion_slug'
+  >,
   roles: string[],
   permisos: string[],
 ): UsuarioAutenticado {
@@ -114,6 +133,11 @@ function toAuthenticatedUser(
     id: usuario.id,
     email: usuario.email,
     nombre: usuario.nombre,
+    organizacion: {
+      id: usuario.organizacion_id,
+      nombre: usuario.organizacion_nombre,
+      slug: usuario.organizacion_slug,
+    },
     roles,
     permisos,
     debeCambiarContrasena: usuario.debe_cambiar_contrasena,
@@ -124,6 +148,7 @@ function buildAccessToken(usuario: UsuarioAutenticado): string {
   return createAccessToken({
     usuarioId: usuario.id,
     email: usuario.email,
+    organizacionId: usuario.organizacion.id,
     roles: usuario.roles,
     permisos: usuario.permisos,
     debeCambiarContrasena: usuario.debeCambiarContrasena,
@@ -146,8 +171,12 @@ export async function login(
             u.hash_contrasena,
             u.activo,
             u.debe_cambiar_contrasena,
-            NULLIF(CONCAT_WS(' ', p.primer_nombre, p.primer_apellido), '') AS nombre
+            NULLIF(CONCAT_WS(' ', p.primer_nombre, p.primer_apellido), '') AS nombre,
+            o.id AS organizacion_id,
+            o.nombre AS organizacion_nombre,
+            o.slug AS organizacion_slug
        FROM usuarios u
+       JOIN organizaciones o ON o.id = u.organizacion_id AND o.activo = TRUE
        LEFT JOIN empleados e ON e.id = u.empleado_id
        LEFT JOIN personas p ON p.id = e.persona_id
       WHERE LOWER(u.email) = LOWER($1)
@@ -205,9 +234,13 @@ export async function refreshSession(
               u.email,
               u.activo,
               u.debe_cambiar_contrasena,
-              NULLIF(CONCAT_WS(' ', p.primer_nombre, p.primer_apellido), '') AS nombre
+              NULLIF(CONCAT_WS(' ', p.primer_nombre, p.primer_apellido), '') AS nombre,
+              o.id AS organizacion_id,
+              o.nombre AS organizacion_nombre,
+              o.slug AS organizacion_slug
          FROM tokens_refresco t
          JOIN usuarios u ON u.id = t.usuario_id
+         JOIN organizaciones o ON o.id = u.organizacion_id AND o.activo = TRUE
          LEFT JOIN empleados e ON e.id = u.empleado_id
          LEFT JOIN personas p ON p.id = e.persona_id
         WHERE t.hash_token = $1
@@ -225,6 +258,9 @@ export async function refreshSession(
           email: string;
           debe_cambiar_contrasena: boolean;
           nombre: string | null;
+          organizacion_id: string;
+          organizacion_nombre: string;
+          organizacion_slug: string;
         }
       | undefined;
 
@@ -241,6 +277,9 @@ export async function refreshSession(
         email: row.email,
         nombre: row.nombre,
         debe_cambiar_contrasena: row.debe_cambiar_contrasena,
+        organizacion_id: row.organizacion_id,
+        organizacion_nombre: row.organizacion_nombre,
+        organizacion_slug: row.organizacion_slug,
       },
       roles,
       permisos,
@@ -300,8 +339,12 @@ export async function getCurrentUser(usuarioId: string): Promise<UsuarioAutentic
     `SELECT u.id,
             u.email,
             u.debe_cambiar_contrasena,
-            NULLIF(CONCAT_WS(' ', p.primer_nombre, p.primer_apellido), '') AS nombre
+            NULLIF(CONCAT_WS(' ', p.primer_nombre, p.primer_apellido), '') AS nombre,
+            o.id AS organizacion_id,
+            o.nombre AS organizacion_nombre,
+            o.slug AS organizacion_slug
        FROM usuarios u
+       JOIN organizaciones o ON o.id = u.organizacion_id AND o.activo = TRUE
        LEFT JOIN empleados e ON e.id = u.empleado_id
        LEFT JOIN personas p ON p.id = e.persona_id
       WHERE u.id = $1
@@ -311,7 +354,15 @@ export async function getCurrentUser(usuarioId: string): Promise<UsuarioAutentic
   );
 
   const row = result.rows[0] as
-    | { id: string; email: string; debe_cambiar_contrasena: boolean; nombre: string | null }
+    | {
+        id: string;
+        email: string;
+        debe_cambiar_contrasena: boolean;
+        nombre: string | null;
+        organizacion_id: string;
+        organizacion_nombre: string;
+        organizacion_slug: string;
+      }
     | undefined;
 
   if (!row) {
