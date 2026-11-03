@@ -6,6 +6,18 @@ interface PropiedadesListadoComunidades {
   cargando?: boolean;
 }
 
+function obtenerEstadoVisual(comunidad: ComunidadResumen) {
+  if (!comunidad.activo) {
+    return { clase: 'inactiva', etiqueta: 'Inactiva' };
+  }
+
+  if (comunidad.zonaActiva === false) {
+    return { clase: 'zona-inactiva', etiqueta: 'Zona inactiva' };
+  }
+
+  return { clase: 'activa', etiqueta: 'Activa' };
+}
+
 function ListadoComunidades({ comunidades, cargando = false }: PropiedadesListadoComunidades) {
   return (
     <section className="listado-comunidades" aria-labelledby="titulo-listado-comunidades">
@@ -39,22 +51,29 @@ function ListadoComunidades({ comunidades, cargando = false }: PropiedadesListad
             <span role="columnheader">Estado</span>
           </div>
 
-          {comunidades.map((comunidad) => (
-            <div className="listado-comunidades__fila" role="row" key={comunidad.id}>
-              <div className="listado-comunidades__nombre" role="cell">
-                <strong>{comunidad.nombre}</strong>
-                <span>Expediente comunitario</span>
-              </div>
-              <span role="cell">{comunidad.nombreZona || 'Sin zona'}</span>
-              <span role="cell">{comunidad.municipio}</span>
-              <span role="cell">{comunidad.departamento}</span>
-              <span role="cell">
-                <span className={`listado-comunidades__estado listado-comunidades__estado--${comunidad.activo ? 'activa' : 'inactiva'}`}>
-                  {comunidad.activo ? 'Activa' : 'Inactiva'}
+          {comunidades.map((comunidad) => {
+            const estadoVisual = obtenerEstadoVisual(comunidad);
+
+            return (
+              <div className="listado-comunidades__fila" role="row" key={comunidad.id}>
+                <div className="listado-comunidades__nombre" role="cell">
+                  <strong>{comunidad.nombre}</strong>
+                  <span>Expediente comunitario</span>
+                </div>
+                <span role="cell">
+                  {comunidad.nombreZona || 'Sin zona'}
+                  {comunidad.zonaActiva === false ? ' · Inactiva' : ''}
                 </span>
-              </span>
-            </div>
-          ))}
+                <span role="cell">{comunidad.municipio}</span>
+                <span role="cell">{comunidad.departamento}</span>
+                <span role="cell">
+                  <span className={`listado-comunidades__estado listado-comunidades__estado--${estadoVisual.clase}`}>
+                    {estadoVisual.etiqueta}
+                  </span>
+                </span>
+              </div>
+            );
+          })}
         </div>
       )}
     </section>
