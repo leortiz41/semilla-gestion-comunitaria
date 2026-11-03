@@ -5,6 +5,7 @@ import type { ComunidadVisual } from '../../tipos/comunidades';
 import type { SubseccionComunidades } from '../../tipos/navegacion';
 import FormularioComunidad from './componentes/FormularioComunidad';
 import ListadoComunidades from './componentes/ListadoComunidades';
+import PaginaZonas from './PaginaZonas';
 
 const comunidadesVisuales: ComunidadVisual[] = [
   { id: 'agua-azul-rancho', nombre: 'Agua Azul Rancho', zona: 'zona-1', nombreZona: 'Zona 1', estado: 'activa' },
@@ -17,6 +18,7 @@ const comunidadesVisuales: ComunidadVisual[] = [
 
 interface PropiedadesPaginaComunidades {
   subseccion: SubseccionComunidades;
+  tokenAcceso: string;
   alCambiarSubseccion: (subseccion: SubseccionComunidades) => void;
 }
 
@@ -28,10 +30,14 @@ function normalizarTexto(texto: string) {
     .trim();
 }
 
-function PaginaComunidades({ subseccion, alCambiarSubseccion }: PropiedadesPaginaComunidades) {
+function PaginaComunidades({ subseccion, tokenAcceso, alCambiarSubseccion }: PropiedadesPaginaComunidades) {
   const [busqueda, setBusqueda] = useState('');
   const [zona, setZona] = useState('todas');
   const [estado, setEstado] = useState('todos');
+
+  if (subseccion === 'zonas') {
+    return <PaginaZonas tokenAcceso={tokenAcceso} />;
+  }
 
   const comunidadesFiltradas = comunidadesVisuales.filter((comunidad) => {
     const coincideBusqueda = normalizarTexto(comunidad.nombre).includes(normalizarTexto(busqueda));
