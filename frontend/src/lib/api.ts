@@ -39,6 +39,7 @@ export interface ComunidadResumen {
   departamento: string;
   activo: boolean;
   nombreZona: string | null;
+  zonaActiva: boolean | null;
 }
 
 interface ApiErrorResponse {
