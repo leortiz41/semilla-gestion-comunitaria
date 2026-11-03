@@ -1,9 +1,16 @@
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
+export interface OrganizacionSesion {
+  id: string;
+  nombre: string;
+  slug: string;
+}
+
 export interface UsuarioSesion {
   id: string;
   email: string;
   nombre: string | null;
+  organizacion: OrganizacionSesion;
   roles: string[];
   permisos: string[];
   debeCambiarContrasena: boolean;
