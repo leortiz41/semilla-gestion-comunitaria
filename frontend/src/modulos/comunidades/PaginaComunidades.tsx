@@ -1,20 +1,16 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import '../../estilos/modulos/paginaModuloBase.css';
 import '../../estilos/modulos/comunidades/comunidades.css';
-import type { ComunidadVisual } from '../../tipos/comunidades';
+import {
+  listarComunidades,
+  listarZonas,
+  type ComunidadResumen,
+  type ZonaResumen,
+} from '../../lib/api';
 import type { SubseccionComunidades } from '../../tipos/navegacion';
 import FormularioRegistroBasicoComunidad from './componentes/FormularioRegistroBasicoComunidad';
 import ListadoComunidades from './componentes/ListadoComunidades';
 import PaginaZonas from './PaginaZonas';
-
-const comunidadesVisuales: ComunidadVisual[] = [
-  { id: 'agua-azul-rancho', nombre: 'Agua Azul Rancho', zona: 'zona-1', nombreZona: 'Zona 1', estado: 'activa' },
-  { id: 'agua-amarilla', nombre: 'Agua Amarilla', zona: 'zona-1', nombreZona: 'Zona 1', estado: 'activa' },
-  { id: 'el-bambu', nombre: 'El Bambú', zona: 'zona-1', nombreZona: 'Zona 1', estado: 'activa' },
-  { id: 'las-marias', nombre: 'Las Marías', zona: 'zona-2', nombreZona: 'Zona 2', estado: 'activa' },
-  { id: 'el-novillo', nombre: 'El Novillo', zona: 'zona-2', nombreZona: 'Zona 2', estado: 'activa' },
-  { id: 'los-cocos', nombre: 'Los Cocos', zona: 'zona-2', nombreZona: 'Zona 2', estado: 'activa' },
-];
 
 interface PropiedadesPaginaComunidades {
   subseccion: SubseccionComunidades;
@@ -31,30 +27,66 @@ function normalizarTexto(texto: string) {
 }
 
 function PaginaComunidades({ subseccion, tokenAcceso, alCambiarSubseccion }: PropiedadesPaginaComunidades) {
+  const [comunidades, setComunidades] = useState<ComunidadResumen[]>([]);
+  const [zonas, setZonas] = useState<ZonaResumen[]>([]);
   const [busqueda, setBusqueda] = useState('');
   const [zona, setZona] = useState('todas');
   const [estado, setEstado] = useState('todos');
+  const [cargando, setCargando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const cargarDatos = useCallback(async () => {
+    setCargando(true);
+    setError(null);
+
+    try {
+      const [respuestaComunidades, respuestaZonas] = await Promise.all([
+        listarComunidades(tokenAcceso),
+        listarZonas(tokenAcceso),
+      ]);
+
+      setComunidades(respuestaComunidades.comunidades);
+      setZonas(respuestaZonas.zonas);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No fue posible actualizar la información territorial.');
+    } finally {
+      setCargando(false);
+    }
+  }, [tokenAcceso]);
+
+  useEffect(() => {
+    if (subseccion === 'listado') {
+      void cargarDatos();
+    }
+  }, [subseccion, cargarDatos]);
 
   if (subseccion === 'zonas') {
     return <PaginaZonas tokenAcceso={tokenAcceso} />;
   }
 
-  const comunidadesFiltradas = comunidadesVisuales.filter((comunidad) => {
-    const coincideBusqueda = normalizarTexto(comunidad.nombre).includes(normalizarTexto(busqueda));
-    const coincideZona = zona === 'todas' || comunidad.zona === zona;
-    const coincideEstado = estado === 'todos' || comunidad.estado === estado;
+  const comunidadesFiltradas = useMemo(
+    () =>
+      comunidades.filter((comunidad) => {
+        const coincideBusqueda = normalizarTexto(comunidad.nombre).includes(normalizarTexto(busqueda));
+        const coincideZona = zona === 'todas' || comunidad.zonaId === zona;
+        const coincideEstado =
+          estado === 'todos' ||
+          (estado === 'activa' && comunidad.activo) ||
+          (estado === 'inactiva' && !comunidad.activo);
 
-    return coincideBusqueda && coincideZona && coincideEstado;
-  });
+        return coincideBusqueda && coincideZona && coincideEstado;
+      }),
+    [comunidades, busqueda, zona, estado],
+  );
 
-  const totalActivas = comunidadesVisuales.filter((comunidad) => comunidad.estado === 'activa').length;
-  const totalZonas = new Set(comunidadesVisuales.map((comunidad) => comunidad.zona)).size;
+  const totalActivas = comunidades.filter((comunidad) => comunidad.activo).length;
+  const totalZonasActivas = zonas.filter((zonaRegistrada) => zonaRegistrada.activo).length;
 
   const resumenVisual = [
     {
       etiqueta: 'Comunidades',
-      valor: String(comunidadesVisuales.length),
-      detalle: 'Total registrado para validar la distribución visual.',
+      valor: String(comunidades.length),
+      detalle: 'Total de comunidades registradas en la organización.',
     },
     {
       etiqueta: 'Activas',
@@ -63,13 +95,13 @@ function PaginaComunidades({ subseccion, tokenAcceso, alCambiarSubseccion }: Pro
     },
     {
       etiqueta: 'Zonas',
-      valor: String(totalZonas),
-      detalle: 'Agrupaciones territoriales para organizar comunidades.',
+      valor: String(totalZonasActivas),
+      detalle: 'Zonas territoriales activas disponibles para nuevas comunidades.',
     },
     {
       etiqueta: 'Familias vinculadas',
       valor: '—',
-      detalle: 'Se conectará con el módulo de Familias en la fase backend.',
+      detalle: 'Se conectará con el módulo de Familias en una fase posterior.',
     },
   ];
 
@@ -99,6 +131,7 @@ function PaginaComunidades({ subseccion, tokenAcceso, alCambiarSubseccion }: Pro
         <FormularioRegistroBasicoComunidad
           tokenAcceso={tokenAcceso}
           alCerrar={() => alCambiarSubseccion('listado')}
+          alGuardar={() => alCambiarSubseccion('listado')}
         />
       </section>
     );
@@ -113,11 +146,19 @@ function PaginaComunidades({ subseccion, tokenAcceso, alCambiarSubseccion }: Pro
             Comunidades
           </h1>
           <p className="pagina-modulo__descripcion">
-            Organiza las zonas y comunidades atendidas por Semilla y concentra su información general en un solo espacio.
+            Organiza las zonas y comunidades atendidas por Semilla y consulta la información territorial registrada en PostgreSQL.
           </p>
         </div>
 
         <div className="pagina-comunidades__acciones">
+          <button
+            className="pagina-comunidades__boton-secundario"
+            type="button"
+            onClick={() => void cargarDatos()}
+            disabled={cargando}
+          >
+            {cargando ? 'Actualizando…' : '↻ Actualizar'}
+          </button>
           <button
             className="pagina-comunidades__boton-nuevo"
             type="button"
@@ -128,7 +169,9 @@ function PaginaComunidades({ subseccion, tokenAcceso, alCambiarSubseccion }: Pro
         </div>
       </div>
 
-      <div className="pagina-comunidades__resumen" aria-label="Resumen visual de comunidades">
+      {error && <div className="pagina-zonas__aviso pagina-zonas__aviso--error">{error}</div>}
+
+      <div className="pagina-comunidades__resumen" aria-label="Resumen de comunidades">
         {resumenVisual.map((indicador) => (
           <article className="pagina-comunidades__tarjeta" key={indicador.etiqueta}>
             <p className="pagina-comunidades__tarjeta-etiqueta">{indicador.etiqueta}</p>
@@ -158,8 +201,11 @@ function PaginaComunidades({ subseccion, tokenAcceso, alCambiarSubseccion }: Pro
             onChange={(event) => setZona(event.target.value)}
           >
             <option value="todas">Todas las zonas</option>
-            <option value="zona-1">Zona 1</option>
-            <option value="zona-2">Zona 2</option>
+            {zonas.map((zonaRegistrada) => (
+              <option value={zonaRegistrada.id} key={zonaRegistrada.id}>
+                {zonaRegistrada.nombre}{zonaRegistrada.activo ? '' : ' (inactiva)'}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -177,7 +223,7 @@ function PaginaComunidades({ subseccion, tokenAcceso, alCambiarSubseccion }: Pro
         </div>
       </div>
 
-      <ListadoComunidades comunidades={comunidadesFiltradas} />
+      <ListadoComunidades comunidades={comunidadesFiltradas} cargando={cargando} />
     </section>
   );
 }
