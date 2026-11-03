@@ -96,7 +96,10 @@ function PaginaComunidades({ subseccion, tokenAcceso, alCambiarSubseccion }: Pro
           </button>
         </div>
 
-        <FormularioComunidad alCerrar={() => alCambiarSubseccion('listado')} />
+        <FormularioComunidad
+          tokenAcceso={tokenAcceso}
+          alCerrar={() => alCambiarSubseccion('listado')}
+        />
       </section>
     );
   }
