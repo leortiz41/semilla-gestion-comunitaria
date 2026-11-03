@@ -8,6 +8,21 @@ datasource db {
   provider = "postgresql"
 }
 
+model organizaciones {
+  id                String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre            String     @db.VarChar(180)
+  slug              String     @unique @db.VarChar(120)
+  nombre_legal      String?    @db.VarChar(220)
+  email_contacto    String?    @db.VarChar(150)
+  telefono_contacto String?    @db.VarChar(40)
+  pais              String     @default("Honduras") @db.VarChar(100)
+  moneda            String     @default("HNL") @db.VarChar(10)
+  activo            Boolean    @default(true)
+  creado_en         DateTime   @default(now()) @db.Timestamptz(6)
+  actualizado_en    DateTime   @default(now()) @db.Timestamptz(6)
+  usuarios          usuarios[]
+}
+
 model roles {
   id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   nombre         String           @unique @db.VarChar(60)
@@ -470,6 +485,7 @@ model tokens_refresco {
 
 model usuarios {
   id                          String                        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizacion_id             String                        @db.Uuid
   empleado_id                 String?                       @unique @db.Uuid
   email                       String                        @unique @db.VarChar(150)
   hash_contrasena             String
@@ -484,9 +500,11 @@ model usuarios {
   evidencias                  evidencias[]
   tokens_refresco             tokens_refresco[]
   empleados                   empleados?                    @relation(fields: [empleado_id], references: [id])
+  organizaciones              organizaciones                @relation(fields: [organizacion_id], references: [id], onDelete: Restrict)
   usuarios_roles              usuarios_roles[]
 
   @@index([empleado_id], map: "idx_usuarios_empleado_id")
+  @@index([organizacion_id], map: "idx_usuarios_organizacion_id")
 }
 
 model usuarios_roles {
