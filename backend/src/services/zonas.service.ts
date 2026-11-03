@@ -54,6 +54,29 @@ export async function crearZona(
   return resultado.rows[0];
 }
 
+export async function editarZona(
+  organizacionId: string,
+  zonaId: string,
+  datos: { nombre: string; descripcion?: string | null },
+): Promise<ZonaResumen | null> {
+  const pool = obtenerPool();
+  const nombre = datos.nombre.trim();
+  const descripcion = datos.descripcion?.trim() || null;
+
+  const resultado = await pool.query<ZonaFila>(
+    `UPDATE zonas
+        SET nombre = $3,
+            descripcion = $4,
+            actualizado_en = NOW()
+      WHERE id = $1
+        AND organizacion_id = $2
+      RETURNING id, nombre, descripcion, activo`,
+    [zonaId, organizacionId, nombre, descripcion],
+  );
+
+  return resultado.rows[0] ?? null;
+}
+
 export async function cambiarEstadoZona(
   organizacionId: string,
   zonaId: string,
