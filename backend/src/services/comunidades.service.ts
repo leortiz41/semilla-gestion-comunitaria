@@ -143,3 +143,71 @@ export async function crearComunidadBasica(
 
   return mapearComunidad(resultado.rows[0]);
 }
+
+export async function editarComunidadBasica(
+  organizacionId: string,
+  comunidadId: string,
+  datos: {
+    zonaId: string;
+    nombre: string;
+    municipio: string;
+    departamento: string;
+  },
+): Promise<ComunidadListado | null> {
+  const pool = obtenerPool();
+
+  const resultado = await pool.query<ComunidadFila>(
+    `WITH comunidad_actualizada AS (
+       UPDATE comunidades c
+          SET zona_id = z.id,
+              nombre = $4,
+              municipio = $5,
+              departamento = $6,
+              actualizado_en = NOW()
+         FROM zonas z
+        WHERE c.id = $1
+          AND c.organizacion_id = $2
+          AND z.id = $3
+          AND z.organizacion_id = $2
+          AND z.activo = TRUE
+       RETURNING
+         c.id,
+         c.zona_id,
+         c.nombre,
+         c.barrio_colonia,
+         c.localidad,
+         c.municipio,
+         c.departamento,
+         c.activo
+     )
+     SELECT
+       c.id,
+       c.zona_id,
+       c.nombre,
+       c.barrio_colonia,
+       c.localidad,
+       c.municipio,
+       c.departamento,
+       c.activo,
+       z.nombre AS nombre_zona,
+       z.activo AS zona_activa
+     FROM comunidad_actualizada c
+     LEFT JOIN zonas z
+       ON z.id = c.zona_id
+      AND z.organizacion_id = $2`,
+    [
+      comunidadId,
+      organizacionId,
+      datos.zonaId,
+      datos.nombre.trim(),
+      datos.municipio.trim(),
+      datos.departamento.trim(),
+    ],
+  );
+
+  if (resultado.rowCount === 0) {
+    return null;
+  }
+
+  return mapearComunidad(resultado.rows[0]);
+}

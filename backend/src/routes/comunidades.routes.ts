@@ -5,6 +5,7 @@ import {
 } from '../middleware/auth.middleware.js';
 import {
   crearComunidadBasica,
+  editarComunidadBasica,
   listarComunidadesPorOrganizacion,
 } from '../services/comunidades.service.js';
 
@@ -91,6 +92,76 @@ comunidadesRouter.post(
 
       console.error('Error creando comunidad:', error);
       res.status(500).json({ message: 'No fue posible registrar la comunidad.' });
+    }
+  },
+);
+
+comunidadesRouter.patch(
+  '/:id',
+  authenticateAccessToken,
+  requirePermission('comunidades.gestionar'),
+  async (req, res) => {
+    const comunidadId = typeof req.params.id === 'string' ? req.params.id : null;
+
+    if (!req.auth?.organizacionId) {
+      res.status(401).json({ message: 'La sesión no contiene una organización válida.' });
+      return;
+    }
+
+    if (!comunidadId) {
+      res.status(400).json({ message: 'El identificador de la comunidad no es válido.' });
+      return;
+    }
+
+    const nombre = typeof req.body?.nombre === 'string' ? req.body.nombre.trim() : '';
+    const zonaId = typeof req.body?.zonaId === 'string' ? req.body.zonaId.trim() : '';
+    const municipio = typeof req.body?.municipio === 'string' ? req.body.municipio.trim() : '';
+    const departamento =
+      typeof req.body?.departamento === 'string' ? req.body.departamento.trim() : '';
+
+    if (!nombre || !zonaId || !municipio || !departamento) {
+      res.status(400).json({
+        message: 'Nombre, zona, municipio y departamento son obligatorios.',
+      });
+      return;
+    }
+
+    if (nombre.length > 150 || municipio.length > 120 || departamento.length > 120) {
+      res.status(400).json({ message: 'Uno de los campos supera la longitud permitida.' });
+      return;
+    }
+
+    try {
+      const comunidad = await editarComunidadBasica(req.auth.organizacionId, comunidadId, {
+        nombre,
+        zonaId,
+        municipio,
+        departamento,
+      });
+
+      if (!comunidad) {
+        res.status(400).json({
+          message: 'La comunidad no existe o la zona seleccionada está inactiva o no pertenece a la organización.',
+        });
+        return;
+      }
+
+      res.json({ comunidad });
+    } catch (error) {
+      const codigo =
+        typeof error === 'object' && error !== null && 'code' in error
+          ? String((error as { code?: unknown }).code)
+          : null;
+
+      if (codigo === '23505') {
+        res.status(409).json({
+          message: 'Ya existe una comunidad con ese nombre, municipio y departamento en la organización.',
+        });
+        return;
+      }
+
+      console.error('Error editando comunidad:', error);
+      res.status(500).json({ message: 'No fue posible actualizar la comunidad.' });
     }
   },
 );
