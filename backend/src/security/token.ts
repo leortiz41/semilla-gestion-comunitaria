@@ -8,6 +8,7 @@ const DEFAULT_REFRESH_DAYS = 30;
 export interface AccessTokenClaims {
   sub: string;
   email: string;
+  organizacionId: string;
   roles: string[];
   permisos: string[];
   debeCambiarContrasena: boolean;
@@ -21,6 +22,7 @@ export interface AccessTokenClaims {
 interface AccessTokenInput {
   usuarioId: string;
   email: string;
+  organizacionId: string;
   roles: string[];
   permisos: string[];
   debeCambiarContrasena: boolean;
@@ -71,6 +73,7 @@ export function createAccessToken(input: AccessTokenInput): string {
   const payload = encodeJson({
     sub: input.usuarioId,
     email: input.email,
+    organizacionId: input.organizacionId,
     roles: input.roles,
     permisos: input.permisos,
     debeCambiarContrasena: input.debeCambiarContrasena,
@@ -121,6 +124,7 @@ export function verifyAccessToken(token: string): AccessTokenClaims {
     payload.aud !== JWT_AUDIENCE ||
     typeof payload.sub !== 'string' ||
     typeof payload.email !== 'string' ||
+    typeof payload.organizacionId !== 'string' ||
     !Array.isArray(payload.roles) ||
     !Array.isArray(payload.permisos) ||
     typeof payload.debeCambiarContrasena !== 'boolean' ||

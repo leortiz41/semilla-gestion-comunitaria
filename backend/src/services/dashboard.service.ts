@@ -18,15 +18,19 @@ function obtenerPool() {
   return databasePool;
 }
 
-export async function obtenerResumenDashboard(): Promise<ResumenDashboard> {
+export async function obtenerResumenDashboard(
+  organizacionId: string,
+): Promise<ResumenDashboard> {
   const pool = obtenerPool();
 
-  const resultado = await pool.query<ResumenComunidadesFila>(`
-    SELECT
-      COUNT(*)::int AS total,
-      COUNT(*) FILTER (WHERE activo = true)::int AS activas
-    FROM comunidades
-  `);
+  const resultado = await pool.query<ResumenComunidadesFila>(
+    `SELECT
+       COUNT(*)::int AS total,
+       COUNT(*) FILTER (WHERE activo = true)::int AS activas
+     FROM comunidades
+     WHERE organizacion_id = $1`,
+    [organizacionId],
+  );
 
   const resumenComunidades = resultado.rows[0];
 

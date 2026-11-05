@@ -1,9 +1,16 @@
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
+export interface OrganizacionSesion {
+  id: string;
+  nombre: string;
+  slug: string;
+}
+
 export interface UsuarioSesion {
   id: string;
   email: string;
   nombre: string | null;
+  organizacion: OrganizacionSesion;
   roles: string[];
   permisos: string[];
   debeCambiarContrasena: boolean;
@@ -13,6 +20,26 @@ export interface SesionResponse {
   accessToken: string;
   expiresIn: number;
   usuario: UsuarioSesion;
+}
+
+export interface ZonaResumen {
+  id: string;
+  nombre: string;
+  descripcion: string | null;
+  activo: boolean;
+}
+
+export interface ComunidadResumen {
+  id: string;
+  zonaId: string | null;
+  nombre: string;
+  barrioColonia: string | null;
+  localidad: string | null;
+  municipio: string;
+  departamento: string;
+  activo: boolean;
+  nombreZona: string | null;
+  zonaActiva: boolean | null;
 }
 
 interface ApiErrorResponse {
@@ -67,6 +94,81 @@ export function obtenerUsuario(accessToken: string): Promise<{ usuario: UsuarioS
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
+  });
+}
+
+export function listarZonas(accessToken: string): Promise<{ zonas: ZonaResumen[] }> {
+  return request<{ zonas: ZonaResumen[] }>('/zonas', {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+}
+
+export function crearZona(
+  accessToken: string,
+  datos: { nombre: string; descripcion?: string | null },
+): Promise<{ zona: ZonaResumen }> {
+  return request<{ zona: ZonaResumen }>('/zonas', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(datos),
+  });
+}
+
+export function editarZona(
+  accessToken: string,
+  zonaId: string,
+  datos: { nombre: string; descripcion?: string | null },
+): Promise<{ zona: ZonaResumen }> {
+  return request<{ zona: ZonaResumen }>(`/zonas/${zonaId}`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(datos),
+  });
+}
+
+export function cambiarEstadoZona(
+  accessToken: string,
+  zonaId: string,
+  activo: boolean,
+): Promise<{ zona: ZonaResumen }> {
+  return request<{ zona: ZonaResumen }>(`/zonas/${zonaId}/estado`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ activo }),
+  });
+}
+
+export function listarComunidades(accessToken: string): Promise<{ comunidades: ComunidadResumen[] }> {
+  return request<{ comunidades: ComunidadResumen[] }>('/comunidades', {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+}
+
+export function crearComunidad(
+  accessToken: string,
+  datos: {
+    nombre: string;
+    zonaId: string;
+    municipio: string;
+    departamento: string;
+  },
+): Promise<{ comunidad: ComunidadResumen }> {
+  return request<{ comunidad: ComunidadResumen }>('/comunidades', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(datos),
   });
 }
 

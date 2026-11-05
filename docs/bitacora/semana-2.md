@@ -248,3 +248,85 @@ Al finalizar esta etapa, Semilla cuenta con:
 6. Registrar auditoría de altas y modificaciones.
 7. Continuar con Familias y Beneficiarios.
 8. Crear y publicar el release académico `semana-2`.
+
+---
+
+## Evolución funcional acordada después de la entrega de Semana 2
+
+Después de cerrar el bloque visual de Comunidades se amplió la visión funcional de Semilla para que la plataforma no se limite a registrar datos, sino que permita visualizar territorio, seguimiento e impacto.
+
+### Trazabilidad completa del recurso
+
+Se definió como concepto central de defensa y diseño el siguiente recorrido:
+
+```text
+Donante
+   ↓
+Donación
+   ↓
+Asignación
+   ↓
+Proyecto / Actividad
+   ↓
+Familia / Comunidad / Zona
+   ↓
+Ejecución
+   ↓
+Evidencia aprobada
+   ↓
+Resultado / Impacto
+```
+
+Semilla deberá permitir seguir un recurso desde su origen, identificar quién lo donó, dónde fue asignado, qué proyecto o actividad lo ejecutó, qué familias o comunidades fueron beneficiadas y qué evidencia demuestra el resultado obtenido.
+
+### Territorio y mapa interactivo
+
+Se acordó incorporar un módulo Territorio para ubicar zonas y comunidades en un mapa, utilizando coordenadas y mostrando proyectos, necesidades, beneficiarios, donantes e indicadores asociados a cada ubicación.
+
+MapLibre GL JS se evaluará como alternativa principal para la visualización cartográfica.
+
+### Visualización de impacto con React Flow
+
+React Flow se utilizará donde aporte una forma de comprensión distinta a las tablas tradicionales, especialmente para representar relaciones como:
+
+```text
+Necesidad → Proyecto → Recursos → Actividades → Beneficiarios → Evidencias → Impacto
+```
+
+### Donantes, donaciones y asignaciones
+
+Se decidió separar cuatro conceptos:
+
+- **Donante:** quién aporta.
+- **Donación:** qué aportó.
+- **Asignación:** dónde y para qué se utilizará.
+- **Ejecución:** cómo se utilizó realmente.
+
+Un proyecto podrá recibir recursos de varios donantes y una donación podrá distribuirse entre varios proyectos, actividades, comunidades o familias beneficiarias.
+
+### Usuarios externos y evidencias
+
+Se definieron dos experiencias externas:
+
+- **Líder comunitario:** reporta avances y fotografías únicamente de proyectos o comunidades asignadas.
+- **Donante:** consulta el progreso e impacto de las iniciativas que financia.
+
+Las evidencias tendrán revisión interna y una autorización adicional antes de ser visibles externamente.
+
+### Multi-organización
+
+Se mantiene la decisión de preparar Semilla para varias organizaciones, utilizando `Organizacion` y `organizacionId` como conceptos del dominio. Ministerio Sal y Luz será la primera organización de referencia.
+
+## Issues creados para esta evolución
+
+- **#11** Persistir expediente comunitario y preparar información territorial.
+- **#12** Implementar módulo Territorio con mapa interactivo.
+- **#13** Diseñar módulo Donantes, Donaciones y Asignaciones.
+- **#14** Vincular donaciones con proyectos, actividades y familias beneficiarias.
+- **#15** Gestionar avances y aprobación de evidencias de proyectos.
+- **#16** Crear portal simplificado para líderes comunitarios.
+- **#17** Crear portal de seguimiento para donantes.
+- **#18** Incorporar vista de impacto con React Flow en Dashboard.
+- **#19** Implementar aislamiento multi-organización.
+
+Estos issues se cerrarán únicamente cuando sus criterios de aceptación estén cumplidos y exista evidencia mediante commits, validación y actualización de la documentación.

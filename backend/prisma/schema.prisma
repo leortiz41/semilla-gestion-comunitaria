@@ -8,6 +8,23 @@ datasource db {
   provider = "postgresql"
 }
 
+model organizaciones {
+  id                String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre            String       @db.VarChar(180)
+  slug              String       @unique @db.VarChar(120)
+  nombre_legal      String?      @db.VarChar(220)
+  email_contacto    String?      @db.VarChar(150)
+  telefono_contacto String?      @db.VarChar(40)
+  pais              String       @default("Honduras") @db.VarChar(100)
+  moneda            String       @default("HNL") @db.VarChar(10)
+  activo            Boolean      @default(true)
+  creado_en         DateTime     @default(now()) @db.Timestamptz(6)
+  actualizado_en    DateTime     @default(now()) @db.Timestamptz(6)
+  comunidades       comunidades[]
+  usuarios          usuarios[]
+  zonas             zonas[]
+}
+
 model roles {
   id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   nombre         String           @unique @db.VarChar(60)
@@ -94,21 +111,23 @@ model claves_idempotencia {
 }
 
 model comunidades {
-  id             String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  zona_id        String?     @db.Uuid
-  nombre         String      @db.VarChar(150)
-  barrio_colonia String?     @db.VarChar(150)
-  localidad      String?     @db.VarChar(150)
-  municipio      String      @db.VarChar(120)
-  departamento   String      @db.VarChar(120)
-  activo         Boolean     @default(true)
-  creado_en      DateTime    @default(now()) @db.Timestamptz(6)
-  actualizado_en DateTime    @default(now()) @db.Timestamptz(6)
-  zonas          zonas?      @relation(fields: [zona_id], references: [id])
-  familias       familias[]
-  proyectos      proyectos[]
+  id               String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizacion_id  String          @db.Uuid
+  zona_id          String?         @db.Uuid
+  nombre           String          @db.VarChar(150)
+  barrio_colonia   String?         @db.VarChar(150)
+  localidad        String?         @db.VarChar(150)
+  municipio        String          @db.VarChar(120)
+  departamento     String          @db.VarChar(120)
+  activo           Boolean         @default(true)
+  creado_en        DateTime        @default(now()) @db.Timestamptz(6)
+  actualizado_en   DateTime        @default(now()) @db.Timestamptz(6)
+  organizaciones   organizaciones  @relation(fields: [organizacion_id], references: [id], onDelete: Restrict)
+  zonas            zonas?          @relation(fields: [zona_id, organizacion_id], references: [id, organizacion_id], onDelete: Restrict)
+  familias         familias[]
+  proyectos        proyectos[]
 
-  @@unique([nombre, municipio, departamento])
+  @@index([organizacion_id], map: "idx_comunidades_organizacion_id")
   @@index([zona_id], map: "idx_comunidades_zona_id")
 }
 
@@ -470,6 +489,7 @@ model tokens_refresco {
 
 model usuarios {
   id                          String                        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizacion_id             String                        @db.Uuid
   empleado_id                 String?                       @unique @db.Uuid
   email                       String                        @unique @db.VarChar(150)
   hash_contrasena             String
@@ -484,9 +504,11 @@ model usuarios {
   evidencias                  evidencias[]
   tokens_refresco             tokens_refresco[]
   empleados                   empleados?                    @relation(fields: [empleado_id], references: [id])
+  organizaciones              organizaciones                @relation(fields: [organizacion_id], references: [id], onDelete: Restrict)
   usuarios_roles              usuarios_roles[]
 
   @@index([empleado_id], map: "idx_usuarios_empleado_id")
+  @@index([organizacion_id], map: "idx_usuarios_organizacion_id")
 }
 
 model usuarios_roles {
@@ -501,11 +523,16 @@ model usuarios_roles {
 
 model zonas {
   id                 String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  nombre             String               @unique @db.VarChar(100)
+  organizacion_id    String               @db.Uuid
+  nombre             String               @db.VarChar(100)
   descripcion        String?
   activo             Boolean              @default(true)
   creado_en          DateTime             @default(now()) @db.Timestamptz(6)
   actualizado_en     DateTime             @default(now()) @db.Timestamptz(6)
   comunidades        comunidades[]
   equipos_misioneros equipos_misioneros[]
+  organizaciones     organizaciones        @relation(fields: [organizacion_id], references: [id], onDelete: Restrict)
+
+  @@unique([id, organizacion_id], map: "uq_zonas_id_organizacion")
+  @@index([organizacion_id], map: "idx_zonas_organizacion_id")
 }

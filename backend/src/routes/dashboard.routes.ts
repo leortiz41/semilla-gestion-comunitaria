@@ -11,9 +11,14 @@ dashboardRouter.get(
   '/resumen',
   authenticateAccessToken,
   requirePermission('comunidades.ver'),
-  async (_req, res) => {
+  async (req, res) => {
     try {
-      const resumen = await obtenerResumenDashboard();
+      if (!req.auth?.organizacionId) {
+        res.status(401).json({ message: 'La sesión no contiene una organización válida.' });
+        return;
+      }
+
+      const resumen = await obtenerResumenDashboard(req.auth.organizacionId);
       res.json(resumen);
     } catch (error) {
       console.error('Error obteniendo el resumen del dashboard:', error);

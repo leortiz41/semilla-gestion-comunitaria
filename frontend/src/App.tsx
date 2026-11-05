@@ -178,9 +178,12 @@ function App() {
   function renderizarSeccionAdministrativa() {
     switch (seccionAdministrativa) {
       case 'comunidades':
+        if (!accessToken) return null;
+
         return (
           <PaginaComunidades
             subseccion={subseccionComunidades}
+            tokenAcceso={accessToken}
             alCambiarSubseccion={setSubseccionComunidades}
           />
         );

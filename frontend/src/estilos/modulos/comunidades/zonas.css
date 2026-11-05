@@ -1,0 +1,186 @@
+.pagina-zonas {
+  display: grid;
+  gap: 22px;
+}
+
+.pagina-zonas__formulario,
+.pagina-zonas__listado {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid rgba(53, 92, 58, 0.1);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.76);
+  box-shadow: 0 16px 34px rgba(48, 69, 48, 0.05);
+}
+
+.pagina-zonas__formulario-encabezado h2,
+.pagina-zonas__listado-encabezado h2 {
+  margin: 0;
+  color: #294c2e;
+}
+
+.pagina-zonas__formulario-encabezado p,
+.pagina-zonas__listado-encabezado p {
+  margin: 5px 0 0;
+}
+
+.pagina-zonas__campos {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.8fr) minmax(260px, 1.5fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.pagina-zonas__aviso {
+  padding: 11px 13px;
+  border-radius: 11px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.pagina-zonas__aviso--exito {
+  color: #2f5b35;
+  background: rgba(73, 130, 81, 0.1);
+}
+
+.pagina-zonas__aviso--error {
+  color: #8b3b2e;
+  background: rgba(176, 74, 54, 0.1);
+}
+
+.pagina-zonas__listado-encabezado {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.pagina-zonas__listado-encabezado > span {
+  color: #6d7a6e;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.pagina-zonas__tabla {
+  overflow-x: auto;
+  border: 1px solid rgba(53, 92, 58, 0.08);
+  border-radius: 14px;
+}
+
+.pagina-zonas__fila {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.75fr) minmax(240px, 1.5fr) 100px minmax(190px, auto);
+  gap: 14px;
+  align-items: center;
+  min-width: 860px;
+  padding: 13px 15px;
+  border-top: 1px solid rgba(53, 92, 58, 0.07);
+}
+
+.pagina-zonas__fila:first-child {
+  border-top: 0;
+}
+
+.pagina-zonas__fila--encabezado {
+  color: #6d7a6e;
+  background: rgba(53, 92, 58, 0.04);
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.pagina-zonas__estado {
+  font-weight: 800;
+}
+
+.pagina-zonas__estado--activo {
+  color: #35623b;
+}
+
+.pagina-zonas__estado--inactivo {
+  color: #8a6b48;
+}
+
+.pagina-zonas__acciones-fila {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pagina-zonas__boton-estado,
+.pagina-zonas__boton-editar {
+  min-width: 88px;
+  padding: 8px 11px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.pagina-zonas__boton-estado:disabled,
+.pagina-zonas__boton-editar:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.pagina-zonas__boton-editar {
+  border: 1px solid rgba(53, 92, 58, 0.16);
+  color: #405b43;
+  background: #ffffff;
+}
+
+.pagina-zonas__boton-editar--guardar {
+  color: #ffffff;
+  border-color: #35623b;
+  background: #35623b;
+}
+
+.pagina-zonas__boton-estado--desactivar {
+  border: 1px solid rgba(151, 95, 45, 0.2);
+  color: #80532d;
+  background: rgba(206, 151, 96, 0.09);
+}
+
+.pagina-zonas__boton-estado--reactivar {
+  border: 1px solid rgba(53, 92, 58, 0.18);
+  color: #355c3a;
+  background: rgba(73, 130, 81, 0.09);
+}
+
+.pagina-zonas__input-edicion {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid rgba(53, 92, 58, 0.2);
+  border-radius: 9px;
+  color: #334337;
+  background: #ffffff;
+  font: inherit;
+}
+
+.pagina-zonas__input-edicion:focus {
+  outline: 2px solid rgba(53, 98, 59, 0.14);
+  border-color: rgba(53, 98, 59, 0.42);
+}
+
+.pagina-zonas__vacio {
+  display: grid;
+  gap: 5px;
+  padding: 24px;
+  border: 1px dashed rgba(53, 92, 58, 0.16);
+  border-radius: 14px;
+  color: #6d7a6e;
+  text-align: center;
+}
+
+@media (max-width: 860px) {
+  .pagina-zonas__campos {
+    grid-template-columns: 1fr;
+  }
+
+  .pagina-zonas__campos .pagina-comunidades__boton-nuevo {
+    justify-self: start;
+  }
+}
