@@ -80,11 +80,17 @@ zonasRouter.patch(
   authenticateAccessToken,
   requirePermission('comunidades.gestionar'),
   async (req, res) => {
+    const zonaId = typeof req.params.id === 'string' ? req.params.id : null;
     const nombre = typeof req.body?.nombre === 'string' ? req.body.nombre.trim() : '';
     const descripcion = typeof req.body?.descripcion === 'string' ? req.body.descripcion : null;
 
     if (!req.auth?.organizacionId) {
       res.status(401).json({ message: 'La sesión no contiene una organización válida.' });
+      return;
+    }
+
+    if (!zonaId) {
+      res.status(400).json({ message: 'El identificador de la zona no es válido.' });
       return;
     }
 
@@ -99,7 +105,7 @@ zonasRouter.patch(
     }
 
     try {
-      const zona = await editarZona(req.auth.organizacionId, req.params.id, {
+      const zona = await editarZona(req.auth.organizacionId, zonaId, {
         nombre,
         descripcion,
       });
@@ -132,8 +138,15 @@ zonasRouter.patch(
   authenticateAccessToken,
   requirePermission('comunidades.gestionar'),
   async (req, res) => {
+    const zonaId = typeof req.params.id === 'string' ? req.params.id : null;
+
     if (!req.auth?.organizacionId) {
       res.status(401).json({ message: 'La sesión no contiene una organización válida.' });
+      return;
+    }
+
+    if (!zonaId) {
+      res.status(400).json({ message: 'El identificador de la zona no es válido.' });
       return;
     }
 
@@ -145,7 +158,7 @@ zonasRouter.patch(
     try {
       const zona = await cambiarEstadoZona(
         req.auth.organizacionId,
-        req.params.id,
+        zonaId,
         req.body.activo,
       );
 
