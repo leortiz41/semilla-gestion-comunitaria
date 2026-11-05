@@ -40,6 +40,7 @@ function PaginaComunidades({ subseccion, tokenAcceso, alCambiarSubseccion }: Pro
   const [estado, setEstado] = useState('todos');
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [comunidadEditando, setComunidadEditando] = useState<ComunidadResumen | null>(null);
 
   const cargarDatos = useCallback(async () => {
     setCargando(true);
@@ -175,6 +176,19 @@ function PaginaComunidades({ subseccion, tokenAcceso, alCambiarSubseccion }: Pro
 
       {error && <div className="pagina-zonas__aviso pagina-zonas__aviso--error">{error}</div>}
 
+      {comunidadEditando && (
+        <FormularioRegistroBasicoComunidad
+          key={comunidadEditando.id}
+          comunidad={comunidadEditando}
+          tokenAcceso={tokenAcceso}
+          alCerrar={() => setComunidadEditando(null)}
+          alGuardar={() => {
+            setComunidadEditando(null);
+            void cargarDatos();
+          }}
+        />
+      )}
+
       <div className="pagina-comunidades__resumen" aria-label="Resumen de comunidades">
         {resumenVisual.map((indicador) => (
           <article className="pagina-comunidades__tarjeta" key={indicador.etiqueta}>
@@ -228,7 +242,11 @@ function PaginaComunidades({ subseccion, tokenAcceso, alCambiarSubseccion }: Pro
         </div>
       </div>
 
-      <ListadoComunidades comunidades={comunidadesFiltradas} cargando={cargando} />
+      <ListadoComunidades
+        comunidades={comunidadesFiltradas}
+        cargando={cargando}
+        alEditar={setComunidadEditando}
+      />
     </section>
   );
 }

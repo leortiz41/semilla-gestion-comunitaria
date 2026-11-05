@@ -172,6 +172,25 @@ export function crearComunidad(
   });
 }
 
+export function editarComunidad(
+  accessToken: string,
+  comunidadId: string,
+  datos: {
+    nombre: string;
+    zonaId: string;
+    municipio: string;
+    departamento: string;
+  },
+): Promise<{ comunidad: ComunidadResumen }> {
+  return request<{ comunidad: ComunidadResumen }>(`/comunidades/${comunidadId}`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(datos),
+  });
+}
+
 export function cambiarContrasena(
   accessToken: string,
   contrasenaActual: string,

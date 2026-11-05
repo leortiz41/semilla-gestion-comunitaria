@@ -4,6 +4,7 @@ import type { ComunidadResumen } from '../../../lib/api';
 interface PropiedadesListadoComunidades {
   comunidades: ComunidadResumen[];
   cargando?: boolean;
+  alEditar?: (comunidad: ComunidadResumen) => void;
 }
 
 function obtenerEstadoVisual(comunidad: ComunidadResumen) {
@@ -18,7 +19,11 @@ function obtenerEstadoVisual(comunidad: ComunidadResumen) {
   return { clase: 'activa', etiqueta: 'Activa' };
 }
 
-function ListadoComunidades({ comunidades, cargando = false }: PropiedadesListadoComunidades) {
+function ListadoComunidades({
+  comunidades,
+  cargando = false,
+  alEditar,
+}: PropiedadesListadoComunidades) {
   return (
     <section className="listado-comunidades" aria-labelledby="titulo-listado-comunidades">
       <div className="listado-comunidades__encabezado">
@@ -49,6 +54,7 @@ function ListadoComunidades({ comunidades, cargando = false }: PropiedadesListad
             <span role="columnheader">Municipio</span>
             <span role="columnheader">Departamento</span>
             <span role="columnheader">Estado</span>
+            <span role="columnheader">Acciones</span>
           </div>
 
           {comunidades.map((comunidad) => {
@@ -70,6 +76,17 @@ function ListadoComunidades({ comunidades, cargando = false }: PropiedadesListad
                   <span className={`listado-comunidades__estado listado-comunidades__estado--${estadoVisual.clase}`}>
                     {estadoVisual.etiqueta}
                   </span>
+                </span>
+                <span role="cell">
+                  {alEditar && (
+                    <button
+                      className="listado-comunidades__boton-editar"
+                      type="button"
+                      onClick={() => alEditar(comunidad)}
+                    >
+                      Editar
+                    </button>
+                  )}
                 </span>
               </div>
             );
