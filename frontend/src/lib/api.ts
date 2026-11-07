@@ -260,8 +260,25 @@ export function consultarExpediente(token: string, id: string) {
     expediente: ExpedienteComunidad & {
       id: string;
       fechaDiagnostico: string | null;
+      diagnosticoId: string | null;
     };
   }>(`/comunidades/${id}/expediente`, {
     headers: { Authorization: `Bearer ${token}` },
   });
+}
+
+export function actualizarDiagnostico(
+  token: string,
+  id: string,
+  datos: ExpedienteComunidad,
+  diagnosticoAnteriorId: string | null,
+) {
+  return request<{ comunidad: { id: string } }>(
+    `/comunidades/${id}/diagnostico`,
+    {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ ...datos, diagnosticoAnteriorId }),
+    },
+  );
 }

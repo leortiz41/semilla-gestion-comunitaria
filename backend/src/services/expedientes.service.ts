@@ -10,19 +10,22 @@ export async function guardarExpediente(
   usuarioId: string,
   datos: ExpedienteComunidad,
   pool: Pool | null = databasePool,
+  edicion?: { comunidadId: string; diagnosticoAnteriorId: string | null },
 ) {
   if (!pool) throw new Error('Base de datos no configurada.');
   const c = await pool.connect();
   try {
     await c.query('BEGIN');
-    const zona = await c.query(
-      'SELECT id FROM zonas WHERE id=$1 AND organizacion_id=$2 AND activo=TRUE FOR SHARE',
-      [datos.zonaId, organizacionId],
-    );
-    if (!zona.rowCount)
-      throw new ErrorExpediente(
-        'Selecciona una zona activa de tu organización.',
+    if (!edicion) {
+      const zona = await c.query(
+        'SELECT id FROM zonas WHERE id=$1 AND organizacion_id=$2 AND activo=TRUE FOR SHARE',
+        [datos.zonaId, organizacionId],
       );
+      if (!zona.rowCount)
+        throw new ErrorExpediente(
+          'Selecciona una zona activa de tu organización.',
+        );
+    }
     const usuario = await c.query(
       'SELECT id FROM usuarios WHERE id=$1 AND organizacion_id=$2 AND activo=TRUE FOR SHARE',
       [usuarioId, organizacionId],
@@ -32,21 +35,41 @@ export async function guardarExpediente(
         'La sesión no corresponde a un usuario activo de la organización.',
         403,
       );
-    const nueva = await c.query(
-      `INSERT INTO comunidades (organizacion_id,zona_id,nombre,municipio,departamento,latitud,longitud) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
-      [
-        organizacionId,
-        datos.zonaId,
-        datos.nombre,
-        datos.municipio,
-        datos.departamento,
-        datos.latitud,
-        datos.longitud,
-      ],
-    );
-    const id = nueva.rows[0].id as string;
+    let id: string;
+    if (edicion) {
+      const comunidad = await c.query(
+        'SELECT id FROM comunidades WHERE id=$1 AND organizacion_id=$2 FOR UPDATE',
+        [edicion.comunidadId, organizacionId],
+      );
+      if (!comunidad.rowCount)
+        throw new ErrorExpediente('Comunidad no encontrada.', 404);
+      const anterior = await c.query(
+        'SELECT id FROM diagnosticos_comunidad WHERE comunidad_id=$1 AND organizacion_id=$2 ORDER BY creado_en DESC,id DESC LIMIT 1',
+        [edicion.comunidadId, organizacionId],
+      );
+      if ((anterior.rows[0]?.id ?? null) !== edicion.diagnosticoAnteriorId)
+        throw new ErrorExpediente(
+          'El diagnóstico cambió desde que lo abriste. Cierra y vuelve a abrir el expediente antes de editar.',
+          409,
+        );
+      id = edicion.comunidadId;
+    } else {
+      const nueva = await c.query(
+        `INSERT INTO comunidades (organizacion_id,zona_id,nombre,municipio,departamento,latitud,longitud) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
+        [
+          organizacionId,
+          datos.zonaId,
+          datos.nombre,
+          datos.municipio,
+          datos.departamento,
+          datos.latitud,
+          datos.longitud,
+        ],
+      );
+      id = nueva.rows[0].id as string;
+    }
     const diagnostico = await c.query(
-      `INSERT INTO diagnosticos_comunidad (organizacion_id,comunidad_id,poblacion,viviendas,viviendas_intervencion,observaciones_organizaciones,potencial_productivo,creado_por_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
+      `INSERT INTO diagnosticos_comunidad (organizacion_id,comunidad_id,poblacion,viviendas,viviendas_intervencion,observaciones_organizaciones,potencial_productivo,creado_por_id,creado_en) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,clock_timestamp()) RETURNING id`,
       [
         organizacionId,
         id,
@@ -84,8 +107,17 @@ export async function guardarExpediente(
           [organizacionId, diagnosticoId, tipo, nombre],
         );
     await c.query(
-      `INSERT INTO bitacora_auditoria (usuario_id,accion,nombre_entidad,entidad_id,valores_nuevos) VALUES ($1,'CREAR_EXPEDIENTE','comunidades',$2,$3::jsonb)`,
-      [usuarioId, id, JSON.stringify({ organizacionId, diagnosticoId })],
+      `INSERT INTO bitacora_auditoria (usuario_id,accion,nombre_entidad,entidad_id,valores_nuevos) VALUES ($1,$4,'comunidades',$2,$3::jsonb)`,
+      [
+        usuarioId,
+        id,
+        JSON.stringify({
+          organizacionId,
+          diagnosticoId,
+          diagnosticoAnteriorId: edicion?.diagnosticoAnteriorId ?? null,
+        }),
+        edicion ? 'ACTUALIZAR_DIAGNOSTICO' : 'CREAR_EXPEDIENTE',
+      ],
     );
     await c.query('COMMIT');
     return { id };
@@ -110,7 +142,7 @@ export async function obtenerExpediente(
     d.poblacion,d.viviendas,d.viviendas_intervencion AS "viviendasIntervencion",
     COALESCE(d.observaciones_organizaciones,'') AS "observacionesOrganizaciones",
     COALESCE(d.potencial_productivo,'') AS "potencialProductivo",
-    d.creado_en AS "fechaDiagnostico",
+    d.id AS "diagnosticoId", d.creado_en AS "fechaDiagnostico",
     COALESCE((SELECT jsonb_agg(jsonb_build_object('categoria',v.categoria,'situacion',v.situacion,'meta',v.meta,'prioridad',v.prioridad) ORDER BY v.categoria) FROM visiones_comunidad v WHERE v.diagnostico_id=d.id AND v.organizacion_id=c.organizacion_id),'[]'::jsonb) AS visiones,
     COALESCE((SELECT jsonb_agg(jsonb_build_object('tipo',e.tipo,'nombre',e.nombre) ORDER BY e.nombre) FROM elementos_diagnostico e WHERE e.diagnostico_id=d.id AND e.organizacion_id=c.organizacion_id),'[]'::jsonb) AS elementos
     FROM comunidades c LEFT JOIN LATERAL (SELECT * FROM diagnosticos_comunidad dc WHERE dc.comunidad_id=c.id AND dc.organizacion_id=c.organizacion_id ORDER BY dc.creado_en DESC,dc.id DESC LIMIT 1) d ON TRUE

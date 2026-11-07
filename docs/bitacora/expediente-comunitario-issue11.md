@@ -48,3 +48,14 @@ Recuperación: si falla la migración, su transacción revierte; si ya fue aplic
 ## Siguiente paso
 
 Completar edición/historial del diagnóstico y persistencia mediante Prisma, probar el flujo en Neon y revisar los criterios del issue antes de cerrarlo.
+
+
+## Ampliación: completar y editar diagnóstico
+
+Se añadió «Completar o editar diagnóstico» en la consulta del expediente para usuarios con permiso de gestión. Permite completar comunidades que solo tenían registro básico y corregir población, vivienda, visión, organizaciones y productividad. Las organizaciones, actividades y productos se registran en filas individuales con acciones Agregar/Quitar; observaciones y oportunidades usan campos multilínea.
+
+`PUT /api/comunidades/:id/diagnostico` conserva las versiones previas y registra auditoría. El cliente envía `diagnosticoAnteriorId`; el servidor bloquea la comunidad y rechaza versiones obsoletas con 409. Los datos generales permanecen separados de esta edición para evitar sobrescribir cambios territoriales. No cambia prioridad automáticamente ni implementa la historia #27.
+
+No requiere otra migración: reutiliza 005. Pruebas cubren actualización de organizaciones/productividad, lectura posterior, conservación de versión anterior, rechazo de versión obsoleta, completar registro básico y rollback. La consulta muestra la última versión; un explorador visual del historial queda fuera de este bloque.
+
+Pendiente de cierre funcional: comprobar en Neon development que guardar, recargar y volver a abrir conserva los cambios. El criterio original de uso de Prisma permanece pendiente porque el servicio sigue el patrón SQL/pg existente. El issue #11 no se cierra automáticamente.
