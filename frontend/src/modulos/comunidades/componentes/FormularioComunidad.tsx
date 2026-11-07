@@ -1,6 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import {
   listarZonas,
+  actualizarDiagnostico,
+  obtenerUsuario,
   crearExpediente,
   consultarExpediente,
   type ZonaResumen,
@@ -51,7 +53,11 @@ export default function FormularioComunidad({
   const [error, setError] = useState<string | null>(null);
   const [cargaCompleta, setCargaCompleta] = useState(false);
   const [fecha, setFecha] = useState<string | null>(null);
-  const consulta = Boolean(comunidadId);
+  const [editando, setEditando] = useState(false);
+  const [puedeEditar, setPuedeEditar] = useState(false);
+  const [diagnosticoId, setDiagnosticoId] = useState<string | null>(null);
+  const [mensaje, setMensaje] = useState<string | null>(null);
+  const consulta = Boolean(comunidadId) && !editando;
   useEffect(() => {
     let vigente = true;
     setCargando(true);
@@ -62,9 +68,14 @@ export default function FormularioComunidad({
       comunidadId
         ? consultarExpediente(tokenAcceso, comunidadId)
         : Promise.resolve(null),
+      obtenerUsuario(tokenAcceso),
     ])
-      .then(([z, r]) => {
+      .then(([z, r, sesion]) => {
         if (vigente) {
+          setPuedeEditar(
+            sesion.usuario.permisos.includes('comunidades.gestionar'),
+          );
+          setDiagnosticoId(r?.expediente.diagnosticoId ?? null);
           setCargaCompleta(true);
           setZonas(z.zonas);
           setDatos(r?.expediente ?? vacio);
@@ -116,8 +127,23 @@ export default function FormularioComunidad({
     }
     setGuardando(true);
     try {
-      await crearExpediente(tokenAcceso, datos);
-      alGuardar?.();
+      if (comunidadId) {
+        await actualizarDiagnostico(
+          tokenAcceso,
+          comunidadId,
+          datos,
+          diagnosticoId,
+        );
+        const r = await consultarExpediente(tokenAcceso, comunidadId);
+        setDatos(r.expediente);
+        setDiagnosticoId(r.expediente.diagnosticoId);
+        setFecha(r.expediente.fechaDiagnostico);
+        setEditando(false);
+        setMensaje('Diagnóstico actualizado. La versión anterior se conserva.');
+      } else {
+        await crearExpediente(tokenAcceso, datos);
+        alGuardar?.();
+      }
     } catch (e) {
       setError(
         e instanceof Error ? e.message : 'No se pudo guardar el expediente.',
@@ -139,12 +165,21 @@ export default function FormularioComunidad({
   ) => (
     <label className="pagina-comunidades__campo" key={k}>
       {label}
-      <input
-        value={datos[k]}
-        maxLength={max}
-        required={required}
-        onChange={(e) => cambiar(k, e.target.value)}
-      />
+      {max > 150 ? (
+        <textarea
+          rows={3}
+          value={datos[k]}
+          maxLength={max}
+          onChange={(e) => cambiar(k, e.target.value)}
+        />
+      ) : (
+        <input
+          value={datos[k]}
+          maxLength={max}
+          required={required}
+          onChange={(e) => cambiar(k, e.target.value)}
+        />
+      )}
     </label>
   );
   const numero = (
@@ -181,19 +216,57 @@ export default function FormularioComunidad({
       | 'productosServicios',
     label: string,
   ) => (
-    <label className="pagina-comunidades__campo" key={k}>
-      {label}
-      <textarea
-        rows={4}
-        value={datos[k].join('\n')}
-        onChange={(e) => cambiar(k, e.target.value.split('\n'))}
-        onBlur={() => cambiar(k, datos[k].map((x) => x.trim()).filter(Boolean))}
-      />
-      <small>
-        Un elemento por línea, máximo 50; hasta 150 caracteres por elemento.
-      </small>
-    </label>
+    <fieldset className="expediente-lista" key={k}>
+      <legend>{label}</legend>
+      {datos[k].length === 0 && <p>Sin información registrada.</p>}
+      {datos[k].map((valor, indice) => (
+        <div className="expediente-lista__fila" key={indice}>
+          <input
+            aria-label={`${label} ${indice + 1}`}
+            required
+            maxLength={150}
+            value={valor}
+            onChange={(e) =>
+              cambiar(
+                k,
+                datos[k].map((x, i) => (i === indice ? e.target.value : x)),
+              )
+            }
+          />
+          {!consulta && (
+            <button
+              type="button"
+              aria-label={`Quitar ${label} ${indice + 1}`}
+              onClick={() =>
+                cambiar(
+                  k,
+                  datos[k].filter((_, i) => i !== indice),
+                )
+              }
+            >
+              Quitar
+            </button>
+          )}
+        </div>
+      ))}
+      {!consulta && (
+        <button
+          type="button"
+          disabled={datos[k].length >= 50}
+          onClick={() => cambiar(k, [...datos[k], ''])}
+        >
+          Agregar elemento
+        </button>
+      )}
+      {!consulta && (
+        <small>
+          Hasta 50 elementos de 150 caracteres. Registra cada organización,
+          actividad o producto por separado.
+        </small>
+      )}
+    </fieldset>
   );
+
   return (
     <form
       className="formulario-comunidad"
@@ -205,7 +278,7 @@ export default function FormularioComunidad({
     >
       <div className="formulario-comunidad__encabezado">
         <div>
-          <h2>{consulta ? 'Expediente comunitario' : 'Nueva comunidad'}</h2>
+          <h2>{comunidadId ? 'Expediente comunitario' : 'Nueva comunidad'}</h2>
           <p>
             {consulta
               ? 'Consulta de la información registrada.'
@@ -222,6 +295,19 @@ export default function FormularioComunidad({
           ×
         </button>
       </div>
+      {mensaje && <p role="status">{mensaje}</p>}
+      {consulta && cargaCompleta && puedeEditar && (
+        <button
+          type="button"
+          className="pagina-comunidades__boton-nuevo"
+          onClick={() => {
+            setEditando(true);
+            setMensaje(null);
+          }}
+        >
+          Completar o editar diagnóstico
+        </button>
+      )}
       {error && (
         <p role="alert" className="formulario-comunidad__aviso">
           {error}
@@ -246,31 +332,36 @@ export default function FormularioComunidad({
           >
             <details className="formulario-comunidad__acordeon" open>
               <summary>01 · Información general y ubicación</summary>
-              <div className="formulario-comunidad__acordeon-contenido formulario-comunidad__campos formulario-comunidad__campos--dos">
-                {texto('nombre', 'Nombre de la comunidad', 150, true)}
-                <label className="pagina-comunidades__campo">
-                  Zona
-                  <select
-                    required
-                    value={datos.zonaId ?? ''}
-                    onChange={(e) => cambiar('zonaId', e.target.value)}
-                  >
-                    <option value="">Seleccionar zona</option>
-                    {zonas
-                      .filter((z) => consulta || z.activo)
-                      .map((z) => (
-                        <option key={z.id} value={z.id}>
-                          {z.nombre}
-                          {!z.activo ? ' (inactiva)' : ''}
-                        </option>
-                      ))}
-                  </select>
-                </label>
-                {texto('municipio', 'Municipio', 120, true)}
-                {texto('departamento', 'Departamento', 120, true)}
-                {numero('latitud', 'Latitud', -90, 90, '0.000001')}
-                {numero('longitud', 'Longitud', -180, 180, '0.000001')}
-              </div>
+              <fieldset
+                disabled={Boolean(comunidadId)}
+                className="expediente-campos"
+              >
+                <div className="formulario-comunidad__acordeon-contenido formulario-comunidad__campos formulario-comunidad__campos--dos">
+                  {texto('nombre', 'Nombre de la comunidad', 150, true)}
+                  <label className="pagina-comunidades__campo">
+                    Zona
+                    <select
+                      required
+                      value={datos.zonaId ?? ''}
+                      onChange={(e) => cambiar('zonaId', e.target.value)}
+                    >
+                      <option value="">Seleccionar zona</option>
+                      {zonas
+                        .filter((z) => Boolean(comunidadId) || z.activo)
+                        .map((z) => (
+                          <option key={z.id} value={z.id}>
+                            {z.nombre}
+                            {!z.activo ? ' (inactiva)' : ''}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
+                  {texto('municipio', 'Municipio', 120, true)}
+                  {texto('departamento', 'Departamento', 120, true)}
+                  {numero('latitud', 'Latitud', -90, 90, '0.000001')}
+                  {numero('longitud', 'Longitud', -180, 180, '0.000001')}
+                </div>
+              </fieldset>
             </details>
             <details className="formulario-comunidad__acordeon" open>
               <summary>02 · Población y vivienda</summary>
@@ -399,9 +490,15 @@ export default function FormularioComunidad({
             <button
               type="submit"
               className="pagina-comunidades__boton-nuevo"
-              disabled={guardando || !zonas.some((z) => z.activo)}
+              disabled={
+                guardando || (!comunidadId && !zonas.some((z) => z.activo))
+              }
             >
-              {guardando ? 'Guardando…' : 'Guardar comunidad y expediente'}
+              {guardando
+                ? 'Guardando…'
+                : comunidadId
+                  ? 'Guardar diagnóstico'
+                  : 'Guardar comunidad y expediente'}
             </button>
           )}
         </>
