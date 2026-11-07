@@ -1,3 +1,4 @@
+import SeccionOrganizacionProductividad from './SeccionOrganizacionProductividad';
 import type { ComunidadResumen } from '../../../lib/api';
 import SeccionPoblacionVivienda from './SeccionPoblacionVivienda';
 import SeccionVisionDesarrollo from './SeccionVisionDesarrollo';
@@ -22,24 +23,38 @@ function ExpedienteComunidad({
   alEditarInformacionGeneral,
 }: PropiedadesExpedienteComunidad) {
   return (
-    <section className="pagina-modulo pagina-comunidades" aria-labelledby="titulo-expediente-comunidad">
+    <section
+      className="pagina-modulo pagina-comunidades"
+      aria-labelledby="titulo-expediente-comunidad"
+    >
       <div className="pagina-comunidades__vista-superior">
         <div>
           <p className="pagina-modulo__etiqueta">Comunidades / Expediente</p>
-          <h1 id="titulo-expediente-comunidad" className="pagina-modulo__titulo">
+          <h1
+            id="titulo-expediente-comunidad"
+            className="pagina-modulo__titulo"
+          >
             {comunidad.nombre}
           </h1>
           <p className="pagina-modulo__descripcion">
-            Consulta y completa el diagnóstico territorial y de desarrollo de esta comunidad por secciones.
+            Consulta y completa el diagnóstico territorial y de desarrollo de
+            esta comunidad por secciones.
           </p>
         </div>
 
-        <button className="pagina-comunidades__boton-secundario" type="button" onClick={alVolver}>
+        <button
+          className="pagina-comunidades__boton-secundario"
+          type="button"
+          onClick={alVolver}
+        >
           ← Volver al listado
         </button>
       </div>
 
-      <section className="expediente-comunidad__resumen" aria-label="Resumen del expediente comunitario">
+      <section
+        className="expediente-comunidad__resumen"
+        aria-label="Resumen del expediente comunitario"
+      >
         <div>
           <span>Zona</span>
           <strong>{comunidad.nombreZona || 'Sin zona asignada'}</strong>
@@ -61,7 +76,9 @@ function ExpedienteComunidad({
       <div className="expediente-comunidad__secciones">
         <article className="expediente-comunidad__seccion">
           <div>
-            <p className="expediente-comunidad__etiqueta">01 · Identificación territorial</p>
+            <p className="expediente-comunidad__etiqueta">
+              01 · Identificación territorial
+            </p>
             <h2>Información general</h2>
             <p>Nombre, zona, municipio y departamento de la comunidad.</p>
           </div>
@@ -74,18 +91,21 @@ function ExpedienteComunidad({
           </button>
         </article>
 
-        <SeccionPoblacionVivienda comunidadId={comunidad.id} tokenAcceso={tokenAcceso} />
+        <SeccionPoblacionVivienda
+          comunidadId={comunidad.id}
+          tokenAcceso={tokenAcceso}
+        />
 
-        <SeccionVisionDesarrollo comunidadId={comunidad.id} tokenAcceso={tokenAcceso} />
+        <SeccionVisionDesarrollo
+          comunidadId={comunidad.id}
+          tokenAcceso={tokenAcceso}
+        />
 
-        <article className="expediente-comunidad__seccion expediente-comunidad__seccion--pendiente">
-          <div>
-            <p className="expediente-comunidad__etiqueta">04 · Capacidades locales</p>
-            <h2>Organización y productividad</h2>
-            <p>Organizaciones comunitarias, actividades económicas y oportunidades de desarrollo.</p>
-          </div>
-          <span>Próxima sección</span>
-        </article>
+        <SeccionOrganizacionProductividad
+          key={comunidad.id}
+          comunidadId={comunidad.id}
+          tokenAcceso={tokenAcceso}
+        />
       </div>
     </section>
   );

@@ -845,3 +845,13 @@ Antes de cerrar cada historia: demostrar persistencia al recargar, permisos, rec
 La migración [005](../database/sql/005_expediente_comunitario.sql), preparada en la rama de expediente, añade `comunidades.latitud/longitud`, `diagnosticos_comunidad`, `visiones_comunidad` y `elementos_diagnostico`. El schema Prisma de esta rama pasa de 29 a 32 modelos; las secciones anteriores conservan el corte original de semana 3. La aplicación de 005 en Neon debe verificarse separadamente.
 
 El diagnóstico conserva población, viviendas, viviendas por intervenir, observaciones, oportunidades, fecha y autor. Sus detalles usan FK compuestas de organización. `elementos_diagnostico` almacena selecciones estructuradas por tipo (vivienda, organización, actividad productiva o producto/servicio); no reemplaza los futuros directorios operativos. Las áreas de visión conservan las cuatro categorías del formulario mediante CHECK, en lugar del catálogo configurable propuesto. Véanse [decisiones, validación y despliegue](bitacora/expediente-comunitario-issue11.md).
+
+## Organización y productividad del expediente por secciones (008)
+
+`capacidades_comunitarias` guarda una revisión completa por comunidad: organización propietaria, número de revisión, observaciones de organización, potencial productivo, autor, origen y fecha. La combinación comunidad/revisión es única. El autor puede faltar en datos migrados; en capturas se exige un usuario activo de la misma organización.
+
+`elementos_capacidad` contiene las organizaciones locales, actividades productivas y productos/servicios de cada revisión. El tipo está restringido y los nombres no se repiten por revisión y tipo, sin distinguir mayúsculas. Las claves foráneas compuestas aseguran pertenencia a la misma organización para comunidad, autor y elementos.
+
+Cada guardado crea una revisión y sus elementos dentro de una transacción, junto con una entrada de auditoría. La API compara la revisión recibida con la vigente bajo bloqueo de comunidad y rechaza ediciones obsoletas con HTTP 409. Quitar un elemento de la revisión actual conserva las versiones anteriores. El historial se conserva en SQL; no se añade todavía una pantalla de historial.
+
+Los textos admiten 3000 caracteres y las listas hasta 50 elementos de 150 caracteres, validados por la API. La migración recupera el último diagnóstico alternativo sin borrar sus tablas. El servicio usa pg, consistente con el flujo existente; el schema Prisma documenta las relaciones, sin afirmar una migración de la persistencia a Prisma. Esta sección no implementa necesidades, proyectos ni cambios de prioridad de la historia #27.

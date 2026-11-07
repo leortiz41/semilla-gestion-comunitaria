@@ -19,7 +19,7 @@ La coincidencia de nombres de archivo 005 no significa coincidencia de contenido
 
 007 crea las tablas por secciones si no existen. Si detecta el modelo alternativo, copia población/vivienda y visión del último diagnóstico solo donde no existe un registro local. Nunca sustituye registros ya capturados por secciones ni elimina los diagnósticos históricos, organizaciones, productividad o auditoría del modelo alternativo. Cuando ambos modelos tienen información, la sección local conserva precedencia y el dato alternativo permanece disponible en su tabla; requiere revisión humana si difieren.
 
-Organizaciones/productividad del formulario alternativo no se trasladan automáticamente a un nuevo modelo. La sección específica de capacidades locales sigue pendiente en el expediente por secciones: debe completarse a partir de esta base unificada, preservando cualquier dato alternativo. La historia #27 tampoco está implementada.
+La sección de organización y productividad se incorpora con 008. Recupera las capacidades del último diagnóstico alternativo, conserva sus originales y registra nuevas revisiones independientes. La historia #27 sigue pendiente.
 
 ## Pruebas realizadas
 
@@ -46,4 +46,8 @@ Respaldar Neon development y ejecutar únicamente `database/sql/007_compatibilid
 
 Reiniciar backend/frontend. Comprobar que el listado abre el expediente por secciones y que conserva población/vivienda y visión registradas. Guardar un cambio de prueba y recargar. Los scripts anteriores y la rama de respaldo permanecen disponibles para comparación.
 
-Los endpoints y servicios del formulario integral anterior se conservan temporalmente para compatibilidad, pero la navegación principal usa las secciones del respaldo. No mezclar ambos flujos de escritura: no hay sincronización bidireccional entre modelos. La consolidación de organizaciones/productividad y el retiro de ese flujo alternativo deben resolverse antes de promover a producción.
+Los endpoints y servicios del formulario integral anterior se conservan temporalmente para compatibilidad, pero la navegación principal usa las secciones del respaldo. No mezclar ambos flujos de escritura: no hay sincronización bidireccional entre modelos. 008 consolida organizaciones/productividad al aplicarse. El retiro del flujo alternativo y la comprobación funcional real siguen pendientes antes de promover a producción.
+
+## Organización y productividad
+
+Después de 007, aplicar una sola vez `database/sql/008_organizacion_productividad.sql` siguiendo [la guía de desarrollo](../migraciones-aplicadas/neon-organizacion-productividad.md). Las pruebas de compatibilidad cubren ambas variantes de 005, migración de capacidades, guardado, aislamiento, conflicto de revisión y rollback. Esto no acredita una ejecución en Neon.

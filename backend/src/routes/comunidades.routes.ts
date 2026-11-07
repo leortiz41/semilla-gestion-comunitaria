@@ -1,3 +1,4 @@
+import {capacidadesRouter} from './capacidades.routes.js';
 import { validarExpediente, esUuid, ErrorExpediente } from '../domain/expediente.js';
 import { guardarExpediente, obtenerExpediente } from '../services/expedientes.service.js';
 import { Router } from 'express';
@@ -558,3 +559,5 @@ comunidadesRouter.put(
     }
   },
 );
+
+comunidadesRouter.use('/:id/expediente/capacidades',capacidadesRouter);

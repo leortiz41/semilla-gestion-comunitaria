@@ -114,6 +114,7 @@ model claves_idempotencia {
 }
 
 model comunidades {
+  capacidades_comunitarias capacidades_comunitarias[]
   diagnostico_comunitario diagnosticos_comunitarios?
   visiones_desarrollo    visiones_desarrollo_comunitarias[]
   latitud Decimal? @db.Decimal(9, 6)
@@ -497,6 +498,7 @@ model tokens_refresco {
 }
 
 model usuarios {
+  capacidades_comunitarias capacidades_comunitarias[]
   @@unique([id, organizacion_id], map: "uq_usuarios_id_organizacion")
   diagnosticos_comunidad diagnosticos_comunidad[]
   id                          String                        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -624,4 +626,32 @@ model visiones_desarrollo_comunitarias {
   @@unique([comunidad_id, area], map: "uq_visiones_desarrollo_comunidad_area")
   @@unique([comunidad_id, organizacion_id, area], map: "uq_visiones_desarrollo_comunidad_organizacion_area")
   @@index([organizacion_id], map: "idx_visiones_desarrollo_organizacion_id")
+}
+
+/// Migración 008: revisiones inmutables de organización y productividad.
+model capacidades_comunitarias {
+ id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+ comunidad_id String @db.Uuid
+ organizacion_id String @db.Uuid
+ revision Int
+ observaciones_organizaciones String @default("")
+ potencial_productivo String @default("")
+ registrado_por_id String? @db.Uuid
+ origen String @default("CAPTURA") @db.VarChar(20)
+ creado_en DateTime @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
+ comunidades comunidades @relation(fields:[comunidad_id,organizacion_id],references:[id,organizacion_id],onDelete:Restrict,onUpdate:NoAction)
+ usuarios usuarios? @relation(fields:[registrado_por_id,organizacion_id],references:[id,organizacion_id],onDelete:Restrict,onUpdate:NoAction)
+ elementos_capacidad elementos_capacidad[]
+ @@unique([comunidad_id,revision])
+ @@unique([id,organizacion_id])
+ @@index([organizacion_id,comunidad_id,revision(sort:Desc)],map:"idx_capacidades_organizacion_comunidad")
+}
+/// CHECK y unicidad por lower(nombre) definidos en SQL 008.
+model elementos_capacidad {
+ id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+ capacidad_id String @db.Uuid
+ organizacion_id String @db.Uuid
+ tipo String @db.VarChar(30)
+ nombre String @db.VarChar(150)
+ capacidades_comunitarias capacidades_comunitarias @relation(fields:[capacidad_id,organizacion_id],references:[id,organizacion_id],onDelete:Restrict,onUpdate:NoAction)
 }

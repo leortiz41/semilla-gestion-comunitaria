@@ -87,3 +87,11 @@ Se agregó edición del diagnóstico con conservación de versiones y control de
 ### Reconciliación con el avance local
 
 Se recuperó el respaldo `c7075a7` y se integró el expediente por secciones en develop. Se conservaron las dos variantes de 005 identificadas y se añadió una nueva migración 007 de compatibilidad, sin reescribir scripts aplicados. Backend, frontend, Prisma y pruebas de ambas bases de partida pasaron. Pendiente validación en Neon development y completar capacidades locales en este flujo antes de #27. [Detalle de la reconciliación](../arquitectura/reconciliacion-diagnostico.md).
+
+## Cierre de organización y productividad — 7 de noviembre de 2026
+
+Se completa la sección del expediente para consultar y editar organizaciones locales, actividades productivas, productos/servicios, observaciones y potencial productivo. Se conservan el diseño por secciones y el flujo de trabajo directo en develop, con promoción posterior mediante PR a main.
+
+Se agrega la migración incremental 008, sin modificar 005, 006 ni 007. Cada guardado conserva una nueva revisión, autor y auditoría; los conflictos de edición se rechazan y los fallos revierten la transacción completa. Las relaciones y consultas mantienen aislamiento por organización. Se recuperan las capacidades del diagnóstico alternativo sin eliminar su historial.
+
+Validación: compilaciones de backend/frontend, schema Prisma válido y cuatro pruebas automatizadas aprobadas, incluyendo ambas variantes de 005, migración 008, persistencia, aislamiento, revisión obsoleta y rollback. La ejecución en Neon y la comprobación autenticada del flujo siguen pendientes de conexión. La historia #27 no se inicia en este cambio.

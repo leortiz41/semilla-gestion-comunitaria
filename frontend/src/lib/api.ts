@@ -367,3 +367,9 @@ export function actualizarDiagnostico(
     },
   );
 }
+
+export interface CapacidadesComunidad {
+ revision:number; organizaciones:string[]; actividadesProductivas:string[]; productosServicios:string[]; observacionesOrganizaciones:string; potencialProductivo:string;
+}
+export function obtenerCapacidades(token:string,id:string) {return request<{capacidades:CapacidadesComunidad}>(`/comunidades/${id}/expediente/capacidades`,{headers:{Authorization:`Bearer ${token}`}});}
+export function guardarCapacidades(token:string,id:string,datos:CapacidadesComunidad) {return request<{capacidades:CapacidadesComunidad}>(`/comunidades/${id}/expediente/capacidades`,{method:'PUT',headers:{Authorization:`Bearer ${token}`},body:JSON.stringify(datos)});}
