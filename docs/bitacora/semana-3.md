@@ -79,3 +79,7 @@ También fue necesario diferenciar un script de validación existente de una pru
 ## Avance posterior: registro y consulta del expediente comunitario
 
 Se implementó un primer flujo de registro completo y consulta desde el listado, con coordenadas, diagnóstico y elementos repetibles normalizados. Incluye migración 005, validación, aislamiento organizacional y guardado transaccional. La aplicación en Neon y la edición del diagnóstico siguen pendientes. Las decisiones y los pasos de validación están en [Expediente comunitario — issue #11](expediente-comunitario-issue11.md).
+
+### Completar organizaciones y productividad
+
+Se agregó edición del diagnóstico con conservación de versiones y control de cambios simultáneos. Las listas ahora permiten agregar/quitar elementos individuales. Se mantiene el trabajo centrado en el diagnóstico antes de implementar la historia #27. No requiere migración adicional a 005; falta la comprobación funcional en Neon development.
