@@ -180,6 +180,72 @@ test('migraciones y servicio: persistencia, aislamiento, duplicados y rollback',
         [otra, id, user],
       ),
     );
+    const anterior = leido!.diagnosticoId;
+    const editado = {
+      ...datos,
+      nombre: 'No cambiar el nombre',
+      organizaciones: ['Cooperativa'],
+      actividadesProductivas: ['Pesca'],
+      productosServicios: ['Tilapia'],
+      observacionesOrganizaciones: 'Comité activo',
+      potencialProductivo: 'Mejorar comercialización',
+    };
+    await guardarExpediente(org, user, editado, pool, {
+      comunidadId: id,
+      diagnosticoAnteriorId: anterior,
+    });
+    const actual = await obtenerExpediente(org, id, pool);
+    assert.equal(actual?.nombre, datos.nombre);
+    assert.deepEqual(actual?.organizaciones, ['Cooperativa']);
+    assert.deepEqual(actual?.actividadesProductivas, ['Pesca']);
+    assert.deepEqual(actual?.productosServicios, ['Tilapia']);
+    assert.equal(actual?.observacionesOrganizaciones, 'Comité activo');
+    assert.equal(actual?.potencialProductivo, 'Mejorar comercialización');
+    assert.notEqual(actual?.diagnosticoId, anterior);
+    assert.equal(
+      (
+        await db.query(
+          'SELECT id FROM diagnosticos_comunidad WHERE comunidad_id=$1',
+          [id],
+        )
+      ).rows.length,
+      2,
+    );
+    await assert.rejects(
+      guardarExpediente(org, user, datos, pool, {
+        comunidadId: id,
+        diagnosticoAnteriorId: anterior,
+      }),
+      /cambió/,
+    );
+    await assert.rejects(
+      guardarExpediente(org, user, datos, pool, {
+        comunidadId: zonaOtra,
+        diagnosticoAnteriorId: null,
+      }),
+      /no encontrada/,
+    );
+    await guardarExpediente(org, user, datos, pool, {
+      comunidadId: basica,
+      diagnosticoAnteriorId: null,
+    });
+    assert.ok((await obtenerExpediente(org, basica, pool))?.diagnosticoId);
+    await assert.rejects(
+      guardarExpediente(
+        org,
+        user,
+        {
+          ...datos,
+          visiones: [{ ...datos.visiones[0], prioridad: 'invalida' }],
+        },
+        pool,
+        { comunidadId: id, diagnosticoAnteriorId: actual!.diagnosticoId },
+      ),
+    );
+    assert.equal(
+      (await obtenerExpediente(org, id, pool))?.diagnosticoId,
+      actual!.diagnosticoId,
+    );
     await db.query('UPDATE zonas SET activo=FALSE WHERE id=$1', [zona]);
     await assert.rejects(
       guardarExpediente(org, user, { ...datos, nombre: 'Zona inactiva' }, pool),
