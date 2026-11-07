@@ -59,11 +59,13 @@ semilla-gestion-comunitaria/
 ├── docs/
 │   ├── vision.md
 │   ├── mapa-historias.md
+│   ├── modelo-datos.md
 │   ├── plan.md
 │   ├── seguridad-autenticacion.md
 │   └── bitacora/
 │       ├── semana-1.md
-│       └── semana-2.md
+│       ├── semana-2.md
+│       └── semana-3.md
 ├── .gitignore
 └── README.md
 ```
@@ -87,6 +89,13 @@ semilla-gestion-comunitaria/
 - [Bitácora - Semana 2](docs/bitacora/semana-2.md)
 - Release requerido: `semana-2`
 
+### Semana 3 - Datos que sostienen el negocio
+
+- [Modelo de datos del producto completo](docs/modelo-datos.md)
+- [Bitácora - Semana 3](docs/bitacora/semana-3.md)
+- Etiqueta de entrega: `semana-3`
+- El modelo distingue las 29 tablas existentes de las ampliaciones pendientes.
+
 ## Flujo de ramas
 
 - `main`: producción y entregas estables.
@@ -95,7 +104,7 @@ semilla-gestion-comunitaria/
 
 ## Estado funcional actual
 
-La aplicación ya cuenta con una base de autenticación y autorización, estructura administrativa, Dashboard con indicadores conectados a PostgreSQL/Neon y una primera capa de experiencia de usuario para el módulo de Comunidades.
+La aplicación ya cuenta con una base de autenticación y autorización, estructura administrativa, Dashboard con indicadores conectados a PostgreSQL/Neon y gestión básica de zonas y comunidades respaldada por PostgreSQL. El modelo completo documenta también los módulos previstos para las siguientes etapas.
 
 El expediente completo de Comunidades todavía requiere completar su persistencia de punta a punta en el backend y la base de datos.
 

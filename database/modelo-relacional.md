@@ -1,5 +1,7 @@
 # Modelo relacional inicial de Semilla
 
+> Antecedente conceptual: este documento conserva el diseño inicial en inglés. La referencia actual del producto, con nombres en español, esquema existente y ampliaciones previstas, está en [docs/modelo-datos.md](../docs/modelo-datos.md).
+
 ## Objetivo
 
 Definir el modelo de datos objetivo para PostgreSQL de **Semilla - Gestión Comunitaria**, asegurando relaciones coherentes, normalización hasta 3FN donde corresponda, trazabilidad de recursos y preparación para trabajo offline.
