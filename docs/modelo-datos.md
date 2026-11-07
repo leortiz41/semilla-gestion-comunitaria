@@ -839,3 +839,9 @@ El backend obtiene la organización de la sesión autenticada. Nunca acepta el `
 | Offline | Dos tablas de soporte | Cola, resolución de conflictos y pruebas sin conexión. |
 
 Antes de cerrar cada historia: demostrar persistencia al recargar, permisos, rechazo de relaciones cruzadas, manejo de duplicados, evidencia de prueba y actualización de bitácora. No se cierran los issues #11–#19 solo por documentar el diseño.
+
+## 10. Evolución posterior al corte documental: expediente comunitario
+
+La migración [005](../database/sql/005_expediente_comunitario.sql), preparada en la rama de expediente, añade `comunidades.latitud/longitud`, `diagnosticos_comunidad`, `visiones_comunidad` y `elementos_diagnostico`. El schema Prisma de esta rama pasa de 29 a 32 modelos; las secciones anteriores conservan el corte original de semana 3. La aplicación de 005 en Neon debe verificarse separadamente.
+
+El diagnóstico conserva población, viviendas, viviendas por intervenir, observaciones, oportunidades, fecha y autor. Sus detalles usan FK compuestas de organización. `elementos_diagnostico` almacena selecciones estructuradas por tipo (vivienda, organización, actividad productiva o producto/servicio); no reemplaza los futuros directorios operativos. Las áreas de visión conservan las cuatro categorías del formulario mediante CHECK, en lugar del catálogo configurable propuesto. Véanse [decisiones, validación y despliegue](bitacora/expediente-comunitario-issue11.md).

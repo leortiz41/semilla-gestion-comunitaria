@@ -75,3 +75,7 @@ También fue necesario diferenciar un script de validación existente de una pru
 5. Implementar revisión y publicación de evidencias, conforme a #15–#17.
 6. Preparar datos ficticios reproducibles y demostrar el flujo de trazabilidad con persistencia, permisos y pruebas entre dos organizaciones.
 7. Mantener los issues abiertos hasta cumplir sus criterios de aceptación; documentar pruebas y resultados en los siguientes avances.
+
+## Avance posterior: registro y consulta del expediente comunitario
+
+Se implementó un primer flujo de registro completo y consulta desde el listado, con coordenadas, diagnóstico y elementos repetibles normalizados. Incluye migración 005, validación, aislamiento organizacional y guardado transaccional. La aplicación en Neon y la edición del diagnóstico siguen pendientes. Las decisiones y los pasos de validación están en [Expediente comunitario — issue #11](expediente-comunitario-issue11.md).
