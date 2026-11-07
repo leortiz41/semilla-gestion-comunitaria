@@ -692,3 +692,114 @@
 .expediente-lista { border: 0; padding: 0; margin: 0 0 1.25rem; min-width: 0; display: grid; gap: .6rem; }
 .expediente-lista__fila { display: flex; gap: .5rem; }
 .expediente-lista__fila input { min-width: 0; flex: 1; }
+
+/* Capacidades locales: presentación acotada a esta sección del expediente. */
+.expediente-comunidad__seccion.capacidades-locales {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
+  gap: 24px;
+}
+.capacidades-locales__encabezado {
+  padding-bottom: 18px;
+  border-bottom: 1px solid #e4ebe1;
+}
+.capacidades-locales .expediente-comunidad__formulario,
+.capacidades-locales .expediente-comunidad__contenido-seccion {
+  width: 100%;
+  min-width: 0;
+  gap: 24px;
+}
+.capacidades-locales .expediente-campos {
+  margin: 0;
+}
+.capacidades-locales__listas,
+.capacidades-locales__notas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 270px), 1fr));
+  gap: 18px;
+  align-items: start;
+}
+.capacidades-locales .expediente-lista,
+.capacidades-locales__tarjeta {
+  min-width: 0;
+  margin: 0;
+  padding: 18px;
+  border: 1px solid #dfe8db;
+  border-radius: 14px;
+  background: #f8faf6;
+}
+.capacidades-locales .expediente-lista legend {
+  padding: 0 6px;
+  color: #355c3a;
+  font-size: .85rem;
+  font-weight: 750;
+  line-height: 1.6;
+}
+.capacidades-locales__contador {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 1px 7px;
+  border-radius: 20px;
+  background: #e7efe2;
+  font-size: .7rem;
+  white-space: nowrap;
+}
+.capacidades-locales input,
+.capacidades-locales textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  padding: 11px 12px;
+  border: 1px solid #d6e1d1;
+  border-radius: 10px;
+  color: #334337;
+  background: #fff;
+  font: inherit;
+  font-size: .88rem;
+  font-weight: 400;
+}
+.capacidades-locales textarea { min-height: 120px; }
+.capacidades-locales input::placeholder { color: #7b867c; }
+.capacidades-locales :is(input, textarea, button):focus-visible {
+  outline: 3px solid #7b9e70;
+  outline-offset: 3px;
+}
+.capacidades-locales button {
+  min-height: 44px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.capacidades-locales__agregar,
+.capacidades-locales__quitar {
+  padding: 9px 12px;
+  border: 1px solid #d3dfcd;
+  border-radius: 9px;
+  font-size: .8rem;
+  font-weight: 700;
+}
+.capacidades-locales__agregar { color: #355c3a; background: #edf3e9; }
+.capacidades-locales__agregar:hover:not(:disabled) { background: #e0ebd9; }
+.capacidades-locales__quitar { flex-shrink: 0; color: #8b4c43; background: #fff; }
+.capacidades-locales__quitar:hover:not(:disabled) { background: #fbefeb; border-color: #d8b4ab; }
+.capacidades-locales button:disabled { cursor: not-allowed; opacity: .6; }
+.capacidades-locales small { color: #6d7a6e; font-size: .75rem; line-height: 1.5; }
+.capacidades-locales .expediente-campos > .capacidades-locales__notas { margin-top: 24px; }
+.capacidades-locales__notas > * { min-width: 0; }
+.capacidades-locales__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-top: 18px;
+  border-top: 1px solid #e4ebe1;
+}
+.capacidades-locales .expediente-campos > .capacidades-locales__acciones { margin-top: 24px; }
+.capacidades-locales h3 { margin: 0 0 12px; color: #355c3a; font-size: .88rem; }
+.capacidades-locales__tarjeta ul { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 0; padding: 0; }
+.capacidades-locales__tarjeta li { padding: 7px 10px; border-radius: 9px; color: #355c3a; background: #e9f0e4; font-size: .82rem; overflow-wrap: anywhere; }
+.capacidades-locales__notas p { white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (max-width: 560px) {
+  .expediente-comunidad__seccion.capacidades-locales { padding: 16px; }
+  .capacidades-locales .expediente-lista { padding: 12px; }
+  .capacidades-locales__acciones > button { width: 100%; }
+}

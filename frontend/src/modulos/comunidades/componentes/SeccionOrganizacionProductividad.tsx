@@ -109,8 +109,8 @@ export default function SeccionOrganizacionProductividad({
     }
   }
   return (
-    <article className="expediente-comunidad__seccion">
-      <div>
+    <article className="expediente-comunidad__seccion capacidades-locales">
+      <div className="capacidades-locales__encabezado">
         <p className="expediente-comunidad__etiqueta">
           04 · Capacidades locales
         </p>
@@ -145,9 +145,10 @@ export default function SeccionOrganizacionProductividad({
       ) : editando ? (
         <form className="expediente-comunidad__formulario" onSubmit={guardar}>
           <fieldset className="expediente-campos" disabled={guardando}>
+            <div className="capacidades-locales__listas">
             {grupos.map(([clave, titulo, ejemplo]) => (
               <fieldset className="expediente-lista" key={clave}>
-                <legend>{titulo}</legend>
+                <legend>{titulo} <span className="capacidades-locales__contador">{borrador[clave].length}/50</span></legend>
                 {borrador[clave].map((valor, i) => (
                   <div className="expediente-lista__fila" key={i}>
                     <input
@@ -167,6 +168,7 @@ export default function SeccionOrganizacionProductividad({
                     />
                     <button
                       type="button"
+                      className="capacidades-locales__quitar"
                       aria-label={`Quitar ${titulo} ${i + 1}`}
                       onClick={() =>
                         setBorrador((b) => ({
@@ -181,6 +183,7 @@ export default function SeccionOrganizacionProductividad({
                 ))}
                 <button
                   type="button"
+                  className="capacidades-locales__agregar"
                   disabled={borrador[clave].length >= 50}
                   onClick={() =>
                     setBorrador((b) => ({ ...b, [clave]: [...b[clave], ''] }))
@@ -199,6 +202,8 @@ export default function SeccionOrganizacionProductividad({
                 </small>
               </fieldset>
             ))}
+            </div>
+            <div className="capacidades-locales__notas">
             <label className="expediente-comunidad__campo-texto">
               Observaciones de las organizaciones
               <textarea
@@ -227,7 +232,8 @@ export default function SeccionOrganizacionProductividad({
                 }
               />
             </label>
-            <div className="expediente-comunidad__acciones-formulario">
+            </div>
+            <div className="expediente-comunidad__acciones-formulario capacidades-locales__acciones">
               <button type="submit" className="pagina-comunidades__boton-nuevo">
                 {guardando ? 'Guardando…' : 'Guardar sección'}
               </button>
@@ -247,8 +253,9 @@ export default function SeccionOrganizacionProductividad({
         </form>
       ) : (
         <div className="expediente-comunidad__contenido-seccion">
+          <div className="capacidades-locales__listas">
           {grupos.map(([clave, titulo]) => (
-            <div key={clave}>
+            <div key={clave} className="capacidades-locales__tarjeta">
               <h3>{titulo}</h3>
               {datos[clave].length ? (
                 <ul>
@@ -261,6 +268,8 @@ export default function SeccionOrganizacionProductividad({
               )}
             </div>
           ))}
+          </div>
+          <div className="capacidades-locales__notas">
           <div>
             <h3>Observaciones de las organizaciones</h3>
             <p className="expediente-comunidad__detalle">
@@ -273,6 +282,8 @@ export default function SeccionOrganizacionProductividad({
               {datos.potencialProductivo || 'Sin información registrada.'}
             </p>
           </div>
+          </div>
+          <div className="capacidades-locales__acciones">
           {puedeEditar && (
             <button
               type="button"
@@ -294,6 +305,7 @@ export default function SeccionOrganizacionProductividad({
           >
             Actualizar sección
           </button>
+          </div>
         </div>
       )}
     </article>
