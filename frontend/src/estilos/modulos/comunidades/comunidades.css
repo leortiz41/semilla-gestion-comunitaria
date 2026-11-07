@@ -395,9 +395,233 @@
   line-height: 1.5;
 }
 
+.expediente-comunidad__resumen {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.expediente-comunidad__resumen > div,
+.expediente-comunidad__seccion {
+  border: 1px solid rgba(53, 92, 58, 0.1);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.76);
+  box-shadow: 0 14px 32px rgba(48, 69, 48, 0.05);
+}
+
+.expediente-comunidad__resumen > div {
+  display: grid;
+  gap: 6px;
+  padding: 15px;
+}
+
+.expediente-comunidad__resumen span,
+.expediente-comunidad__etiqueta {
+  color: #7b867c;
+  font-size: 0.68rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.expediente-comunidad__resumen strong {
+  color: #334337;
+  font-size: 0.9rem;
+}
+
+.expediente-comunidad__secciones {
+  display: grid;
+  gap: 12px;
+}
+
+.expediente-comunidad__seccion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px;
+}
+
+.expediente-comunidad__seccion h2 {
+  margin: 5px 0;
+  color: #294c2e;
+  font-size: 1rem;
+}
+
+.expediente-comunidad__seccion p {
+  max-width: 680px;
+  margin: 0;
+  color: #6d7a6e;
+  line-height: 1.5;
+}
+
+.expediente-comunidad__seccion--pendiente {
+  border-style: dashed;
+  background: rgba(248, 250, 247, 0.78);
+}
+
+.expediente-comunidad__seccion--pendiente > span {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  border-radius: 999px;
+  color: #7b6b4a;
+  background: #f7efdf;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.expediente-comunidad__contenido-seccion,
+.expediente-comunidad__formulario {
+  width: min(100%, 720px);
+  display: grid;
+  gap: 12px;
+}
+
+.expediente-comunidad__estado-seccion {
+  color: #7b6b4a;
+  font-size: 0.8rem;
+  font-weight: 750;
+}
+
+.expediente-comunidad__metricas {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.expediente-comunidad__metricas span {
+  display: grid;
+  gap: 3px;
+  padding: 10px;
+  border-radius: 10px;
+  color: #6d7a6e;
+  background: #f6f8f4;
+  font-size: 0.72rem;
+}
+
+.expediente-comunidad__metricas strong {
+  color: #355c3a;
+  font-size: 1rem;
+}
+
+.expediente-comunidad__detalle {
+  margin: 0;
+  color: #536055;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.expediente-comunidad__campos-numericos {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.expediente-comunidad__campos-numericos label,
+.expediente-comunidad__campo-texto {
+  display: grid;
+  gap: 6px;
+  color: #6d7a6e;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.expediente-comunidad__campos-numericos input,
+.expediente-comunidad__campo-texto textarea,
+.expediente-comunidad__campo-texto select {
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 12px;
+  border: 1px solid #dce5d9;
+  border-radius: 10px;
+  color: #334337;
+  background: #fff;
+  font: inherit;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.expediente-comunidad__campo-texto textarea {
+  resize: vertical;
+}
+
+.expediente-comunidad__seccion--vision {
+  display: grid;
+  align-items: stretch;
+}
+
+.vision-desarrollo__areas {
+  display: grid;
+  gap: 10px;
+}
+
+.vision-desarrollo__area {
+  display: grid;
+  gap: 12px;
+  padding: 15px;
+  border: 1px solid rgba(53, 92, 58, 0.1);
+  border-radius: 13px;
+  background: #f9fbf8;
+}
+
+.vision-desarrollo__encabezado {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.vision-desarrollo__encabezado h3 {
+  margin: 0;
+  color: #355c3a;
+  font-size: 0.92rem;
+}
+
+.vision-desarrollo__encabezado p {
+  margin-top: 4px;
+  font-size: 0.8rem;
+}
+
+.vision-desarrollo__contenido {
+  display: grid;
+  gap: 7px;
+}
+
+.vision-desarrollo__contenido p {
+  margin: 0;
+  color: #536055;
+  font-size: 0.82rem;
+}
+
+.vision-desarrollo__prioridad {
+  width: fit-content;
+  padding: 5px 9px;
+  border-radius: 999px;
+  color: #5d6b47;
+  background: #edf2e7;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.expediente-comunidad__acciones-formulario {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
 @media (max-width: 980px) {
   .pagina-comunidades__resumen {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .expediente-comunidad__resumen {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .expediente-comunidad__campos-numericos {
+    grid-template-columns: 1fr;
   }
 
   .formulario-comunidad__campos--tres,
@@ -432,6 +656,24 @@
 
   .formulario-comunidad {
     padding: 18px;
+  }
+
+  .expediente-comunidad__resumen {
+    grid-template-columns: 1fr;
+  }
+
+  .expediente-comunidad__seccion {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .vision-desarrollo__encabezado {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .expediente-comunidad__metricas {
+    grid-template-columns: 1fr;
   }
 
   .formulario-comunidad__acordeon-resumen {

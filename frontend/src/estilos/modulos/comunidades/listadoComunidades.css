@@ -139,6 +139,44 @@
   background: #eef3eb;
 }
 
+.listado-comunidades__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.listado-comunidades__boton-editar:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.listado-comunidades__boton-editar--desactivar {
+  color: #8a6460;
+  border-color: rgba(138, 100, 96, 0.2);
+}
+
+.listado-comunidades__boton-editar--desactivar:hover {
+  background: #f4e9e7;
+}
+
+.listado-comunidades__boton-editar--reactivar {
+  color: #3f7547;
+  border-color: rgba(63, 117, 71, 0.2);
+}
+
+.listado-comunidades__boton-editar--reactivar:hover {
+  background: #e7f1e4;
+}
+
+.listado-comunidades__boton-editar--expediente {
+  color: #8b6a34;
+  border-color: rgba(139, 106, 52, 0.2);
+}
+
+.listado-comunidades__boton-editar--expediente:hover {
+  background: #f7efdf;
+}
+
 .listado-comunidades__vacio {
   display: grid;
   gap: 5px;

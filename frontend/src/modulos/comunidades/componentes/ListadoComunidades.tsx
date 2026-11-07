@@ -5,6 +5,9 @@ interface PropiedadesListadoComunidades {
   comunidades: ComunidadResumen[];
   cargando?: boolean;
   alEditar?: (comunidad: ComunidadResumen) => void;
+  alVerExpediente?: (comunidad: ComunidadResumen) => void;
+  alCambiarEstado?: (comunidad: ComunidadResumen) => void;
+  comunidadProcesandoId?: string | null;
 }
 
 function obtenerEstadoVisual(comunidad: ComunidadResumen) {
@@ -23,6 +26,9 @@ function ListadoComunidades({
   comunidades,
   cargando = false,
   alEditar,
+  alVerExpediente,
+  alCambiarEstado,
+  comunidadProcesandoId,
 }: PropiedadesListadoComunidades) {
   return (
     <section className="listado-comunidades" aria-labelledby="titulo-listado-comunidades">
@@ -59,6 +65,7 @@ function ListadoComunidades({
 
           {comunidades.map((comunidad) => {
             const estadoVisual = obtenerEstadoVisual(comunidad);
+            const procesando = comunidadProcesandoId === comunidad.id;
 
             return (
               <div className="listado-comunidades__fila" role="row" key={comunidad.id}>
@@ -77,14 +84,43 @@ function ListadoComunidades({
                     {estadoVisual.etiqueta}
                   </span>
                 </span>
-                <span role="cell">
+                <span role="cell" className="listado-comunidades__acciones">
+                  {alVerExpediente && (
+                    <button
+                      className="listado-comunidades__boton-editar listado-comunidades__boton-editar--expediente"
+                      type="button"
+                      disabled={procesando}
+                      onClick={() => alVerExpediente(comunidad)}
+                    >
+                      Expediente
+                    </button>
+                  )}
                   {alEditar && (
                     <button
                       className="listado-comunidades__boton-editar"
                       type="button"
+                      disabled={procesando}
                       onClick={() => alEditar(comunidad)}
                     >
                       Editar
+                    </button>
+                  )}
+                  {alCambiarEstado && (
+                    <button
+                      className={
+                        comunidad.activo
+                          ? 'listado-comunidades__boton-editar listado-comunidades__boton-editar--desactivar'
+                          : 'listado-comunidades__boton-editar listado-comunidades__boton-editar--reactivar'
+                      }
+                      type="button"
+                      disabled={procesando}
+                      onClick={() => alCambiarEstado(comunidad)}
+                    >
+                      {procesando
+                        ? 'Guardando…'
+                        : comunidad.activo
+                          ? 'Desactivar'
+                          : 'Reactivar'}
                     </button>
                   )}
                 </span>

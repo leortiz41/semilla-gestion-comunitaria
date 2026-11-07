@@ -42,6 +42,26 @@ export interface ComunidadResumen {
   zonaActiva: boolean | null;
 }
 
+export interface DiagnosticoPoblacionVivienda {
+  poblacionAproximada: number | null;
+  viviendasAproximadas: number | null;
+  viviendasIntervencion: number | null;
+  tiposVivienda: string | null;
+}
+
+export type AreaVisionDesarrollo =
+  | 'EVANGELISMO'
+  | 'EDUCACION_FORMAL'
+  | 'EDUCACION_COMUNITARIA'
+  | 'INFRAESTRUCTURA';
+
+export interface VisionDesarrolloComunitaria {
+  area: AreaVisionDesarrollo;
+  situacionActual: string | null;
+  prioridad: 'ALTA' | 'MEDIA' | 'BAJA' | null;
+  metaDesarrollo: string | null;
+}
+
 interface ApiErrorResponse {
   message?: string;
 }
@@ -189,6 +209,83 @@ export function editarComunidad(
     },
     body: JSON.stringify(datos),
   });
+}
+
+export function cambiarEstadoComunidad(
+  accessToken: string,
+  comunidadId: string,
+  activo: boolean,
+): Promise<{ comunidad: ComunidadResumen }> {
+  return request<{ comunidad: ComunidadResumen }>(`/comunidades/${comunidadId}/estado`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ activo }),
+  });
+}
+
+export function obtenerDiagnosticoPoblacionVivienda(
+  accessToken: string,
+  comunidadId: string,
+): Promise<{ diagnostico: DiagnosticoPoblacionVivienda | null }> {
+  return request<{ diagnostico: DiagnosticoPoblacionVivienda | null }>(
+    `/comunidades/${comunidadId}/expediente/poblacion-vivienda`,
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    },
+  );
+}
+
+export function guardarDiagnosticoPoblacionVivienda(
+  accessToken: string,
+  comunidadId: string,
+  datos: DiagnosticoPoblacionVivienda,
+): Promise<{ diagnostico: DiagnosticoPoblacionVivienda }> {
+  return request<{ diagnostico: DiagnosticoPoblacionVivienda }>(
+    `/comunidades/${comunidadId}/expediente/poblacion-vivienda`,
+    {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(datos),
+    },
+  );
+}
+
+export function obtenerVisionesDesarrollo(
+  accessToken: string,
+  comunidadId: string,
+): Promise<{ visiones: VisionDesarrolloComunitaria[] }> {
+  return request<{ visiones: VisionDesarrolloComunitaria[] }>(
+    `/comunidades/${comunidadId}/expediente/vision-desarrollo`,
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    },
+  );
+}
+
+export function guardarVisionDesarrollo(
+  accessToken: string,
+  comunidadId: string,
+  area: AreaVisionDesarrollo,
+  datos: Omit<VisionDesarrolloComunitaria, 'area'>,
+): Promise<{ vision: VisionDesarrolloComunitaria }> {
+  return request<{ vision: VisionDesarrolloComunitaria }>(
+    `/comunidades/${comunidadId}/expediente/vision-desarrollo/${area}`,
+    {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(datos),
+    },
+  );
 }
 
 export function cambiarContrasena(

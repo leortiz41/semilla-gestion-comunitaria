@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import '../../estilos/modulos/paginaModuloBase.css';
 import '../../estilos/modulos/comunidades/comunidades.css';
 import {
+  cambiarEstadoComunidad,
   listarComunidades,
   listarZonas,
   type ComunidadResumen,
@@ -9,6 +10,7 @@ import {
 } from '../../lib/api';
 import type { SubseccionComunidades } from '../../tipos/navegacion';
 import FormularioRegistroBasicoComunidad from './componentes/FormularioRegistroBasicoComunidad';
+import ExpedienteComunidad from './componentes/ExpedienteComunidad';
 import ListadoComunidades from './componentes/ListadoComunidades';
 import PaginaZonas from './PaginaZonas';
 
@@ -40,7 +42,10 @@ function PaginaComunidades({ subseccion, tokenAcceso, alCambiarSubseccion }: Pro
   const [estado, setEstado] = useState('todos');
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mensaje, setMensaje] = useState<string | null>(null);
   const [comunidadEditando, setComunidadEditando] = useState<ComunidadResumen | null>(null);
+  const [comunidadExpediente, setComunidadExpediente] = useState<ComunidadResumen | null>(null);
+  const [comunidadProcesandoId, setComunidadProcesandoId] = useState<string | null>(null);
 
   const cargarDatos = useCallback(async () => {
     setCargando(true);
@@ -60,6 +65,35 @@ function PaginaComunidades({ subseccion, tokenAcceso, alCambiarSubseccion }: Pro
       setCargando(false);
     }
   }, [tokenAcceso]);
+
+  async function handleCambiarEstadoComunidad(comunidad: ComunidadResumen) {
+    setError(null);
+    setMensaje(null);
+    setComunidadProcesandoId(comunidad.id);
+
+    try {
+      const respuesta = await cambiarEstadoComunidad(
+        tokenAcceso,
+        comunidad.id,
+        !comunidad.activo,
+      );
+
+      setComunidades((actuales) =>
+        actuales.map((actual) =>
+          actual.id === respuesta.comunidad.id ? respuesta.comunidad : actual,
+        ),
+      );
+      setMensaje(
+        respuesta.comunidad.activo
+          ? 'Comunidad reactivada correctamente.'
+          : 'Comunidad desactivada correctamente.',
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No fue posible cambiar el estado de la comunidad.');
+    } finally {
+      setComunidadProcesandoId(null);
+    }
+  }
 
   useEffect(() => {
     if (subseccion === 'listado') {
@@ -142,6 +176,20 @@ function PaginaComunidades({ subseccion, tokenAcceso, alCambiarSubseccion }: Pro
     );
   }
 
+  if (comunidadExpediente) {
+    return (
+      <ExpedienteComunidad
+        comunidad={comunidadExpediente}
+        tokenAcceso={tokenAcceso}
+        alVolver={() => setComunidadExpediente(null)}
+        alEditarInformacionGeneral={() => {
+          setComunidadEditando(comunidadExpediente);
+          setComunidadExpediente(null);
+        }}
+      />
+    );
+  }
+
   return (
     <section className="pagina-modulo pagina-comunidades" aria-labelledby="titulo-comunidades">
       <div className="pagina-comunidades__superior">
@@ -175,6 +223,7 @@ function PaginaComunidades({ subseccion, tokenAcceso, alCambiarSubseccion }: Pro
       </div>
 
       {error && <div className="pagina-zonas__aviso pagina-zonas__aviso--error">{error}</div>}
+      {mensaje && <div className="pagina-zonas__aviso pagina-zonas__aviso--exito">{mensaje}</div>}
 
       {comunidadEditando && (
         <FormularioRegistroBasicoComunidad
@@ -246,6 +295,9 @@ function PaginaComunidades({ subseccion, tokenAcceso, alCambiarSubseccion }: Pro
         comunidades={comunidadesFiltradas}
         cargando={cargando}
         alEditar={setComunidadEditando}
+        alVerExpediente={setComunidadExpediente}
+        alCambiarEstado={handleCambiarEstadoComunidad}
+        comunidadProcesandoId={comunidadProcesandoId}
       />
     </section>
   );

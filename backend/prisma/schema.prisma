@@ -21,6 +21,8 @@ model organizaciones {
   creado_en         DateTime     @default(now()) @db.Timestamptz(6)
   actualizado_en    DateTime     @default(now()) @db.Timestamptz(6)
   comunidades       comunidades[]
+  diagnosticos_comunitarios diagnosticos_comunitarios[]
+  visiones_desarrollo_comunitarias visiones_desarrollo_comunitarias[]
   usuarios          usuarios[]
   zonas             zonas[]
 }
@@ -124,11 +126,49 @@ model comunidades {
   actualizado_en   DateTime        @default(now()) @db.Timestamptz(6)
   organizaciones   organizaciones  @relation(fields: [organizacion_id], references: [id], onDelete: Restrict)
   zonas            zonas?          @relation(fields: [zona_id, organizacion_id], references: [id, organizacion_id], onDelete: Restrict)
+  diagnostico_comunitario diagnosticos_comunitarios?
+  visiones_desarrollo    visiones_desarrollo_comunitarias[]
   familias         familias[]
   proyectos        proyectos[]
 
   @@index([organizacion_id], map: "idx_comunidades_organizacion_id")
   @@index([zona_id], map: "idx_comunidades_zona_id")
+  @@unique([id, organizacion_id], map: "uq_comunidades_id_organizacion")
+}
+
+model diagnosticos_comunitarios {
+  id                       String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  comunidad_id             String         @unique @db.Uuid
+  organizacion_id          String         @db.Uuid
+  poblacion_aproximada     Int?
+  viviendas_aproximadas    Int?
+  viviendas_intervencion   Int?
+  tipos_vivienda           String?
+  creado_en                DateTime       @default(now()) @db.Timestamptz(6)
+  actualizado_en           DateTime       @default(now()) @db.Timestamptz(6)
+  comunidades              comunidades    @relation(fields: [comunidad_id, organizacion_id], references: [id, organizacion_id], onDelete: Cascade)
+  organizaciones           organizaciones @relation(fields: [organizacion_id], references: [id], onDelete: Restrict)
+
+  @@unique([comunidad_id, organizacion_id], map: "uq_diagnosticos_comunitarios_comunidad_organizacion")
+  @@index([organizacion_id], map: "idx_diagnosticos_comunitarios_organizacion_id")
+}
+
+model visiones_desarrollo_comunitarias {
+  id               String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  comunidad_id     String         @db.Uuid
+  organizacion_id  String         @db.Uuid
+  area             String         @db.VarChar(60)
+  situacion_actual String?
+  prioridad        String?        @db.VarChar(10)
+  meta_desarrollo  String?
+  creado_en        DateTime       @default(now()) @db.Timestamptz(6)
+  actualizado_en   DateTime       @default(now()) @db.Timestamptz(6)
+  comunidades      comunidades    @relation(fields: [comunidad_id, organizacion_id], references: [id, organizacion_id], onDelete: Cascade)
+  organizaciones   organizaciones @relation(fields: [organizacion_id], references: [id], onDelete: Restrict)
+
+  @@unique([comunidad_id, area], map: "uq_visiones_desarrollo_comunidad_area")
+  @@unique([comunidad_id, organizacion_id, area], map: "uq_visiones_desarrollo_comunidad_organizacion_area")
+  @@index([organizacion_id], map: "idx_visiones_desarrollo_organizacion_id")
 }
 
 model contactos {
