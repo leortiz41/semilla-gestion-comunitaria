@@ -76,7 +76,10 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   return (await response.json()) as T;
 }
 
-export function iniciarSesion(email: string, password: string): Promise<SesionResponse> {
+export function iniciarSesion(
+  email: string,
+  password: string,
+): Promise<SesionResponse> {
   return request<SesionResponse>('/auth/login', {
     method: 'POST',
     body: JSON.stringify({ email, password }),
@@ -89,7 +92,9 @@ export function renovarSesion(): Promise<SesionResponse> {
   });
 }
 
-export function obtenerUsuario(accessToken: string): Promise<{ usuario: UsuarioSesion }> {
+export function obtenerUsuario(
+  accessToken: string,
+): Promise<{ usuario: UsuarioSesion }> {
   return request<{ usuario: UsuarioSesion }>('/auth/me', {
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -97,7 +102,9 @@ export function obtenerUsuario(accessToken: string): Promise<{ usuario: UsuarioS
   });
 }
 
-export function listarZonas(accessToken: string): Promise<{ zonas: ZonaResumen[] }> {
+export function listarZonas(
+  accessToken: string,
+): Promise<{ zonas: ZonaResumen[] }> {
   return request<{ zonas: ZonaResumen[] }>('/zonas', {
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -146,7 +153,9 @@ export function cambiarEstadoZona(
   });
 }
 
-export function listarComunidades(accessToken: string): Promise<{ comunidades: ComunidadResumen[] }> {
+export function listarComunidades(
+  accessToken: string,
+): Promise<{ comunidades: ComunidadResumen[] }> {
   return request<{ comunidades: ComunidadResumen[] }>('/comunidades', {
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -182,13 +191,16 @@ export function editarComunidad(
     departamento: string;
   },
 ): Promise<{ comunidad: ComunidadResumen }> {
-  return request<{ comunidad: ComunidadResumen }>(`/comunidades/${comunidadId}`, {
-    method: 'PATCH',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
+  return request<{ comunidad: ComunidadResumen }>(
+    `/comunidades/${comunidadId}`,
+    {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(datos),
     },
-    body: JSON.stringify(datos),
-  });
+  );
 }
 
 export function cambiarContrasena(
@@ -208,5 +220,48 @@ export function cambiarContrasena(
 export function cerrarSesion(): Promise<void> {
   return request<void>('/auth/logout', {
     method: 'POST',
+  });
+}
+
+export interface VisionComunidad {
+  categoria: string;
+  situacion: string;
+  meta: string;
+  prioridad: string;
+}
+export interface ExpedienteComunidad {
+  nombre: string;
+  zonaId: string;
+  municipio: string;
+  departamento: string;
+  latitud: number | null;
+  longitud: number | null;
+  poblacion: number | null;
+  viviendas: number | null;
+  viviendasIntervencion: number | null;
+  tiposVivienda: string[];
+  visiones: VisionComunidad[];
+  organizaciones: string[];
+  actividadesProductivas: string[];
+  productosServicios: string[];
+  observacionesOrganizaciones: string;
+  potencialProductivo: string;
+}
+
+export function crearExpediente(token: string, datos: ExpedienteComunidad) {
+  return request<{ comunidad: { id: string } }>('/comunidades/expedientes', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(datos),
+  });
+}
+export function consultarExpediente(token: string, id: string) {
+  return request<{
+    expediente: ExpedienteComunidad & {
+      id: string;
+      fechaDiagnostico: string | null;
+    };
+  }>(`/comunidades/${id}/expediente`, {
+    headers: { Authorization: `Bearer ${token}` },
   });
 }

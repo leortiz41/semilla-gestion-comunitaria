@@ -443,3 +443,6 @@
     padding: 0 15px 15px;
   }
 }
+
+.expediente-campos { border: 0; padding: 0; margin: 0 0 1rem; min-width: 0; }
+.expediente-campos:disabled input, .expediente-campos:disabled textarea, .expediente-campos:disabled select { opacity: 1; }
