@@ -1,5 +1,5 @@
 # Necesidades comunitarias y seguimiento
-Estado: diseño acordado, pendiente de implementación. Fecha: 7 de noviembre de 2026.
+Estado: entrega 1 implementada; evaluaciones y vínculos con proyectos pendientes. Fecha: 7 de noviembre de 2026.
 
 ## Propósito
 Convertir la información narrativa del expediente en necesidades gestionables, conservando el diagnóstico original. Cada necesidad debe permitir justificar una intervención y comprobar sus resultados.
@@ -56,3 +56,15 @@ Consultas previstas: necesidades sin proyecto, altas sin atención, revisiones v
 No se considera terminada una fase sin persistencia comprobada, validación de permisos y actualización de bitácora. Este documento registra una decisión de producto; no afirma que las pantallas o tablas propuestas ya existan.
 
 Historia de implementación: [#27](https://github.com/leortiz41/semilla-gestion-comunitaria/issues/27).
+
+## Entrega 1 implementada (010)
+
+Debajo de cada área aparecen las necesidades y el formulario «Agregar necesidad». Permite seleccionar una meta activa del área como origen opcional, mostrando la referencia y situación del diagnóstico para su revisión humana. No crea necesidades automáticamente ni transforma el texto narrativo.
+
+Se registra título, problema, situación inicial y cómo se comprobó, población y cantidad afectada opcionales, resultado esperado, objetivo numérico/unidad opcionales y motivo de prioridad obligatorio. La prioridad inicia por evaluar, independientemente de la prioridad del área. El estado inicial siempre es identificada y no se acepta un estado enviado por el cliente.
+
+`necesidades_comunitarias` no existía en el esquema operativo previo; 010 la crea y conecta con comunidad, visión, meta y autor mediante claves compuestas. Los IDs de metas de otra comunidad, organización, área o archivadas no son aceptados. Archivar después una meta vinculada conserva la necesidad y su referencia, marcada como archivada en consulta.
+
+GET y POST usan permisos `comunidades.ver` y `comunidades.gestionar`. Esta entrega no incluye modificación ni borrado de necesidades: las futuras correcciones y evaluaciones deben conservar historial. El registro y su auditoría se confirman en una única transacción. Un UUID de captura evita duplicar el mismo envío al reintentarlo; la repetición devuelve 409 e indica actualizar la sección. No equivale a deduplicación semántica de necesidades.
+
+Pendientes de entregas 2–3: evaluaciones inmutables, responsables, próxima revisión, evidencia inicial, transiciones, relación N:M con proyectos y reportes de resultados. La historia #27 permanece abierta. La prueba autenticada de esta entrega en el navegador del usuario aún está pendiente.

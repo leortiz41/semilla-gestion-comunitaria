@@ -40,7 +40,7 @@ El recorrido principal del usuario se organiza en las siguientes actividades:
 | HU-04 | Dashboard | Como coordinador quiero ver indicadores reales para conocer rápidamente el estado de la operación. | Must | En progreso |
 | HU-05 | Comunidades | Como coordinador quiero consultar un listado de comunidades para localizar rápidamente la comunidad que necesito gestionar. | Must | Hecho UX |
 | HU-06 | Comunidades | Como usuario quiero buscar y filtrar comunidades por zona y estado para reducir el tiempo de consulta. | Must | Hecho UX |
-| HU-07 | Comunidades | Como personal de campo quiero registrar una comunidad con información general, población, vivienda, visión de desarrollo, organizaciones y productividad local. | Must | UX lista / persistencia pendiente |
+| HU-07 | Comunidades | Como personal de campo quiero registrar una comunidad con información general, población, vivienda, visión de desarrollo, organizaciones y productividad local. | Must | Persistencia pg implementada / captura de metas validada por usuario |
 | HU-08 | Comunidades | Como coordinador quiero conocer cuántas comunidades están registradas y activas para dar seguimiento a la cobertura. | Must | Hecho |
 | HU-09 | Familias | Como personal de campo quiero registrar familias vinculadas a una comunidad para mantener un expediente familiar ordenado. | Must | Pendiente |
 | HU-10 | Beneficiarios | Como coordinador quiero asociar personas y beneficiarios a una familia para evitar duplicidad y mejorar la trazabilidad. | Must | Pendiente |
@@ -118,3 +118,7 @@ Se utilizará una priorización tipo **MoSCoW**:
 - **Won't now:** fuera del alcance de la primera versión.
 
 La prioridad se revisará conforme se valide el producto con el cliente y se obtenga nueva información durante el desarrollo.
+
+## Seguimiento de necesidades — historia #27
+
+Entrega 1 implementada: registrar y consultar necesidades por área, origen opcional en una meta, situación inicial, resultado esperado y prioridad justificada. Estado inicial identificada. La migración 010 y las pruebas protegen las relaciones entre organización/comunidad/área/meta. Pendiente validación del usuario de esta entrega; evaluaciones y vinculación con proyectos siguen pendientes.

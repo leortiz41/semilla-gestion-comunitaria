@@ -1,6 +1,14 @@
-import {randomUUID} from 'node:crypto';
-import {validarMetasVision} from '../src/domain/metas-vision.js';
-import {obtenerVisionesDesarrolloComunitaria, guardarVisionDesarrolloComunitaria} from '../src/services/comunidades.service.js';
+import { validarNecesidad } from '../src/domain/necesidades.js';
+import {
+  listarNecesidades,
+  registrarNecesidad,
+} from '../src/services/necesidades.service.js';
+import { randomUUID } from 'node:crypto';
+import { validarMetasVision } from '../src/domain/metas-vision.js';
+import {
+  obtenerVisionesDesarrolloComunitaria,
+  guardarVisionDesarrolloComunitaria,
+} from '../src/services/comunidades.service.js';
 import type { Pool } from 'pg';
 import {
   obtenerCapacidades,
@@ -219,36 +227,280 @@ for (const variante of ['local', 'publicada'])
         2,
       );
 
-      await db.query("INSERT INTO visiones_desarrollo_comunitarias(comunidad_id,organizacion_id,area) VALUES($1,$2,'EVANGELISMO') ON CONFLICT(comunidad_id,area) DO NOTHING",[comunidad,org]);
-      await db.query("UPDATE visiones_desarrollo_comunitarias SET meta_desarrollo='Construir un aula y equiparla' WHERE comunidad_id=$1",[comunidad]);
+      await db.query(
+        "INSERT INTO visiones_desarrollo_comunitarias(comunidad_id,organizacion_id,area) VALUES($1,$2,'EVANGELISMO') ON CONFLICT(comunidad_id,area) DO NOTHING",
+        [comunidad, org],
+      );
+      await db.query(
+        "UPDATE visiones_desarrollo_comunitarias SET meta_desarrollo='Construir un aula y equiparla' WHERE comunidad_id=$1",
+        [comunidad],
+      );
       await db.exec(await leer('database/sql/009_metas_vision_desarrollo.sql'));
-      const visiones = await obtenerVisionesDesarrolloComunitaria(org, comunidad, pool);
+      const visiones = await obtenerVisionesDesarrolloComunitaria(
+        org,
+        comunidad,
+        pool,
+      );
       assert.ok(visiones?.length);
       const vision = visiones![0];
-      assert.equal(vision.metas[0].descripcion, 'Construir un aula y equiparla');
-      const datosVision = {...vision, metas: [{...vision.metas[0],descripcion:'Construir un aula'},{id:randomUUID(),descripcion:'Equipar el aula'}]};
-      assert.throws(() => validarMetasVision([{id:randomUUID(),descripcion:' '}],1));
-      assert.throws(() => validarMetasVision([{id:randomUUID(),descripcion:'A'},{id:randomUUID(),descripcion:'a'}],1));
-      assert.throws(() => validarMetasVision([],undefined));
-      const nueva=await guardarVisionDesarrolloComunitaria(org,comunidad,datosVision,usuario,pool);
-      assert.equal(nueva?.metas.length,2);
-      assert.equal(nueva?.metas[0].id,vision.metas[0].id);
-      assert.equal(nueva?.metaDesarrollo,'Construir un aula y equiparla'); // legado intacto
-      assert.deepEqual((await obtenerVisionesDesarrolloComunitaria(org,comunidad,pool))?.find(v=>v.area===vision.area),nueva);
-      await assert.rejects(guardarVisionDesarrolloComunitaria(org,comunidad,datosVision,usuario,pool),/actualizó/);
-      assert.equal(await obtenerVisionesDesarrolloComunitaria(otra,comunidad,pool),undefined);
-      assert.equal(await guardarVisionDesarrolloComunitaria(otra,comunidad,datosVision,usuario,pool),null);
-      const areaDestino=visiones!.find(v=>v.area==='INFRAESTRUCTURA');
-      const nuevaArea={...nueva!,area:'INFRAESTRUCTURA' as const,revision:areaDestino?.revision ?? 0};
+      assert.equal(
+        vision.metas[0].descripcion,
+        'Construir un aula y equiparla',
+      );
+      const datosVision = {
+        ...vision,
+        metas: [
+          { ...vision.metas[0], descripcion: 'Construir un aula' },
+          { id: randomUUID(), descripcion: 'Equipar el aula' },
+        ],
+      };
+      assert.throws(() =>
+        validarMetasVision([{ id: randomUUID(), descripcion: ' ' }], 1),
+      );
+      assert.throws(() =>
+        validarMetasVision(
+          [
+            { id: randomUUID(), descripcion: 'A' },
+            { id: randomUUID(), descripcion: 'a' },
+          ],
+          1,
+        ),
+      );
+      assert.throws(() => validarMetasVision([], undefined));
+      const nueva = await guardarVisionDesarrolloComunitaria(
+        org,
+        comunidad,
+        datosVision,
+        usuario,
+        pool,
+      );
+      assert.equal(nueva?.metas.length, 2);
+      assert.equal(nueva?.metas[0].id, vision.metas[0].id);
+      assert.equal(nueva?.metaDesarrollo, 'Construir un aula y equiparla'); // legado intacto
+      assert.deepEqual(
+        (
+          await obtenerVisionesDesarrolloComunitaria(org, comunidad, pool)
+        )?.find((v) => v.area === vision.area),
+        nueva,
+      );
+      await assert.rejects(
+        guardarVisionDesarrolloComunitaria(
+          org,
+          comunidad,
+          datosVision,
+          usuario,
+          pool,
+        ),
+        /actualizó/,
+      );
+      assert.equal(
+        await obtenerVisionesDesarrolloComunitaria(otra, comunidad, pool),
+        undefined,
+      );
+      assert.equal(
+        await guardarVisionDesarrolloComunitaria(
+          otra,
+          comunidad,
+          datosVision,
+          usuario,
+          pool,
+        ),
+        null,
+      );
+      const areaDestino = visiones!.find((v) => v.area === 'INFRAESTRUCTURA');
+      const nuevaArea = {
+        ...nueva!,
+        area: 'INFRAESTRUCTURA' as const,
+        revision: areaDestino?.revision ?? 0,
+      };
       // La misma meta no puede moverse a otra área por manipulación del ID; se revierte todo.
       if (vision.area !== 'INFRAESTRUCTURA') {
-        await assert.rejects(guardarVisionDesarrolloComunitaria(org,comunidad,nuevaArea,usuario,pool),/no pertenece/);
-        assert.deepEqual((await obtenerVisionesDesarrolloComunitaria(org,comunidad,pool))?.find(v=>v.area==='INFRAESTRUCTURA'),areaDestino);
+        await assert.rejects(
+          guardarVisionDesarrolloComunitaria(
+            org,
+            comunidad,
+            nuevaArea,
+            usuario,
+            pool,
+          ),
+          /no pertenece/,
+        );
+        assert.deepEqual(
+          (
+            await obtenerVisionesDesarrolloComunitaria(org, comunidad, pool)
+          )?.find((v) => v.area === 'INFRAESTRUCTURA'),
+          areaDestino,
+        );
       }
-      const recortada=await guardarVisionDesarrolloComunitaria(org,comunidad,{...nueva!,metas:[nueva!.metas[1]]},usuario,pool);
-      assert.equal(recortada?.metas.length,1);
-      assert.equal((await db.query<{activa:boolean}>('SELECT activa FROM metas_vision_desarrollo WHERE id=$1',[vision.metas[0].id])).rows[0].activa,false);
-      assert.equal((await db.query("SELECT id FROM bitacora_auditoria WHERE accion='GUARDAR_METAS_VISION'")).rows.length,2);
+      const recortada = await guardarVisionDesarrolloComunitaria(
+        org,
+        comunidad,
+        { ...nueva!, metas: [nueva!.metas[1]] },
+        usuario,
+        pool,
+      );
+      assert.equal(recortada?.metas.length, 1);
+      assert.equal(
+        (
+          await db.query<{ activa: boolean }>(
+            'SELECT activa FROM metas_vision_desarrollo WHERE id=$1',
+            [vision.metas[0].id],
+          )
+        ).rows[0].activa,
+        false,
+      );
+      assert.equal(
+        (
+          await db.query(
+            "SELECT id FROM bitacora_auditoria WHERE accion='GUARDAR_METAS_VISION'",
+          )
+        ).rows.length,
+        2,
+      );
+
+      await db.exec(
+        await leer('database/sql/010_necesidades_comunitarias.sql'),
+      );
+      assert.deepEqual(await listarNecesidades(org, comunidad, pool), []);
+      const necesidad = validarNecesidad({
+        id: randomUUID(),
+        area: recortada!.area,
+        metaId: recortada!.metas[0].id,
+        titulo: 'Espacio escolar insuficiente',
+        descripcion: 'Falta espacio para recibir estudiantes.',
+        situacionInicial: 'Visita comunitaria documenta un solo salón.',
+        poblacionAfectada: 'Estudiantes de primaria',
+        cantidadAfectada: null,
+        resultadoEsperado: 'Disponer de espacio suficiente.',
+        unidadMedida: 'aulas',
+        cantidadObjetivo: 1,
+        prioridad: 'ALTA',
+        motivoPrioridad: 'Hay estudiantes sin espacio.',
+      });
+      assert.throws(() =>
+        validarNecesidad({ ...necesidad, motivoPrioridad: '' }),
+      );
+      assert.throws(() =>
+        validarNecesidad({ ...necesidad, cantidadAfectada: -1 }),
+      );
+      assert.throws(() =>
+        validarNecesidad({ ...necesidad, unidadMedida: null }),
+      );
+      assert.throws(() =>
+        validarNecesidad({ ...necesidad, estado: 'RESUELTA' }),
+      );
+      assert.throws(() =>
+        validarNecesidad({ ...necesidad, cantidadObjetivo: 1.234 }),
+      );
+      const registrada = await registrarNecesidad(
+        org,
+        comunidad,
+        usuario,
+        necesidad,
+        pool,
+      );
+      assert.equal(registrada.estado, 'IDENTIFICADA');
+      assert.equal(registrada.cantidadAfectada, null);
+      assert.equal(registrada.metaId, recortada!.metas[0].id);
+      assert.equal((await listarNecesidades(org, comunidad, pool))?.length, 1);
+      await assert.rejects(
+        registrarNecesidad(org, comunidad, usuario, necesidad, pool),
+        /ya existe/,
+      );
+      assert.equal(await listarNecesidades(otra, comunidad, pool), null);
+      await assert.rejects(
+        registrarNecesidad(
+          otra,
+          comunidad,
+          usuario,
+          { ...necesidad, id: randomUUID() },
+          pool,
+        ),
+        /no encontrada/,
+      );
+      await assert.rejects(
+        registrarNecesidad(
+          org,
+          comunidad,
+          usuario,
+          { ...necesidad, id: randomUUID(), metaId: vision.metas[0].id },
+          pool,
+        ),
+        /activa/,
+      );
+      await assert.rejects(
+        registrarNecesidad(
+          org,
+          comunidad,
+          usuario,
+          { ...necesidad, id: randomUUID(), area: 'EDUCACION_COMUNITARIA' },
+          pool,
+        ),
+        /pertenecer/,
+      );
+      const comunidadAjena = (
+        await db.query<{ id: string }>(
+          "INSERT INTO comunidades(nombre,municipio,departamento,organizacion_id) VALUES('Otra','Otro','Otro',$1) RETURNING id",
+          [org],
+        )
+      ).rows[0].id;
+      await assert.rejects(
+        registrarNecesidad(
+          org,
+          comunidadAjena,
+          usuario,
+          { ...necesidad, id: randomUUID() },
+          pool,
+        ),
+        /pertenecer/,
+      );
+      const libre = await registrarNecesidad(
+        org,
+        comunidad,
+        usuario,
+        {
+          ...necesidad,
+          id: randomUUID(),
+          metaId: null,
+          prioridad: 'POR_EVALUAR',
+          motivoPrioridad: 'Falta evaluación',
+          cantidadObjetivo: null,
+          unidadMedida: null,
+          cantidadAfectada: 0,
+        },
+        pool,
+      );
+      assert.equal(libre.cantidadAfectada, 0);
+      assert.equal(libre.metaId, null);
+      assert.equal(libre.prioridad, 'POR_EVALUAR');
+      assert.equal(
+        (
+          await db.query(
+            "SELECT id FROM bitacora_auditoria WHERE accion='REGISTRAR_NECESIDAD'",
+          )
+        ).rows.length,
+        2,
+      );
+      assert.equal((await listarNecesidades(org, comunidad, pool))?.length, 2);
+      await guardarVisionDesarrolloComunitaria(
+        org,
+        comunidad,
+        { ...recortada!, metas: [] },
+        usuario,
+        pool,
+      );
+      const conservada = (await listarNecesidades(org, comunidad, pool))?.find(
+        (n) => n.id === necesidad.id,
+      );
+      assert.equal(conservada?.metaActiva, false);
+      assert.equal(conservada?.metaDescripcion, 'Equipar el aula');
+      // La restricción compuesta también protege escrituras SQL que omiten el servicio.
+      await assert.rejects(
+        db.query(
+          'UPDATE necesidades_comunitarias SET comunidad_id=$1 WHERE id=$2',
+          [comunidadAjena, necesidad.id],
+        ),
+      );
     } finally {
       await db.close();
     }

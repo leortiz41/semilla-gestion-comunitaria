@@ -103,3 +103,13 @@ Visión de desarrollo permite agregar, editar y quitar metas independientes dent
 Se agrega 009 sin modificar las migraciones anteriores. Guarda UUID estables, archiva metas retiradas, registra auditoría y rechaza versiones obsoletas. Compilaciones backend/frontend y validación Prisma aprobadas. Las cuatro pruebas automatizadas cubren ambas variantes de 005, migración de texto heredado, guardado/lectura, conservación de IDs, archivo, aislamiento, conflicto y rollback ante ID ajeno.
 
 009 aplicada en Neon `development` (base `neondb`), con copia previa `respaldo-development-antes-009-20261107` sin cómputo. La solicitud de snapshot no estaba admitida en esta rama derivada; se utilizó la copia como respaldo. Producción no modificada. Comprobación autenticada desde la aplicación local pendiente de actualizar y reiniciar el backend.
+
+## Historia #27 — entrega 1: necesidades comunitarias
+
+El usuario confirmó el funcionamiento de las metas individuales y su utilidad para orientar proyectos hacia resultados elegidos con la comunidad. Se continúa con registro y consulta de necesidades debajo de cada área, conservando el diagnóstico y vinculando opcionalmente una meta activa.
+
+El formulario registra problema, situación inicial, población afectada, resultado esperado, medición opcional y motivo de prioridad. No hereda prioridad ni modifica automáticamente el estado por inversión. El estado inicial es identificada. Se verifica organización, comunidad, área, meta y usuario en backend, con auditoría transaccional.
+
+Migración 010 aplicada en Neon development (neondb), después del respaldo sin cómputo `respaldo-development-antes-010-20261107`. No se modificaron migraciones anteriores ni producción. Backend/frontend compilan y Prisma valida. Cuatro pruebas integrales aprobadas cubren las dos variantes de 005, registro/consulta, validaciones, aislamiento, origen ajeno/inactivo, reintento duplicado, auditoría y conservación del vínculo al archivar metas.
+
+Pendiente: prueba del usuario en su sesión local. La entrega no cierra #27; evaluación con evidencia e historial, responsables, revisiones y vínculo con proyectos corresponden a las siguientes etapas.

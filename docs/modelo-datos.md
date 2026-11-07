@@ -863,3 +863,13 @@ Cada área de `visiones_desarrollo_comunitarias` contiene múltiples `metas_visi
 La migración copia el párrafo anterior como una única meta, sin inferir cómo dividirlo. `meta_desarrollo` queda como referencia histórica inalterada; el frontend utiliza exclusivamente la colección `metas`. Al editar se conserva el ID; quitar archiva. El guardado es transaccional y genera auditoría con las metas resultantes. La revisión del área impide sobrescribir ediciones concurrentes (HTTP 409). Clientes anteriores deben actualizarse, ya que el PUT requiere metas y revisión.
 
 La prioridad sigue siendo del área: no se reduce automáticamente por registrar una meta o por decidir invertir. Vinculación con necesidades/proyectos, indicadores de cumplimiento y seguimiento de prioridad pertenecen a la siguiente etapa, aún no implementada aquí.
+
+## Necesidades comunitarias — entrega 1 (010)
+
+`necesidades_comunitarias` representa un problema concreto de una comunidad y área. Guarda UUID, organización, título, descripción, situación inicial, población afectada, cantidad afectada (nullable), resultado esperado, cantidad objetivo/unidad (ambas opcionales juntas), prioridad, motivo, estado, autor y fecha. Cantidad afectada desconocida es NULL; cero sigue siendo un valor explícito. La cantidad objetivo es positiva con hasta dos decimales.
+
+Origen opcional: meta individual y visión correspondiente. Las claves compuestas validan que visión, meta, comunidad, área y organización coincidan. La API valida además que la meta esté activa al registrarse. El archivo posterior de la meta no elimina la necesidad ni su relación. La referencia muestra la descripción vigente de la meta; la auditoría de visiones conserva revisiones anteriores.
+
+Prioridad propia (POR_EVALUAR/ALTA/MEDIA/BAJA) y estado independiente. El POST asigna IDENTIFICADA, exige motivo incluso cuando queda por evaluar y registra auditoría en la misma transacción. Las otras transiciones previstas en el CHECK están reservadas para evaluaciones futuras: todavía no hay endpoints para cambiar estado, prioridad o cerrar una necesidad.
+
+Consulta y registro se filtran por organización autenticada; permisos actuales comunidades.ver y comunidades.gestionar. Las futuras relaciones con proyectos, evidencias e historial de evaluaciones no se consideran implementadas por esta migración.

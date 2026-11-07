@@ -375,3 +375,16 @@ export interface CapacidadesComunidad {
 }
 export function obtenerCapacidades(token:string,id:string) {return request<{capacidades:CapacidadesComunidad}>(`/comunidades/${id}/expediente/capacidades`,{headers:{Authorization:`Bearer ${token}`}});}
 export function guardarCapacidades(token:string,id:string,datos:CapacidadesComunidad) {return request<{capacidades:CapacidadesComunidad}>(`/comunidades/${id}/expediente/capacidades`,{method:'PUT',headers:{Authorization:`Bearer ${token}`},body:JSON.stringify(datos)});}
+
+export interface DatosNecesidad {
+ id: string; area: AreaVisionDesarrollo; metaId: string|null;
+ titulo: string; descripcion: string; situacionInicial: string;
+ poblacionAfectada: string|null; cantidadAfectada: number|null;
+ resultadoEsperado: string; unidadMedida: string|null; cantidadObjetivo: number|null;
+ prioridad: 'POR_EVALUAR'|'ALTA'|'MEDIA'|'BAJA'; motivoPrioridad: string;
+}
+export interface NecesidadComunitaria extends DatosNecesidad {
+ estado: string; creadoEn: string; metaDescripcion: string|null; metaActiva: boolean|null;
+}
+export function obtenerNecesidades(token:string,id:string) { return request<{necesidades:NecesidadComunitaria[]}>(`/comunidades/${id}/expediente/necesidades`,{headers:{Authorization:`Bearer ${token}`}}); }
+export function registrarNecesidad(token:string,id:string,datos:DatosNecesidad) {return request<{necesidad:NecesidadComunitaria}>(`/comunidades/${id}/expediente/necesidades`,{method:'POST',headers:{Authorization:`Bearer ${token}`},body:JSON.stringify(datos)});}

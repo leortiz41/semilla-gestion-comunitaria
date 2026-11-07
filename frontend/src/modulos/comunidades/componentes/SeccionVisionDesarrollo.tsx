@@ -1,3 +1,4 @@
+import NecesidadesArea from './NecesidadesArea';
 import { type FormEvent, useEffect, useState } from 'react';
 import {
   guardarVisionDesarrollo,
@@ -245,6 +246,7 @@ function SeccionVisionDesarrollo({ comunidadId, tokenAcceso }: PropiedadesSeccio
                 ) : (
                   <span className="expediente-comunidad__estado-seccion">Sin datos registrados</span>
                 )}
+              <NecesidadesArea key={`${comunidadId}-${area.id}`} comunidadId={comunidadId} area={area.id} tokenAcceso={tokenAcceso} vision={vision} puedeEditar={puedeEditar} bloqueado={areaEditando!==null} />
               </section>
             );
           })}
