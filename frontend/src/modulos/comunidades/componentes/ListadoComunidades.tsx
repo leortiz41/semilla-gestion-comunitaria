@@ -4,6 +4,7 @@ import type { ComunidadResumen } from '../../../lib/api';
 interface PropiedadesListadoComunidades {
   comunidades: ComunidadResumen[];
   cargando?: boolean;
+  alConsultar?: (comunidad: ComunidadResumen) => void;
   alEditar?: (comunidad: ComunidadResumen) => void;
 }
 
@@ -23,23 +24,32 @@ function ListadoComunidades({
   comunidades,
   cargando = false,
   alEditar,
+  alConsultar,
 }: PropiedadesListadoComunidades) {
   return (
-    <section className="listado-comunidades" aria-labelledby="titulo-listado-comunidades">
+    <section
+      className="listado-comunidades"
+      aria-labelledby="titulo-listado-comunidades"
+    >
       <div className="listado-comunidades__encabezado">
         <div>
-          <p className="listado-comunidades__etiqueta">Directorio comunitario</p>
+          <p className="listado-comunidades__etiqueta">
+            Directorio comunitario
+          </p>
           <h2 id="titulo-listado-comunidades">Comunidades registradas</h2>
         </div>
         <span className="listado-comunidades__conteo">
-          {comunidades.length} {comunidades.length === 1 ? 'resultado' : 'resultados'}
+          {comunidades.length}{' '}
+          {comunidades.length === 1 ? 'resultado' : 'resultados'}
         </span>
       </div>
 
       {cargando ? (
         <div className="listado-comunidades__vacio">
           <strong>Actualizando comunidades…</strong>
-          <span>Consultando la información registrada en la base de datos.</span>
+          <span>
+            Consultando la información registrada en la base de datos.
+          </span>
         </div>
       ) : comunidades.length === 0 ? (
         <div className="listado-comunidades__vacio">
@@ -47,8 +57,15 @@ function ListadoComunidades({
           <span>Prueba cambiando la búsqueda, la zona o el estado.</span>
         </div>
       ) : (
-        <div className="listado-comunidades__tabla" role="table" aria-label="Listado de comunidades">
-          <div className="listado-comunidades__fila listado-comunidades__fila--encabezado" role="row">
+        <div
+          className="listado-comunidades__tabla"
+          role="table"
+          aria-label="Listado de comunidades"
+        >
+          <div
+            className="listado-comunidades__fila listado-comunidades__fila--encabezado"
+            role="row"
+          >
             <span role="columnheader">Comunidad</span>
             <span role="columnheader">Zona</span>
             <span role="columnheader">Municipio</span>
@@ -61,7 +78,11 @@ function ListadoComunidades({
             const estadoVisual = obtenerEstadoVisual(comunidad);
 
             return (
-              <div className="listado-comunidades__fila" role="row" key={comunidad.id}>
+              <div
+                className="listado-comunidades__fila"
+                role="row"
+                key={comunidad.id}
+              >
                 <div className="listado-comunidades__nombre" role="cell">
                   <strong>{comunidad.nombre}</strong>
                   <span>Expediente comunitario</span>
@@ -73,11 +94,22 @@ function ListadoComunidades({
                 <span role="cell">{comunidad.municipio}</span>
                 <span role="cell">{comunidad.departamento}</span>
                 <span role="cell">
-                  <span className={`listado-comunidades__estado listado-comunidades__estado--${estadoVisual.clase}`}>
+                  <span
+                    className={`listado-comunidades__estado listado-comunidades__estado--${estadoVisual.clase}`}
+                  >
                     {estadoVisual.etiqueta}
                   </span>
                 </span>
                 <span role="cell">
+                  {alConsultar && (
+                    <button
+                      className="listado-comunidades__boton-editar"
+                      type="button"
+                      onClick={() => alConsultar(comunidad)}
+                    >
+                      Ver expediente
+                    </button>
+                  )}
                   {alEditar && (
                     <button
                       className="listado-comunidades__boton-editar"

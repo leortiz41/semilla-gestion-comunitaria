@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - main
+      - develop
     paths:
       - 'backend/**'
       - 'database/**'
@@ -41,3 +42,6 @@ jobs:
 
       - name: Compilar TypeScript
         run: npm run build
+
+      - name: Validar expediente y migraciones en PostgreSQL embebido
+        run: npm run test:expedientes

@@ -11,7 +11,8 @@
     "auth:create-admin": "tsx src/scripts/create-admin.ts",
     "prisma:generate": "prisma generate",
     "prisma:pull": "prisma db pull",
-    "prisma:studio": "prisma studio"
+    "prisma:studio": "prisma studio",
+    "test:expedientes": "node --import tsx --test tests/expedientes.test.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "7.10.1",
@@ -23,6 +24,7 @@
     "pg": "latest"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.4.3",
     "@types/cors": "latest",
     "@types/express": "latest",
     "@types/node": "latest",
