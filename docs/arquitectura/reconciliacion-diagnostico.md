@@ -13,7 +13,7 @@ La coincidencia de nombres de archivo 005 no significa coincidencia de contenido
 | Artefacto | Tratamiento |
 |---|---|
 | 005 publicada en develop | Conservada sin cambiar su contenido. |
-| 005 local del respaldo | Copia exacta de referencia en `docs/migraciones-aplicadas/005_expediente_comunitario_local.sql`; no ejecutar como una migración adicional. |
+| 005 local del respaldo | Copia exacta de referencia en `database/referencias/005_expediente_comunitario_local.sql`; no ejecutar como una migración adicional. |
 | 006 local | Incorporada con el contenido original. |
 | 007 compatibilidad | Nueva migración incremental para admitir ambas bases de partida. |
 
@@ -50,4 +50,4 @@ Los endpoints y servicios del formulario integral anterior se conservan temporal
 
 ## Organización y productividad
 
-Después de 007, aplicar una sola vez `database/sql/008_organizacion_productividad.sql` siguiendo [la guía de desarrollo](../migraciones-aplicadas/neon-organizacion-productividad.md). Las pruebas de compatibilidad cubren ambas variantes de 005, migración de capacidades, guardado, aislamiento, conflicto de revisión y rollback. Esto no acredita una ejecución en Neon.
+Después de 007, aplicar una sola vez `database/sql/008_organizacion_productividad.sql` siguiendo [la guía de desarrollo](../../database/documentacion/neon-organizacion-productividad.md). Las pruebas de compatibilidad cubren ambas variantes de 005, migración de capacidades, guardado, aislamiento, conflicto de revisión y rollback. Esto no acredita una ejecución en Neon.

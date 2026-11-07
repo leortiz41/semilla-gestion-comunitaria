@@ -11,8 +11,8 @@ El esquema parte del modelo original diseñado en DrawDB con **14 tablas y 26 re
 - PostgreSQL desplegado en Neon.
 - Rama `production` reservada para producción.
 - Rama `development` utilizada para desarrollo.
-- Modelo PostgreSQL definitivo en `database/sql/001_esquema_inicial.sql`.
-- 28 tablas relacionadas en el esquema propuesto.
+- Esquema inicial en `database/sql/001_esquema_inicial.sql`, ampliado mediante migraciones incrementales 002–010.
+- El esquema inicial contiene 28 tablas; las migraciones posteriores amplían el modelo.
 - Las 14 entidades funcionales originales se conservan como núcleo del diseño.
 - UUID utilizados como claves primarias para facilitar sincronización offline.
 - Prisma 7 integrado en el backend.
@@ -78,16 +78,25 @@ Reglas principales:
 - `dispositivos_sincronizacion`
 - `claves_idempotencia`
 
-## Scripts SQL
+## Organización de archivos
 
-```text
-database/sql/
-└── 001_esquema_inicial.sql
-```
+| Carpeta | Contenido |
+|---|---|
+| `database/sql/` | Migraciones ejecutables numeradas 001–010. Las nuevas continúan la secuencia. |
+| `database/sql/validaciones/` | Consultas de validación; no son migraciones. |
+| `database/documentacion/` | Guías y registros de aplicación en Neon. |
+| `database/referencias/` | Copias históricas para comparación y pruebas; no ejecutar como migraciones. |
+| `docs/bitacora/` | Relato del trabajo y enlaces a sus artefactos; no almacena scripts de migración. |
 
-### 001_esquema_inicial.sql
+Las migraciones ya aplicadas conservan su contenido. Mover documentación o referencias no requiere ejecutar SQL ni modifica el estado de Neon.
 
-Crea la versión PostgreSQL del modelo de Semilla a partir de las 14 tablas originales de DrawDB, con las correcciones de normalización y las extensiones necesarias para seguridad, auditoría y trabajo offline.
+La copia local histórica de 005 está en [referencias](referencias/README.md). No se aplica además de la 005 publicada. Consultar [la reconciliación](../docs/arquitectura/reconciliacion-diagnostico.md) antes de intervenir bases con esas variantes.
+
+Guías disponibles:
+
+- [Organización y productividad (008)](documentacion/neon-organizacion-productividad.md).
+- [Metas individuales (009)](documentacion/009-metas-vision.md).
+- [Necesidades comunitarias (010)](documentacion/010-necesidades-comunitarias.md).
 
 ## Flujo de validación
 
@@ -98,12 +107,3 @@ Crea la versión PostgreSQL del modelo de Semilla a partir de las 14 tablas orig
 5. Ejecutar `prisma generate`.
 6. Validar el backend con `npm run db:test` y `npm run build`.
 7. Llevar a `main` y Neon `production` únicamente cambios ya validados mediante Pull Request.
-
-## Estructura
-
-```text
-database/
-├── sql/
-├── diagrams/
-└── seed/
-```

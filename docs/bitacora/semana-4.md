@@ -32,3 +32,9 @@ Se conserva la convención de trabajar en develop y promover posteriormente a ma
 ### Siguientes pasos
 
 Resolver las diferencias documentadas cuando se aborde cada historia, crear permisos específicos mediante migraciones incrementales cuando corresponda y agregar pruebas negativas de autorización y propiedad junto con cada API nueva.
+
+## Corrección de organización de archivos
+
+Se trasladaron las guías de aplicación desde `docs/migraciones-aplicadas/` a `database/documentacion/`, y la copia histórica de 005 a `database/referencias/`. Se actualizaron la prueba de compatibilidad, los enlaces y el índice de base de datos. La copia SQL se conserva sin cambios de contenido y queda identificada como referencia no ejecutable.
+
+Las migraciones 001–010 permanecen en `database/sql/`. La bitácora conserva únicamente esta constancia. No se modificó ni ejecutó ninguna migración en Neon.

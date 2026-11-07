@@ -38,7 +38,7 @@ for (const variante of ['local', 'publicada'])
       await db.exec(
         await leer(
           variante === 'local'
-            ? 'docs/migraciones-aplicadas/005_expediente_comunitario_local.sql'
+            ? 'database/referencias/005_expediente_comunitario_local.sql'
             : 'database/sql/005_expediente_comunitario.sql',
         ),
       );
