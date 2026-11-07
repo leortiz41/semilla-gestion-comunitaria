@@ -1,3 +1,4 @@
+import { validarMetasVision } from '../domain/metas-vision.js';
 import {capacidadesRouter} from './capacidades.routes.js';
 import { validarExpediente, esUuid, ErrorExpediente } from '../domain/expediente.js';
 import { guardarExpediente, obtenerExpediente } from '../services/expedientes.service.js';
@@ -272,7 +273,7 @@ comunidadesRouter.put(
       return;
     }
 
-    if (!comunidadId || !esAreaVisionDesarrollo(area)) {
+    if (!esUuid(comunidadId) || !esAreaVisionDesarrollo(area)) {
       res.status(400).json({ message: 'La comunidad o el área de desarrollo no son válidas.' });
       return;
     }
@@ -294,10 +295,12 @@ comunidadesRouter.put(
     }
 
     try {
+      const metasValidadas = validarMetasVision(req.body?.metas, req.body?.revision);
       const vision = await guardarVisionDesarrolloComunitaria(
         req.auth.organizacionId,
         comunidadId,
-        { area, situacionActual, prioridad, metaDesarrollo },
+        { area, situacionActual, prioridad, metaDesarrollo, ...metasValidadas },
+        req.auth.sub,
       );
 
       if (!vision) {
@@ -307,6 +310,7 @@ comunidadesRouter.put(
 
       res.json({ vision });
     } catch (error) {
+      if (error instanceof ErrorExpediente) { res.status(error.status).json({message: error.message}); return; }
       console.error('Error guardando visión de desarrollo:', error);
       res.status(500).json({ message: 'No fue posible guardar la visión de desarrollo.' });
     }

@@ -626,6 +626,9 @@ model visiones_desarrollo_comunitarias {
   @@unique([comunidad_id, area], map: "uq_visiones_desarrollo_comunidad_area")
   @@unique([comunidad_id, organizacion_id, area], map: "uq_visiones_desarrollo_comunidad_organizacion_area")
   @@index([organizacion_id], map: "idx_visiones_desarrollo_organizacion_id")
+  revision Int @default(1)
+  metas metas_vision_desarrollo[]
+  @@unique([id, organizacion_id], map: "uq_vision_id_organizacion")
 }
 
 /// Migración 008: revisiones inmutables de organización y productividad.
@@ -654,4 +657,17 @@ model elementos_capacidad {
  tipo String @db.VarChar(30)
  nombre String @db.VarChar(150)
  capacidades_comunitarias capacidades_comunitarias @relation(fields:[capacidad_id,organizacion_id],references:[id,organizacion_id],onDelete:Restrict,onUpdate:NoAction)
+}
+
+model metas_vision_desarrollo {
+ id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+ vision_id String @db.Uuid
+ organizacion_id String @db.Uuid
+ descripcion String
+ orden Int
+ activa Boolean @default(true)
+ creado_en DateTime @default(now()) @db.Timestamptz(6)
+ actualizado_en DateTime @default(now()) @db.Timestamptz(6)
+ vision visiones_desarrollo_comunitarias @relation(fields: [vision_id, organizacion_id], references: [id, organizacion_id], onDelete: Cascade)
+ @@index([vision_id, organizacion_id, activa, orden], map: "idx_metas_vision")
 }

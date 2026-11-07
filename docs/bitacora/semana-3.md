@@ -95,3 +95,11 @@ Se completa la sección del expediente para consultar y editar organizaciones lo
 Se agrega la migración incremental 008, sin modificar 005, 006 ni 007. Cada guardado conserva una nueva revisión, autor y auditoría; los conflictos de edición se rechazan y los fallos revierten la transacción completa. Las relaciones y consultas mantienen aislamiento por organización. Se recuperan las capacidades del diagnóstico alternativo sin eliminar su historial.
 
 Validación: compilaciones de backend/frontend, schema Prisma válido y cuatro pruebas automatizadas aprobadas, incluyendo ambas variantes de 005, migración 008, persistencia, aislamiento, revisión obsoleta y rollback. La ejecución en Neon y la comprobación autenticada del flujo siguen pendientes de conexión. La historia #27 no se inicia en este cambio.
+
+## Metas individuales por área — 7 de noviembre de 2026
+
+Visión de desarrollo permite agregar, editar y quitar metas independientes dentro de cada una de las cuatro áreas. Se usa una tarjeta por meta, con descripción, contador y lista de consulta. Se conserva el texto existente como una meta editable para que la persona decida cómo separarlo. Los permisos de consulta y edición se aplican también a la interfaz.
+
+Se agrega 009 sin modificar las migraciones anteriores. Guarda UUID estables, archiva metas retiradas, registra auditoría y rechaza versiones obsoletas. Compilaciones backend/frontend y validación Prisma aprobadas. Las cuatro pruebas automatizadas cubren ambas variantes de 005, migración de texto heredado, guardado/lectura, conservación de IDs, archivo, aislamiento, conflicto y rollback ante ID ajeno.
+
+009 aplicada en Neon `development` (base `neondb`), con copia previa `respaldo-development-antes-009-20261107` sin cómputo. La solicitud de snapshot no estaba admitida en esta rama derivada; se utilizó la copia como respaldo. Producción no modificada. Comprobación autenticada desde la aplicación local pendiente de actualizar y reiniciar el backend.

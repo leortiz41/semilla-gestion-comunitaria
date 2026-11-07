@@ -60,6 +60,8 @@ export interface VisionDesarrolloComunitaria {
   situacionActual: string | null;
   prioridad: 'ALTA' | 'MEDIA' | 'BAJA' | null;
   metaDesarrollo: string | null;
+  metas: {id: string; descripcion: string}[];
+  revision: number;
 }
 
 interface ApiErrorResponse {

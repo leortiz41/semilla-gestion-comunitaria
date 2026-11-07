@@ -855,3 +855,11 @@ El diagnóstico conserva población, viviendas, viviendas por intervenir, observ
 Cada guardado crea una revisión y sus elementos dentro de una transacción, junto con una entrada de auditoría. La API compara la revisión recibida con la vigente bajo bloqueo de comunidad y rechaza ediciones obsoletas con HTTP 409. Quitar un elemento de la revisión actual conserva las versiones anteriores. El historial se conserva en SQL; no se añade todavía una pantalla de historial.
 
 Los textos admiten 3000 caracteres y las listas hasta 50 elementos de 150 caracteres, validados por la API. La migración recupera el último diagnóstico alternativo sin borrar sus tablas. El servicio usa pg, consistente con el flujo existente; el schema Prisma documenta las relaciones, sin afirmar una migración de la persistencia a Prisma. Esta sección no implementa necesidades, proyectos ni cambios de prioridad de la historia #27.
+
+## Metas individuales de visión de desarrollo (009)
+
+Cada área de `visiones_desarrollo_comunitarias` contiene múltiples `metas_vision_desarrollo`. Cada meta tiene UUID estable, descripción (1–2000 caracteres), orden, estado activa/archivada y fechas. La clave foránea compuesta impide asociar una meta con otra organización. La API admite hasta 50 metas por área y rechaza duplicados y filas vacías.
+
+La migración copia el párrafo anterior como una única meta, sin inferir cómo dividirlo. `meta_desarrollo` queda como referencia histórica inalterada; el frontend utiliza exclusivamente la colección `metas`. Al editar se conserva el ID; quitar archiva. El guardado es transaccional y genera auditoría con las metas resultantes. La revisión del área impide sobrescribir ediciones concurrentes (HTTP 409). Clientes anteriores deben actualizarse, ya que el PUT requiere metas y revisión.
+
+La prioridad sigue siendo del área: no se reduce automáticamente por registrar una meta o por decidir invertir. Vinculación con necesidades/proyectos, indicadores de cumplimiento y seguimiento de prioridad pertenecen a la siguiente etapa, aún no implementada aquí.

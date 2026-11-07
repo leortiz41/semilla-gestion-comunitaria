@@ -1,3 +1,6 @@
+import {randomUUID} from 'node:crypto';
+import {validarMetasVision} from '../src/domain/metas-vision.js';
+import {obtenerVisionesDesarrolloComunitaria, guardarVisionDesarrolloComunitaria} from '../src/services/comunidades.service.js';
 import type { Pool } from 'pg';
 import {
   obtenerCapacidades,
@@ -215,6 +218,37 @@ for (const variante of ['local', 'publicada'])
         ).rows.length,
         2,
       );
+
+      await db.query("INSERT INTO visiones_desarrollo_comunitarias(comunidad_id,organizacion_id,area) VALUES($1,$2,'EVANGELISMO') ON CONFLICT(comunidad_id,area) DO NOTHING",[comunidad,org]);
+      await db.query("UPDATE visiones_desarrollo_comunitarias SET meta_desarrollo='Construir un aula y equiparla' WHERE comunidad_id=$1",[comunidad]);
+      await db.exec(await leer('database/sql/009_metas_vision_desarrollo.sql'));
+      const visiones = await obtenerVisionesDesarrolloComunitaria(org, comunidad, pool);
+      assert.ok(visiones?.length);
+      const vision = visiones![0];
+      assert.equal(vision.metas[0].descripcion, 'Construir un aula y equiparla');
+      const datosVision = {...vision, metas: [{...vision.metas[0],descripcion:'Construir un aula'},{id:randomUUID(),descripcion:'Equipar el aula'}]};
+      assert.throws(() => validarMetasVision([{id:randomUUID(),descripcion:' '}],1));
+      assert.throws(() => validarMetasVision([{id:randomUUID(),descripcion:'A'},{id:randomUUID(),descripcion:'a'}],1));
+      assert.throws(() => validarMetasVision([],undefined));
+      const nueva=await guardarVisionDesarrolloComunitaria(org,comunidad,datosVision,usuario,pool);
+      assert.equal(nueva?.metas.length,2);
+      assert.equal(nueva?.metas[0].id,vision.metas[0].id);
+      assert.equal(nueva?.metaDesarrollo,'Construir un aula y equiparla'); // legado intacto
+      assert.deepEqual((await obtenerVisionesDesarrolloComunitaria(org,comunidad,pool))?.find(v=>v.area===vision.area),nueva);
+      await assert.rejects(guardarVisionDesarrolloComunitaria(org,comunidad,datosVision,usuario,pool),/actualizó/);
+      assert.equal(await obtenerVisionesDesarrolloComunitaria(otra,comunidad,pool),undefined);
+      assert.equal(await guardarVisionDesarrolloComunitaria(otra,comunidad,datosVision,usuario,pool),null);
+      const areaDestino=visiones!.find(v=>v.area==='INFRAESTRUCTURA');
+      const nuevaArea={...nueva!,area:'INFRAESTRUCTURA' as const,revision:areaDestino?.revision ?? 0};
+      // La misma meta no puede moverse a otra área por manipulación del ID; se revierte todo.
+      if (vision.area !== 'INFRAESTRUCTURA') {
+        await assert.rejects(guardarVisionDesarrolloComunitaria(org,comunidad,nuevaArea,usuario,pool),/no pertenece/);
+        assert.deepEqual((await obtenerVisionesDesarrolloComunitaria(org,comunidad,pool))?.find(v=>v.area==='INFRAESTRUCTURA'),areaDestino);
+      }
+      const recortada=await guardarVisionDesarrolloComunitaria(org,comunidad,{...nueva!,metas:[nueva!.metas[1]]},usuario,pool);
+      assert.equal(recortada?.metas.length,1);
+      assert.equal((await db.query<{activa:boolean}>('SELECT activa FROM metas_vision_desarrollo WHERE id=$1',[vision.metas[0].id])).rows[0].activa,false);
+      assert.equal((await db.query("SELECT id FROM bitacora_auditoria WHERE accion='GUARDAR_METAS_VISION'")).rows.length,2);
     } finally {
       await db.close();
     }
