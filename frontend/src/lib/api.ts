@@ -42,6 +42,26 @@ export interface ComunidadResumen {
   zonaActiva: boolean | null;
 }
 
+export interface DiagnosticoPoblacionVivienda {
+  poblacionAproximada: number | null;
+  viviendasAproximadas: number | null;
+  viviendasIntervencion: number | null;
+  tiposVivienda: string | null;
+}
+
+export type AreaVisionDesarrollo =
+  | 'EVANGELISMO'
+  | 'EDUCACION_FORMAL'
+  | 'EDUCACION_COMUNITARIA'
+  | 'INFRAESTRUCTURA';
+
+export interface VisionDesarrolloComunitaria {
+  area: AreaVisionDesarrollo;
+  situacionActual: string | null;
+  prioridad: 'ALTA' | 'MEDIA' | 'BAJA' | null;
+  metaDesarrollo: string | null;
+}
+
 interface ApiErrorResponse {
   message?: string;
 }
@@ -76,10 +96,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   return (await response.json()) as T;
 }
 
-export function iniciarSesion(
-  email: string,
-  password: string,
-): Promise<SesionResponse> {
+export function iniciarSesion(email: string, password: string): Promise<SesionResponse> {
   return request<SesionResponse>('/auth/login', {
     method: 'POST',
     body: JSON.stringify({ email, password }),
@@ -92,9 +109,7 @@ export function renovarSesion(): Promise<SesionResponse> {
   });
 }
 
-export function obtenerUsuario(
-  accessToken: string,
-): Promise<{ usuario: UsuarioSesion }> {
+export function obtenerUsuario(accessToken: string): Promise<{ usuario: UsuarioSesion }> {
   return request<{ usuario: UsuarioSesion }>('/auth/me', {
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -102,9 +117,7 @@ export function obtenerUsuario(
   });
 }
 
-export function listarZonas(
-  accessToken: string,
-): Promise<{ zonas: ZonaResumen[] }> {
+export function listarZonas(accessToken: string): Promise<{ zonas: ZonaResumen[] }> {
   return request<{ zonas: ZonaResumen[] }>('/zonas', {
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -153,9 +166,7 @@ export function cambiarEstadoZona(
   });
 }
 
-export function listarComunidades(
-  accessToken: string,
-): Promise<{ comunidades: ComunidadResumen[] }> {
+export function listarComunidades(accessToken: string): Promise<{ comunidades: ComunidadResumen[] }> {
   return request<{ comunidades: ComunidadResumen[] }>('/comunidades', {
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -191,10 +202,84 @@ export function editarComunidad(
     departamento: string;
   },
 ): Promise<{ comunidad: ComunidadResumen }> {
-  return request<{ comunidad: ComunidadResumen }>(
-    `/comunidades/${comunidadId}`,
+  return request<{ comunidad: ComunidadResumen }>(`/comunidades/${comunidadId}`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(datos),
+  });
+}
+
+export function cambiarEstadoComunidad(
+  accessToken: string,
+  comunidadId: string,
+  activo: boolean,
+): Promise<{ comunidad: ComunidadResumen }> {
+  return request<{ comunidad: ComunidadResumen }>(`/comunidades/${comunidadId}/estado`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ activo }),
+  });
+}
+
+export function obtenerDiagnosticoPoblacionVivienda(
+  accessToken: string,
+  comunidadId: string,
+): Promise<{ diagnostico: DiagnosticoPoblacionVivienda | null }> {
+  return request<{ diagnostico: DiagnosticoPoblacionVivienda | null }>(
+    `/comunidades/${comunidadId}/expediente/poblacion-vivienda`,
     {
-      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    },
+  );
+}
+
+export function guardarDiagnosticoPoblacionVivienda(
+  accessToken: string,
+  comunidadId: string,
+  datos: DiagnosticoPoblacionVivienda,
+): Promise<{ diagnostico: DiagnosticoPoblacionVivienda }> {
+  return request<{ diagnostico: DiagnosticoPoblacionVivienda }>(
+    `/comunidades/${comunidadId}/expediente/poblacion-vivienda`,
+    {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(datos),
+    },
+  );
+}
+
+export function obtenerVisionesDesarrollo(
+  accessToken: string,
+  comunidadId: string,
+): Promise<{ visiones: VisionDesarrolloComunitaria[] }> {
+  return request<{ visiones: VisionDesarrolloComunitaria[] }>(
+    `/comunidades/${comunidadId}/expediente/vision-desarrollo`,
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    },
+  );
+}
+
+export function guardarVisionDesarrollo(
+  accessToken: string,
+  comunidadId: string,
+  area: AreaVisionDesarrollo,
+  datos: Omit<VisionDesarrolloComunitaria, 'area'>,
+): Promise<{ vision: VisionDesarrolloComunitaria }> {
+  return request<{ vision: VisionDesarrolloComunitaria }>(
+    `/comunidades/${comunidadId}/expediente/vision-desarrollo/${area}`,
+    {
+      method: 'PUT',
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },

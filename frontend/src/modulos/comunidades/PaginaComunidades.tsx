@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import '../../estilos/modulos/paginaModuloBase.css';
 import '../../estilos/modulos/comunidades/comunidades.css';
 import {
+  cambiarEstadoComunidad,
   listarComunidades,
   listarZonas,
   type ComunidadResumen,
@@ -9,8 +10,8 @@ import {
 } from '../../lib/api';
 import type { SubseccionComunidades } from '../../tipos/navegacion';
 import FormularioRegistroBasicoComunidad from './componentes/FormularioRegistroBasicoComunidad';
+import ExpedienteComunidad from './componentes/ExpedienteComunidad';
 import ListadoComunidades from './componentes/ListadoComunidades';
-import FormularioComunidad from './componentes/FormularioComunidad';
 import PaginaZonas from './PaginaZonas';
 
 interface PropiedadesPaginaComunidades {
@@ -33,12 +34,7 @@ function obtenerEstadoEfectivo(comunidad: ComunidadResumen) {
   return 'activa';
 }
 
-function PaginaComunidades({
-  subseccion,
-  tokenAcceso,
-  alCambiarSubseccion,
-}: PropiedadesPaginaComunidades) {
-  const [expedienteId, setExpedienteId] = useState<string | null>(null);
+function PaginaComunidades({ subseccion, tokenAcceso, alCambiarSubseccion }: PropiedadesPaginaComunidades) {
   const [comunidades, setComunidades] = useState<ComunidadResumen[]>([]);
   const [zonas, setZonas] = useState<ZonaResumen[]>([]);
   const [busqueda, setBusqueda] = useState('');
@@ -46,8 +42,10 @@ function PaginaComunidades({
   const [estado, setEstado] = useState('todos');
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [comunidadEditando, setComunidadEditando] =
-    useState<ComunidadResumen | null>(null);
+  const [mensaje, setMensaje] = useState<string | null>(null);
+  const [comunidadEditando, setComunidadEditando] = useState<ComunidadResumen | null>(null);
+  const [comunidadExpediente, setComunidadExpediente] = useState<ComunidadResumen | null>(null);
+  const [comunidadProcesandoId, setComunidadProcesandoId] = useState<string | null>(null);
 
   const cargarDatos = useCallback(async () => {
     setCargando(true);
@@ -62,15 +60,40 @@ function PaginaComunidades({
       setComunidades(respuestaComunidades.comunidades);
       setZonas(respuestaZonas.zonas);
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : 'No fue posible actualizar la información territorial.',
-      );
+      setError(err instanceof Error ? err.message : 'No fue posible actualizar la información territorial.');
     } finally {
       setCargando(false);
     }
   }, [tokenAcceso]);
+
+  async function handleCambiarEstadoComunidad(comunidad: ComunidadResumen) {
+    setError(null);
+    setMensaje(null);
+    setComunidadProcesandoId(comunidad.id);
+
+    try {
+      const respuesta = await cambiarEstadoComunidad(
+        tokenAcceso,
+        comunidad.id,
+        !comunidad.activo,
+      );
+
+      setComunidades((actuales) =>
+        actuales.map((actual) =>
+          actual.id === respuesta.comunidad.id ? respuesta.comunidad : actual,
+        ),
+      );
+      setMensaje(
+        respuesta.comunidad.activo
+          ? 'Comunidad reactivada correctamente.'
+          : 'Comunidad desactivada correctamente.',
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No fue posible cambiar el estado de la comunidad.');
+    } finally {
+      setComunidadProcesandoId(null);
+    }
+  }
 
   useEffect(() => {
     if (subseccion === 'listado') {
@@ -81,9 +104,7 @@ function PaginaComunidades({
   const comunidadesFiltradas = useMemo(
     () =>
       comunidades.filter((comunidad) => {
-        const coincideBusqueda = normalizarTexto(comunidad.nombre).includes(
-          normalizarTexto(busqueda),
-        );
+        const coincideBusqueda = normalizarTexto(comunidad.nombre).includes(normalizarTexto(busqueda));
         const coincideZona = zona === 'todas' || comunidad.zonaId === zona;
         const estadoEfectivo = obtenerEstadoEfectivo(comunidad);
         const coincideEstado = estado === 'todos' || estadoEfectivo === estado;
@@ -93,12 +114,8 @@ function PaginaComunidades({
     [comunidades, busqueda, zona, estado],
   );
 
-  const totalActivas = comunidades.filter(
-    (comunidad) => obtenerEstadoEfectivo(comunidad) === 'activa',
-  ).length;
-  const totalZonasActivas = zonas.filter(
-    (zonaRegistrada) => zonaRegistrada.activo,
-  ).length;
+  const totalActivas = comunidades.filter((comunidad) => obtenerEstadoEfectivo(comunidad) === 'activa').length;
+  const totalZonasActivas = zonas.filter((zonaRegistrada) => zonaRegistrada.activo).length;
 
   const resumenVisual = [
     {
@@ -114,8 +131,7 @@ function PaginaComunidades({
     {
       etiqueta: 'Zonas',
       valor: String(totalZonasActivas),
-      detalle:
-        'Zonas territoriales activas disponibles para nuevas comunidades.',
+      detalle: 'Zonas territoriales activas disponibles para nuevas comunidades.',
     },
     {
       etiqueta: 'Familias vinculadas',
@@ -130,10 +146,7 @@ function PaginaComunidades({
 
   if (subseccion === 'nueva') {
     return (
-      <section
-        className="pagina-modulo pagina-comunidades"
-        aria-labelledby="titulo-nueva-comunidad"
-      >
+      <section className="pagina-modulo pagina-comunidades" aria-labelledby="titulo-nueva-comunidad">
         <div className="pagina-comunidades__vista-superior">
           <div>
             <p className="pagina-modulo__etiqueta">Comunidades / Registro</p>
@@ -141,8 +154,7 @@ function PaginaComunidades({
               Nueva comunidad
             </h1>
             <p className="pagina-modulo__descripcion">
-              Registra la ubicación y el diagnóstico de la comunidad por
-              secciones.
+              Crea primero el registro territorial básico. Después completaremos el expediente comunitario por secciones.
             </p>
           </div>
 
@@ -155,7 +167,7 @@ function PaginaComunidades({
           </button>
         </div>
 
-        <FormularioComunidad
+        <FormularioRegistroBasicoComunidad
           tokenAcceso={tokenAcceso}
           alCerrar={() => alCambiarSubseccion('listado')}
           alGuardar={() => alCambiarSubseccion('listado')}
@@ -164,11 +176,22 @@ function PaginaComunidades({
     );
   }
 
+  if (comunidadExpediente) {
+    return (
+      <ExpedienteComunidad
+        comunidad={comunidadExpediente}
+        tokenAcceso={tokenAcceso}
+        alVolver={() => setComunidadExpediente(null)}
+        alEditarInformacionGeneral={() => {
+          setComunidadEditando(comunidadExpediente);
+          setComunidadExpediente(null);
+        }}
+      />
+    );
+  }
+
   return (
-    <section
-      className="pagina-modulo pagina-comunidades"
-      aria-labelledby="titulo-comunidades"
-    >
+    <section className="pagina-modulo pagina-comunidades" aria-labelledby="titulo-comunidades">
       <div className="pagina-comunidades__superior">
         <div className="pagina-modulo__encabezado">
           <p className="pagina-modulo__etiqueta">Gestión territorial</p>
@@ -176,8 +199,7 @@ function PaginaComunidades({
             Comunidades
           </h1>
           <p className="pagina-modulo__descripcion">
-            Organiza las zonas y comunidades atendidas por Semilla y consulta la
-            información territorial registrada en PostgreSQL.
+            Organiza las zonas y comunidades atendidas por Semilla y consulta la información territorial registrada en PostgreSQL.
           </p>
         </div>
 
@@ -200,20 +222,8 @@ function PaginaComunidades({
         </div>
       </div>
 
-      {error && (
-        <div className="pagina-zonas__aviso pagina-zonas__aviso--error">
-          {error}
-        </div>
-      )}
-
-      {expedienteId && (
-        <FormularioComunidad
-          key={expedienteId}
-          comunidadId={expedienteId}
-          tokenAcceso={tokenAcceso}
-          alCerrar={() => setExpedienteId(null)}
-        />
-      )}
+      {error && <div className="pagina-zonas__aviso pagina-zonas__aviso--error">{error}</div>}
+      {mensaje && <div className="pagina-zonas__aviso pagina-zonas__aviso--exito">{mensaje}</div>}
 
       {comunidadEditando && (
         <FormularioRegistroBasicoComunidad
@@ -228,32 +238,17 @@ function PaginaComunidades({
         />
       )}
 
-      <div
-        className="pagina-comunidades__resumen"
-        aria-label="Resumen de comunidades"
-      >
+      <div className="pagina-comunidades__resumen" aria-label="Resumen de comunidades">
         {resumenVisual.map((indicador) => (
-          <article
-            className="pagina-comunidades__tarjeta"
-            key={indicador.etiqueta}
-          >
-            <p className="pagina-comunidades__tarjeta-etiqueta">
-              {indicador.etiqueta}
-            </p>
-            <strong className="pagina-comunidades__tarjeta-valor">
-              {indicador.valor}
-            </strong>
-            <p className="pagina-comunidades__tarjeta-detalle">
-              {indicador.detalle}
-            </p>
+          <article className="pagina-comunidades__tarjeta" key={indicador.etiqueta}>
+            <p className="pagina-comunidades__tarjeta-etiqueta">{indicador.etiqueta}</p>
+            <strong className="pagina-comunidades__tarjeta-valor">{indicador.valor}</strong>
+            <p className="pagina-comunidades__tarjeta-detalle">{indicador.detalle}</p>
           </article>
         ))}
       </div>
 
-      <div
-        className="pagina-comunidades__herramientas"
-        aria-label="Filtros de comunidades"
-      >
+      <div className="pagina-comunidades__herramientas" aria-label="Filtros de comunidades">
         <div className="pagina-comunidades__campo">
           <label htmlFor="buscar-comunidad">Buscar comunidad</label>
           <input
@@ -275,8 +270,7 @@ function PaginaComunidades({
             <option value="todas">Todas las zonas</option>
             {zonas.map((zonaRegistrada) => (
               <option value={zonaRegistrada.id} key={zonaRegistrada.id}>
-                {zonaRegistrada.nombre}
-                {zonaRegistrada.activo ? '' : ' (inactiva)'}
+                {zonaRegistrada.nombre}{zonaRegistrada.activo ? '' : ' (inactiva)'}
               </option>
             ))}
           </select>
@@ -301,10 +295,9 @@ function PaginaComunidades({
         comunidades={comunidadesFiltradas}
         cargando={cargando}
         alEditar={setComunidadEditando}
-        alConsultar={(comunidad) => {
-          setComunidadEditando(null);
-          setExpedienteId(comunidad.id);
-        }}
+        alVerExpediente={setComunidadExpediente}
+        alCambiarEstado={handleCambiarEstadoComunidad}
+        comunidadProcesandoId={comunidadProcesandoId}
       />
     </section>
   );

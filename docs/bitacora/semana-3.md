@@ -83,3 +83,7 @@ Se implementó un primer flujo de registro completo y consulta desde el listado,
 ### Completar organizaciones y productividad
 
 Se agregó edición del diagnóstico con conservación de versiones y control de cambios simultáneos. Las listas ahora permiten agregar/quitar elementos individuales. Se mantiene el trabajo centrado en el diagnóstico antes de implementar la historia #27. No requiere migración adicional a 005; falta la comprobación funcional en Neon development.
+
+### Reconciliación con el avance local
+
+Se recuperó el respaldo `c7075a7` y se integró el expediente por secciones en develop. Se conservaron las dos variantes de 005 identificadas y se añadió una nueva migración 007 de compatibilidad, sin reescribir scripts aplicados. Backend, frontend, Prisma y pruebas de ambas bases de partida pasaron. Pendiente validación en Neon development y completar capacidades locales en este flujo antes de #27. [Detalle de la reconciliación](../arquitectura/reconciliacion-diagnostico.md).
