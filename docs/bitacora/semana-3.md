@@ -56,22 +56,6 @@ Se incorporó una propuesta de ampliación del modelo para expediente comunitari
 
 No se atribuyen entrevistas, pruebas en campo ni resultados productivos que no estén respaldados por evidencia disponible.
 
-## Requisitos académicos y verificación
-
-| Requisito | Evidencia / estado |
-|---|---|
-| `docs/modelo-datos.md` | Incluido con diccionario, diagramas y diseño completo por dominios. |
-| `docs/bitacora/semana-3.md` | Este archivo. |
-| Token en README | `LEARN-CAP-4EC8DB14`, ya existente; token público de propiedad académica. |
-| Al menos 15 commits y 3 recientes | Antes de esta entrega, main tenía 231 commits; 202 desde el 28/10/2026. No se fabrican commits para alcanzar la cuota. |
-| Etiqueta o release `semana-3` | Publicar sobre el commit integrado de esta entrega; verificar en GitHub. |
-| Dominio público HTTPS | URL declarada: https://semilla-gestion-comunitaria.vercel.app/ . Comprobado el 07/11/2026: HTTP 200 sobre HTTPS; no implica prueba autenticada del flujo. |
-| Migraciones versionadas | Scripts SQL 001–004; no confundirlos con un historial Prisma Migrate inexistente. |
-| Datos semilla | Catálogos y organización inicial presentes; dataset demostrativo completo pendiente. |
-| Flujo central con datos | Territorio tiene integración SQL; la trazabilidad integral de donaciones todavía está pendiente. |
-
-Los requisitos de archivos y etiqueta permiten identificar una versión de entrega, pero no sustituyen la evaluación funcional del proyecto.
-
 ## Validaciones de esta entrega
 
 Revisión documental del esquema y de los commits, coherencia de nombres, enlaces relativos y diferencias de Git. No se cambiaron tablas, API ni interfaz. No se ejecutaron migraciones sobre Neon ni se confirmó la configuración de producción. La publicación documental no permite afirmar que todos los módulos del modelo objetivo ya funcionan.
