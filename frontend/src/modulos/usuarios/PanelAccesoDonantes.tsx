@@ -61,8 +61,8 @@ export default function PanelAccesoDonantes({ token }: { token: string }) {
   }
 
   return (
-    <section className="roles-panel__tarjeta" aria-labelledby="titulo-acceso-donantes">
-      <h2 id="titulo-acceso-donantes">Acceso de donantes</h2>
+    <section className="acceso-donantes" aria-labelledby="titulo-acceso-donantes">
+      <h3 id="titulo-acceso-donantes">Acceso de donantes</h3>
       <p>Elegí un proyecto para gestionar sus donantes. Las evidencias compartidas se muestran a todos los donantes asignados a ese proyecto.</p>
       {error && <p role="alert">{error}</p>}
       {mensaje && <p role="status">{mensaje}</p>}
@@ -75,12 +75,12 @@ export default function PanelAccesoDonantes({ token }: { token: string }) {
               <input type="email" required maxLength={150} value={correo}
                 onChange={(evento) => setCorreo(evento.target.value)} />
             </label>{' '}
-            <button type="submit">Crear donante</button>
+            <button type="submit">Crear cuenta</button>
           </fieldset>
         </form>
       )}
       {credencial && (
-        <div role="status">
+        <div className="acceso-donantes__credencial" role="status">
           <p>Cuenta creada para {credencial.email}. Deberá cambiar la contraseña al ingresar.</p>
           <p>Contraseña temporal, visible una sola vez</p>
           <p><code>{credencial.temporal}</code></p>

@@ -73,12 +73,17 @@ function PaginaUsuarios({ tokenAcceso, puedeVer, puedeGestionarAcceso }: { token
                       ) : <p>Sin permisos asignados.</p>}
                     </details>
                   )}
+                  {perfil.codigo === 'DONANTE' && puedeGestionarAcceso && (
+                    <details className="roles-panel__acceso">
+                      <summary>Gestionar acceso de donantes</summary>
+                      <PanelAccesoDonantes token={tokenAcceso} />
+                    </details>
+                  )}
                 </article>
               );
             })}
           </div>
         )}
-      {puedeGestionarAcceso && <PanelAccesoDonantes token={tokenAcceso} />}
     </section>
   );
 }

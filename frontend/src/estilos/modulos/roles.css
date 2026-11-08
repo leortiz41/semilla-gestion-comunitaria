@@ -40,3 +40,109 @@
 .roles-panel__tarjeta li span {
   display: block;
 }
+
+.roles-panel__tarjeta:has(> .roles-panel__acceso[open]) {
+  grid-column: 1 / -1;
+}
+
+.roles-panel__acceso > summary {
+  padding: .7rem .85rem;
+  border-radius: .65rem;
+  background: #e6f0e3;
+  color: #25462b;
+}
+
+.acceso-donantes {
+  display: grid;
+  gap: .85rem;
+  padding: 1rem;
+  margin-top: .8rem;
+  border: 1px solid #dbe7d8;
+  border-radius: .85rem;
+  background: #f4f8f2;
+}
+
+.acceso-donantes > :is(h3, p) {
+  margin: 0;
+}
+
+.acceso-donantes fieldset {
+  min-width: 0;
+  padding: .9rem;
+  border: 1px solid #dbe7d8;
+  border-radius: .65rem;
+  background: #fff;
+}
+
+.acceso-donantes legend {
+  padding: 0 .35rem;
+  font-weight: 650;
+  color: #25462b;
+}
+
+.acceso-donantes label:has(> :is(input[type="email"], select)) {
+  display: grid;
+  gap: .4rem;
+}
+
+.acceso-donantes :is(input[type="email"], select, button) {
+  box-sizing: border-box;
+  padding: .65rem .85rem;
+  border: 1px solid #aabdac;
+  border-radius: .55rem;
+  font: inherit;
+}
+
+.acceso-donantes :is(input[type="email"], select) {
+  width: 100%;
+  max-width: 32rem;
+  background: white;
+  color: #203526;
+}
+
+.acceso-donantes button {
+  background: #315737;
+  color: white;
+  cursor: pointer;
+}
+
+.acceso-donantes button[type="submit"] {
+  margin-top: .65rem;
+}
+
+.acceso-donantes :is(button, summary, input, select):focus-visible,
+.roles-panel__acceso > summary:focus-visible {
+  outline: 2px solid #315737;
+  outline-offset: 3px;
+}
+
+.acceso-donantes ul {
+  display: grid;
+  gap: .4rem;
+  padding: 0;
+  list-style: none;
+}
+
+.acceso-donantes li {
+  margin: 0;
+}
+
+.acceso-donantes li label {
+  display: flex;
+  align-items: flex-start;
+  gap: .5rem;
+  padding: .5rem;
+  background: #f4f8f2;
+  border-radius: .4rem;
+}
+
+.acceso-donantes input[type="checkbox"] {
+  accent-color: #315737;
+}
+
+.acceso-donantes__credencial {
+  padding: .75rem;
+  border-radius: .55rem;
+  background: #fff5d9;
+  overflow-wrap: anywhere;
+}
