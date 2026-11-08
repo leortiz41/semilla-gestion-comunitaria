@@ -11,6 +11,7 @@ import './donantes.css';
 export default function PaginaDonantes({ token }: { token: string }) {
   const [fichas, setFichas] = useState<FichaDonante[]>([]);
   const [proyectos, setProyectos] = useState<ProyectoBrigada[]>([]);
+  const [zonas, setZonas] = useState<{ id: string; nombre: string }[]>([]);
   const [comunidades, setComunidades] = useState<ComunidadBrigada[]>([]);
   const [versionesPlan, setVersionesPlan] = useState<Record<string, number>>({});
   const [error, setError] = useState('');
@@ -25,6 +26,7 @@ export default function PaginaDonantes({ token }: { token: string }) {
         if (!vigente) return;
         setFichas(registro.fichas);
         setComunidades(registro.comunidades);
+        setZonas(registro.zonas);
         setProyectos(catalogo.proyectos);
       })
       .catch((fallo: Error) => { if (vigente) setError(fallo.message); })
@@ -42,7 +44,7 @@ export default function PaginaDonantes({ token }: { token: string }) {
       datos[clave] = clave === 'miembros' ? Number(valor) : String(valor);
     }
     if (fichaId) {
-      for (const campo of ['actividades', 'contrataciones']) {
+      for (const campo of ['actividades', 'contrataciones', 'comunidadIds']) {
         datos[campo] = campos.getAll(campo).map((valor) => String(valor).trim());
       }
     }
@@ -94,7 +96,8 @@ export default function PaginaDonantes({ token }: { token: string }) {
           {ficha.brigadas.map((brigada) => (
             <details key={brigada.id}>
               <summary>{brigada.lider} · {brigada.miembros} integrantes · {brigada.llegada ?? 'Fecha por definir'}</summary>
-              <p>Comunidad: {brigada.comunidad ?? 'Por asignar'}</p>
+              <p>Zona: {brigada.zona ?? 'Por asignar'}</p>
+              <p>Comunidades: {brigada.comunidades.join(', ') || 'Por definir'}</p>
               <p>Salida: {brigada.salida ?? 'Por definir'} · Proyecto: {brigada.proyecto ?? 'Por asignar'}</p>
               {brigada.actividades.length > 0 && (
                 <><h4>Actividades</h4><ul>{brigada.actividades.map((texto, indice) => <li key={indice}>{texto}</li>)}</ul></>
@@ -117,9 +120,9 @@ export default function PaginaDonantes({ token }: { token: string }) {
                   <label>Salida tentativa<input name="salida" type="date" /></label>
                   <label>Observaciones<textarea name="observaciones" maxLength={3000} /></label>
                 </div>
-                <PlanBrigada key={versionesPlan[ficha.id] ?? 0} comunidades={comunidades} proyectos={proyectos} />
-                {!comunidades.length && <p>Registrá una comunidad activa antes de guardar la brigada.</p>}
-                <button type="submit" disabled={!comunidades.length}>Guardar brigada</button>
+                <PlanBrigada key={versionesPlan[ficha.id] ?? 0} zonas={zonas} comunidades={comunidades} proyectos={proyectos} />
+                {!zonas.length && <p>Registrá una zona activa antes de guardar la brigada.</p>}
+                <button type="submit" disabled={!zonas.length}>Guardar brigada</button>
               </fieldset>
             </form>
           </details>

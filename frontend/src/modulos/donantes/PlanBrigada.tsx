@@ -4,6 +4,7 @@ export interface ComunidadBrigada {
   id: string;
   nombre: string;
   municipio: string;
+  zonaId: string | null;
 }
 
 export interface ProyectoBrigada {
@@ -41,32 +42,57 @@ function ListaPlan({ nombre, titulo, singular }: {
   );
 }
 
-export default function PlanBrigada({ comunidades, proyectos }: {
+export default function PlanBrigada({ zonas, comunidades, proyectos }: {
+  zonas: { id: string; nombre: string }[];
   comunidades: ComunidadBrigada[];
   proyectos: ProyectoBrigada[];
 }) {
-  const [comunidadId, setComunidadId] = useState('');
+  const [zonaId, setZonaId] = useState('');
+  const [comunidadIds, setComunidadIds] = useState<string[]>([]);
+  const comunidadesZona = comunidades.filter((comunidad) => comunidad.zonaId === zonaId);
 
   return (
     <>
       <div className="donantes-campos">
-        <label>Comunidad de trabajo
-          <select name="comunidadId" required value={comunidadId} onChange={(evento) => setComunidadId(evento.target.value)}>
-            <option value="">Seleccioná una comunidad</option>
-            {comunidades.map((comunidad) => (
-              <option key={comunidad.id} value={comunidad.id}>{comunidad.nombre} · {comunidad.municipio}</option>
-            ))}
+        <label>Zona de trabajo
+          <select name="zonaId" required value={zonaId} onChange={(evento) => {
+            setZonaId(evento.target.value);
+            setComunidadIds([]);
+          }}>
+            <option value="">Seleccioná una zona</option>
+            {zonas.map((zona) => <option key={zona.id} value={zona.id}>{zona.nombre}</option>)}
           </select>
         </label>
         <label>Proyecto relacionado
-          <select key={comunidadId} name="proyectoId" disabled={!comunidadId}>
+          <select key={comunidadIds.join(',')} name="proyectoId" disabled={!comunidadIds.length}>
             <option value="">Por asignar</option>
-            {proyectos.filter((proyecto) => proyecto.comunidadId === comunidadId).map((proyecto) => (
+            {proyectos.filter((proyecto) => comunidadIds.includes(proyecto.comunidadId)).map((proyecto) => (
               <option key={proyecto.id} value={proyecto.id}>{proyecto.nombre}</option>
             ))}
           </select>
         </label>
       </div>
+      {zonaId && (
+        <fieldset>
+          <legend>Comunidades de trabajo</legend>
+          <p>Marcá las comunidades previstas o dejalas por definir.</p>
+          {comunidadesZona.map((comunidad) => (
+            <div key={comunidad.id}>
+              <label>
+                <input type="checkbox" name="comunidadIds" value={comunidad.id}
+                  checked={comunidadIds.includes(comunidad.id)}
+                  onChange={(evento) => {
+                    const marcada = evento.target.checked;
+                    setComunidadIds((actual) => marcada
+                      ? [...actual, comunidad.id]
+                      : actual.filter((id) => id !== comunidad.id));
+                  }} />
+                {' '}{comunidad.nombre} · {comunidad.municipio}
+              </label>
+            </div>
+          ))}
+        </fieldset>
+      )}
       <ListaPlan nombre="actividades" titulo="Actividades" singular="Actividad" />
       <ListaPlan nombre="contrataciones" titulo="Contrataciones previstas" singular="Contratación" />
     </>

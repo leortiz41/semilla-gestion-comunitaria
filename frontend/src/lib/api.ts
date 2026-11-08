@@ -473,7 +473,8 @@ export interface FichaDonante {
     llegada: string | null;
     salida: string | null;
     proyecto: string | null;
-    comunidad: string | null;
+    zona: string | null;
+    comunidades: string[];
     actividades: string[];
     contrataciones: string[];
     observaciones: string | null;
@@ -481,7 +482,7 @@ export interface FichaDonante {
 }
 
 export function obtenerFichasDonantes(token: string) {
-  return request<{ fichas: FichaDonante[]; comunidades: { id: string; nombre: string; municipio: string }[] }>('/donantes/administracion/fichas', {
+  return request<{ fichas: FichaDonante[]; comunidades: { id: string; nombre: string; municipio: string; zonaId: string | null }[]; zonas: { id: string; nombre: string }[] }>('/donantes/administracion/fichas', {
     headers: { Authorization: `Bearer ${token}` },
   });
 }
