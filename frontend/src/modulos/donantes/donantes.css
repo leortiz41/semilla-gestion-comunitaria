@@ -143,3 +143,9 @@
   padding: .6rem;
   font: inherit;
 }
+
+.brigadas-accion--eliminar {
+  border-color: #ddc4c1;
+  background: #fff4f2;
+  color: #8a2920;
+}

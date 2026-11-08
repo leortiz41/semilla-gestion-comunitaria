@@ -1,7 +1,7 @@
 import PlanBrigada, { type ComunidadBrigada, type ProyectoBrigada } from './PlanBrigada';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import {
-  guardarFichaDonante, obtenerAdministracionDonantes, obtenerFichasDonantes, type FichaDonante,
+  eliminarBrigada, guardarFichaDonante, obtenerAdministracionDonantes, obtenerFichasDonantes, type FichaDonante,
 } from '../../lib/api';
 import PanelAccesoDonantes from '../usuarios/PanelAccesoDonantes';
 import '../../estilos/modulos/paginaModuloBase.css';
@@ -10,7 +10,7 @@ import './donantes.css';
 
 const tarjetasPorPagina = 6;
 type Brigada = FichaDonante['brigadas'][number];
-type VentanaBrigada = { tipo: 'alta'; fichaId: string } |
+type VentanaBrigada = { tipo: 'alta'; fichaId: string; brigada?: Brigada } |
   { tipo: 'detalle'; brigada: Brigada; donante: string };
 
 export default function PaginaDonantes({ token }: { token: string }) {
@@ -47,12 +47,12 @@ export default function PaginaDonantes({ token }: { token: string }) {
     return () => { vigente = false; };
   }, [token]);
 
-  function abrirAlta(fichaId: string) {
+  function abrirAlta(fichaId: string, brigada?: Brigada) {
     setError('');
-    setVentana({ tipo: 'alta', fichaId });
+    setVentana({ tipo: 'alta', fichaId, brigada });
   }
 
-  async function guardar(evento: FormEvent<HTMLFormElement>, fichaId?: string) {
+  async function guardar(evento: FormEvent<HTMLFormElement>, fichaId?: string, brigadaId?: string) {
     evento.preventDefault();
     if (ocupado) return;
     const formulario = evento.currentTarget;
@@ -70,16 +70,35 @@ export default function PaginaDonantes({ token }: { token: string }) {
     setError('');
     setMensaje('');
     try {
-      await guardarFichaDonante(token, datos, fichaId);
+      await guardarFichaDonante(token, datos, fichaId, brigadaId);
       formulario.reset();
       if (fichaId) {
         setPaginas((actual) => ({ ...actual, [fichaId]: 0 }));
         setVentana(null);
       }
-      setMensaje(fichaId ? 'Brigada registrada.' : 'Donante registrado.');
+      setMensaje(brigadaId ? 'Brigada actualizada.' : fichaId ? 'Brigada registrada.' : 'Donante registrado.');
       setFichas((await obtenerFichasDonantes(token)).fichas);
     } catch (fallo) {
       setError(fallo instanceof Error ? fallo.message : 'No fue posible completar la operación.');
+    } finally {
+      setOcupado(false);
+    }
+  }
+
+  async function borrar(fichaId: string, brigada: Brigada) {
+    if (ocupado || !window.confirm(`¿Eliminar permanentemente la brigada de ${brigada.lider}?`)) return;
+    setOcupado(true);
+    setError('');
+    setMensaje('');
+    try {
+      await eliminarBrigada(token, fichaId, brigada.id);
+      setFichas((actual) => actual.map((ficha) => ficha.id === fichaId
+        ? { ...ficha, brigadas: ficha.brigadas.filter((item) => item.id !== brigada.id) }
+        : ficha));
+      setPaginas((actual) => ({ ...actual, [fichaId]: 0 }));
+      setMensaje('Brigada eliminada.');
+    } catch (fallo) {
+      setError(fallo instanceof Error ? fallo.message : 'No fue posible eliminar la brigada.');
     } finally {
       setOcupado(false);
     }
@@ -135,6 +154,10 @@ export default function PaginaDonantes({ token }: { token: string }) {
                     onClick={() => setVentana({ tipo: 'detalle', brigada, donante: ficha.nombre })}>
                     Ver detalles
                   </button>
+                  {' '}<button type="button" className="brigadas-accion" disabled={ocupado}
+                    onClick={() => abrirAlta(ficha.id, brigada)}>Editar</button>
+                  {' '}<button type="button" className="brigadas-accion brigadas-accion--eliminar" disabled={ocupado}
+                    onClick={() => void borrar(ficha.id, brigada)}>Eliminar</button>
                 </article>
               ))}
             </div>
@@ -160,7 +183,7 @@ export default function PaginaDonantes({ token }: { token: string }) {
           <>
             <header className="brigadas-encabezado">
               <h2 id="titulo-ventana-brigada">
-                {ventana.tipo === 'alta' ? 'Agregar brigada' : `Brigada de ${ventana.brigada.lider}`}
+                {ventana.tipo === 'alta' ? (ventana.brigada ? 'Editar brigada' : 'Agregar brigada') : `Brigada de ${ventana.brigada.lider}`}
               </h2>
               <button type="button" disabled={ocupado} onClick={() => setVentana(null)}>Cerrar</button>
             </header>
@@ -169,23 +192,23 @@ export default function PaginaDonantes({ token }: { token: string }) {
                 {error && <p role="alert">{error}</p>}
                 <label className="brigadas-selector">
                   Donante
-                  <select value={ventana.fichaId} disabled={ocupado}
+                  <select value={ventana.fichaId} disabled={ocupado || Boolean(ventana.brigada)}
                     onChange={(evento) => setVentana({ tipo: 'alta', fichaId: evento.target.value })}>
                     <option value="">Seleccioná un donante</option>
                     {fichas.map((ficha) => <option key={ficha.id} value={ficha.id}>{ficha.nombre}</option>)}
                   </select>
                 </label>
-                <form onSubmit={(evento) => void guardar(evento, ventana.fichaId)}>
+                <form onSubmit={(evento) => void guardar(evento, ventana.fichaId, ventana.brigada?.id)}>
                   <fieldset disabled={ocupado || !ventana.fichaId}>
                     <legend>Plan del viaje</legend>
                     <div className="donantes-campos">
-                      <label>Líder del grupo<input name="lider" required maxLength={180} /></label>
-                      <label>Cantidad de integrantes<input name="miembros" type="number" required min={1} max={100000} /></label>
-                      <label>Llegada tentativa<input name="llegada" type="date" /></label>
-                      <label>Salida tentativa<input name="salida" type="date" /></label>
-                      <label>Observaciones<textarea name="observaciones" maxLength={3000} /></label>
+                      <label>Líder del grupo<input name="lider" defaultValue={ventana.brigada?.lider ?? ''} required maxLength={180} /></label>
+                      <label>Cantidad de integrantes<input name="miembros" defaultValue={ventana.brigada?.miembros ?? ''} type="number" required min={1} max={100000} /></label>
+                      <label>Llegada tentativa<input name="llegada" defaultValue={ventana.brigada?.llegada ?? ''} type="date" /></label>
+                      <label>Salida tentativa<input name="salida" defaultValue={ventana.brigada?.salida ?? ''} type="date" /></label>
+                      <label>Observaciones<textarea name="observaciones" defaultValue={ventana.brigada?.observaciones ?? ''} maxLength={3000} /></label>
                     </div>
-                    <PlanBrigada zonas={zonas} comunidades={comunidades} proyectos={proyectos} />
+                    <PlanBrigada inicial={ventana.brigada} zonas={zonas} comunidades={comunidades} proyectos={proyectos} />
                     {!zonas.length && <p>Registrá una zona activa antes de guardar la brigada.</p>}
                     <button type="submit" disabled={!zonas.length || !ventana.fichaId}>Guardar brigada</button>
                   </fieldset>

@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { hashPassword } from '../security/password.js';
-import { Router } from 'express';
+import { Router, type RequestHandler } from 'express';
 import { esUuid } from '../domain/expediente.js';
 import { databasePool } from '../config/database.js';
 import { authenticateAccessToken, requirePermission, requireRole } from '../middleware/auth.middleware.js';
@@ -249,6 +249,9 @@ administracionDonantes.get('/fichas', async (req, res) => {
       `SELECT d.id, d.nombre, d.correo, d.telefono,
               COALESCE((SELECT jsonb_agg(jsonb_build_object(
                 'id', b.id, 'lider', b.lider, 'miembros', b.miembros,
+                'zonaId', b.zona_id, 'proyectoId', b.proyecto_id,
+                'comunidadIds', ARRAY(SELECT bc.comunidad_id FROM brigadas_donantes_comunidades bc
+                  WHERE bc.brigada_id = b.id),
                 'llegada', b.fecha_llegada::text, 'salida', b.fecha_salida::text,
                 'actividades', b.lista_actividades, 'contrataciones', b.lista_contrataciones,
                 'zona', (SELECT z.nombre FROM zonas z
@@ -314,12 +317,12 @@ function esListaPlan(valor: unknown): valor is string[] {
     valor.every((texto) => typeof texto === 'string' && texto.trim().length > 0 && texto.length <= 3000);
 }
 
-administracionDonantes.post('/fichas/:id/brigadas', async (req, res) => {
-  const { id } = req.params;
+const guardarBrigada: RequestHandler = async (req, res) => {
+  const { id, brigadaId } = req.params;
   const { miembros, llegada, salida, proyectoId, zonaId, comunidadIds, actividades, contrataciones } = req.body ?? {};
   const lider = typeof req.body?.lider === 'string' ? req.body.lider.trim() : '';
   const observaciones = req.body?.observaciones ?? '';
-  if (!esUuid(id) || !esUuid(zonaId) || !Array.isArray(comunidadIds) ||
+  if (!esUuid(id) || (brigadaId !== undefined && !esUuid(brigadaId)) || !esUuid(zonaId) || !Array.isArray(comunidadIds) ||
       !comunidadIds.every(esUuid) || new Set(comunidadIds).size !== comunidadIds.length || !lider || lider.length > 180 ||
       !Number.isInteger(miembros) || miembros < 1 || miembros > 100000 ||
       (llegada && !esFechaValida(llegada)) ||
@@ -330,17 +333,29 @@ administracionDonantes.post('/fichas/:id/brigadas', async (req, res) => {
     res.status(400).json({ message: 'Revisá la zona, las comunidades y los datos del viaje.' });
     return;
   }
+  const organizacion = req.auth!.organizacionId;
   try {
     if (!databasePool) throw new Error('Base de datos no disponible');
-    const resultado = await databasePool.query(
-      `WITH comunidades_validas AS (
-         SELECT id FROM comunidades
-         WHERE id = ANY($12::uuid[]) AND zona_id = $11 AND organizacion_id = $2 AND activo
-       ), brigada AS (
-         INSERT INTO brigadas_donantes
-           (donante_id, proyecto_id, lider, miembros, fecha_llegada, fecha_salida,
-            lista_actividades, lista_contrataciones, observaciones, zona_id)
-         SELECT d.id, $3::uuid, $4, $5, $6, $7, $8, $9, $10, z.id
+    const cliente = await databasePool.connect();
+    try {
+      await cliente.query('BEGIN');
+      if (brigadaId) {
+        const bloqueo = await cliente.query(
+          `SELECT b.id FROM brigadas_donantes b JOIN donantes d ON d.id = b.donante_id
+           WHERE b.id = $1 AND d.id = $2 AND d.organizacion_id = $3 FOR UPDATE OF b`,
+          [brigadaId, id, organizacion],
+        );
+        if (!bloqueo.rowCount) {
+          await cliente.query('ROLLBACK');
+          res.status(404).json({ message: 'No se encontró la brigada.' });
+          return;
+        }
+      }
+
+      const datos = `SELECT d.id AS donante_id, $3::uuid AS proyecto_id, $4::text AS lider,
+              $5::integer AS miembros, $6::date AS llegada, $7::date AS salida,
+              $8::text[] AS actividades, $9::text[] AS contrataciones, $10::text AS observaciones,
+              z.id AS zona_id
          FROM donantes d
          JOIN zonas z ON z.id = $11 AND z.organizacion_id = d.organizacion_id AND z.activo
          WHERE d.id = $1 AND d.organizacion_id = $2
@@ -348,24 +363,79 @@ administracionDonantes.post('/fichas/:id/brigadas', async (req, res) => {
            AND ($3::uuid IS NULL OR EXISTS (
              SELECT 1 FROM proyectos p JOIN comunidades_validas c ON c.id = p.comunidad_id
              WHERE p.id = $3::uuid
-           ))
-         RETURNING id
-       ), vinculadas AS (
-         INSERT INTO brigadas_donantes_comunidades (brigada_id, comunidad_id)
-         SELECT b.id, c.id FROM brigada b CROSS JOIN comunidades_validas c
-       )
-       SELECT id FROM brigada`,
-      [id, req.auth!.organizacionId, proyectoId || null, lider, miembros,
+           ))`;
+      const operacion = brigadaId
+        ? `UPDATE brigadas_donantes b SET proyecto_id = d.proyecto_id, lider = d.lider,
+             miembros = d.miembros, fecha_llegada = d.llegada, fecha_salida = d.salida,
+             lista_actividades = d.actividades, lista_contrataciones = d.contrataciones,
+             observaciones = d.observaciones, zona_id = d.zona_id, comunidad_id = NULL
+           FROM datos d WHERE b.id = $13 AND b.donante_id = d.donante_id RETURNING b.id`
+        : `INSERT INTO brigadas_donantes
+             (donante_id, proyecto_id, lider, miembros, fecha_llegada, fecha_salida,
+              lista_actividades, lista_contrataciones, observaciones, zona_id)
+           SELECT * FROM datos RETURNING id`;
+      const parametros = [id, organizacion, proyectoId || null, lider, miembros,
         llegada || null, salida || null, actividades.map((texto) => texto.trim()),
-        contrataciones.map((texto) => texto.trim()), observaciones.trim() || null, zonaId, comunidadIds],
+        contrataciones.map((texto) => texto.trim()), observaciones.trim() || null, zonaId, comunidadIds];
+      if (brigadaId) parametros.push(brigadaId);
+      const resultado = await cliente.query(
+        `WITH comunidades_validas AS (
+           SELECT id FROM comunidades
+           WHERE id = ANY($12::uuid[]) AND zona_id = $11 AND organizacion_id = $2 AND activo
+         ), datos AS (${datos})
+         ${operacion}`, parametros,
+      );
+      if (!resultado.rowCount) {
+        await cliente.query('ROLLBACK');
+        res.status(404).json({ message: 'La zona, las comunidades o el proyecto no corresponden a la selección.' });
+        return;
+      }
+
+      const guardada = resultado.rows[0].id;
+      if (brigadaId) {
+        await cliente.query('DELETE FROM brigadas_donantes_comunidades WHERE brigada_id = $1', [guardada]);
+      }
+      await cliente.query(
+        `INSERT INTO brigadas_donantes_comunidades (brigada_id, comunidad_id)
+         SELECT $1, id FROM unnest($2::uuid[]) AS seleccion(id)`,
+        [guardada, comunidadIds],
+      );
+      await cliente.query('COMMIT');
+      res.sendStatus(204);
+    } catch (error) {
+      await cliente.query('ROLLBACK');
+      throw error;
+    } finally {
+      cliente.release();
+    }
+  } catch {
+    res.status(500).json({ message: 'No fue posible guardar la brigada.' });
+  }
+};
+
+administracionDonantes.post('/fichas/:id/brigadas', guardarBrigada);
+administracionDonantes.put('/fichas/:id/brigadas/:brigadaId', guardarBrigada);
+
+administracionDonantes.delete('/fichas/:id/brigadas/:brigadaId', async (req, res) => {
+  const { id, brigadaId } = req.params;
+  if (!esUuid(id) || !esUuid(brigadaId)) {
+    res.status(400).json({ message: 'Identificador de brigada inválido.' });
+    return;
+  }
+  try {
+    if (!databasePool) throw new Error('Base de datos no disponible');
+    const resultado = await databasePool.query(
+      `DELETE FROM brigadas_donantes b USING donantes d
+       WHERE b.id = $1 AND b.donante_id = d.id AND d.id = $2 AND d.organizacion_id = $3`,
+      [brigadaId, id, req.auth!.organizacionId],
     );
     if (!resultado.rowCount) {
-      res.status(404).json({ message: 'La zona, las comunidades o el proyecto no corresponden a la selección.' });
+      res.status(404).json({ message: 'No se encontró la brigada.' });
       return;
     }
     res.sendStatus(204);
   } catch {
-    res.status(500).json({ message: 'No fue posible registrar la brigada.' });
+    res.status(500).json({ message: 'No fue posible eliminar la brigada.' });
   }
 });
 

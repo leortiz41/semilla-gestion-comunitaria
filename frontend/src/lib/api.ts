@@ -468,6 +468,9 @@ export interface FichaDonante {
   telefono: string | null;
   brigadas: {
     id: string;
+    zonaId: string | null;
+    proyectoId: string | null;
+    comunidadIds: string[];
     lider: string;
     miembros: number;
     llegada: string | null;
@@ -487,11 +490,18 @@ export function obtenerFichasDonantes(token: string) {
   });
 }
 
-export function guardarFichaDonante(token: string, datos: Record<string, string | number | string[]>, fichaId?: string) {
-  const ruta = fichaId ? `/fichas/${fichaId}/brigadas` : '/fichas';
+export function guardarFichaDonante(token: string, datos: Record<string, string | number | string[]>, fichaId?: string, brigadaId?: string) {
+  const ruta = fichaId ? `/fichas/${fichaId}/brigadas${brigadaId ? '/' + brigadaId : ''}` : '/fichas';
   return request<void>(`/donantes/administracion${ruta}`, {
-    method: 'POST',
+    method: brigadaId ? 'PUT' : 'POST',
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify(datos),
+  });
+}
+
+export function eliminarBrigada(token: string, fichaId: string, brigadaId: string) {
+  return request<void>(`/donantes/administracion/fichas/${fichaId}/brigadas/${brigadaId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
   });
 }
