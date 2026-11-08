@@ -7,6 +7,7 @@ import { authRouter } from './routes/auth.routes.js';
 import { comunidadesRouter } from './routes/comunidades.routes.js';
 import { dashboardRouter } from './routes/dashboard.routes.js';
 import { zonasRouter } from './routes/zonas.routes.js';
+import { usuariosRouter } from './routes/usuarios.routes.js';
 
 const app = express();
 const port = Number(process.env.PORT ?? 3000);
@@ -24,6 +25,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/comunidades', comunidadesRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/zonas', zonasRouter);
+app.use('/api/usuarios', usuariosRouter);
 
 app.get('/api/health', async (_req, res) => {
   const database = await checkDatabaseConnection();

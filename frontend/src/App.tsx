@@ -196,7 +196,9 @@ function App() {
       case 'pagos':
         return <PaginaPagos />;
       case 'usuarios':
-        return <PaginaUsuarios />;
+        return usuario && accessToken ? (
+          <PaginaUsuarios tokenAcceso={accessToken} puedeVer={usuario.permisos.includes("usuarios.ver")} />
+        ) : null;
       case 'auditoria':
         return <PaginaAuditoria />;
       case 'perfil':

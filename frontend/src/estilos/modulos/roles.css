@@ -1,0 +1,42 @@
+.roles-panel {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 270px), 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+.roles-panel__tarjeta {
+  padding: 1.25rem;
+  border: 1px solid #dfe8db;
+  border-radius: 1rem;
+  background: #fff;
+}
+
+.roles-panel__tarjeta h2 {
+  margin: 0.5rem 0;
+  color: #355c3a;
+}
+
+.roles-panel__tarjeta details {
+  margin-top: 1rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid #dfe8db;
+}
+
+.roles-panel__tarjeta summary {
+  cursor: pointer;
+  font-weight: 650;
+}
+
+.roles-panel__tarjeta ul {
+  padding-left: 1.25rem;
+}
+
+.roles-panel__tarjeta li {
+  margin-bottom: 0.65rem;
+  overflow-wrap: anywhere;
+}
+
+.roles-panel__tarjeta li span {
+  display: block;
+}

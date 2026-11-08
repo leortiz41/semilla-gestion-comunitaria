@@ -388,3 +388,15 @@ export interface NecesidadComunitaria extends DatosNecesidad {
 }
 export function obtenerNecesidades(token:string,id:string) { return request<{necesidades:NecesidadComunitaria[]}>(`/comunidades/${id}/expediente/necesidades`,{headers:{Authorization:`Bearer ${token}`}}); }
 export function registrarNecesidad(token:string,id:string,datos:DatosNecesidad) {return request<{necesidad:NecesidadComunitaria}>(`/comunidades/${id}/expediente/necesidades`,{method:'POST',headers:{Authorization:`Bearer ${token}`},body:JSON.stringify(datos)});}
+
+export interface RolCatalogo {
+  nombre: string;
+  activo: boolean;
+  permisos: { codigo: string; descripcion: string | null }[];
+}
+
+export function obtenerRoles(tokenAcceso: string) {
+  return request<{ roles: RolCatalogo[] }>('/usuarios/roles', {
+    headers: { Authorization: `Bearer ${tokenAcceso}` },
+  });
+}
