@@ -448,3 +448,14 @@ export function actualizarEvidenciaDonante(token: string, proyectoId: string, ev
     body: JSON.stringify({ compartida }),
   });
 }
+
+export function crearCuentaDonante(token: string, email: string) {
+  return request<{ donante: AdministracionDonantes['donantes'][number]; contrasenaTemporal: string }>(
+    '/donantes/administracion/cuentas',
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ email }),
+    },
+  );
+}

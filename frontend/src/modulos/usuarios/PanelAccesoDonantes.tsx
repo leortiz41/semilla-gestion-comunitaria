@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import {
   actualizarAccesoDonante,
   actualizarEvidenciaDonante,
+  crearCuentaDonante,
   obtenerAdministracionDonantes,
   type AdministracionDonantes,
 } from '../../lib/api';
@@ -12,6 +13,8 @@ export default function PanelAccesoDonantes({ token }: { token: string }) {
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
+  const [correo, setCorreo] = useState('');
+  const [credencial, setCredencial] = useState<{ email: string; temporal: string } | null>(null);
 
   useEffect(() => {
     let vigente = true;
@@ -39,12 +42,51 @@ export default function PanelAccesoDonantes({ token }: { token: string }) {
     }
   }
 
+  async function crearDonante(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault();
+    if (guardando || credencial) return;
+    setGuardando(true);
+    setError('');
+    setMensaje('');
+    try {
+      const { donante, contrasenaTemporal } = await crearCuentaDonante(token, correo);
+      setDatos((actual) => actual ? { ...actual, donantes: [...actual.donantes, donante] } : actual);
+      setCredencial({ email: donante.email, temporal: contrasenaTemporal });
+      setCorreo('');
+    } catch (fallo) {
+      setError(fallo instanceof Error ? fallo.message : 'No fue posible crear la cuenta.');
+    } finally {
+      setGuardando(false);
+    }
+  }
+
   return (
     <section className="roles-panel__tarjeta" aria-labelledby="titulo-acceso-donantes">
       <h2 id="titulo-acceso-donantes">Acceso de donantes</h2>
       <p>Elegí un proyecto para gestionar sus donantes. Las evidencias compartidas se muestran a todos los donantes asignados a ese proyecto.</p>
       {error && <p role="alert">{error}</p>}
       {mensaje && <p role="status">{mensaje}</p>}
+      {datos && (
+        <form onSubmit={crearDonante}>
+          <fieldset disabled={guardando || Boolean(credencial)}>
+            <legend>Nueva cuenta de donante</legend>
+            <label>
+              Correo electrónico{' '}
+              <input type="email" required maxLength={150} value={correo}
+                onChange={(evento) => setCorreo(evento.target.value)} />
+            </label>{' '}
+            <button type="submit">Crear donante</button>
+          </fieldset>
+        </form>
+      )}
+      {credencial && (
+        <div role="status">
+          <p>Cuenta creada para {credencial.email}. Deberá cambiar la contraseña al ingresar.</p>
+          <p>Contraseña temporal, visible una sola vez</p>
+          <p><code>{credencial.temporal}</code></p>
+          <button type="button" onClick={() => setCredencial(null)}>Ocultar contraseña</button>
+        </div>
+      )}
       {!datos && !error && <p role="status">Cargando proyectos y donantes…</p>}
       {datos?.proyectos.length === 0 && <p>Todavía no hay proyectos registrados en tu organización.</p>}
       {datos && datos.proyectos.length > 0 && (

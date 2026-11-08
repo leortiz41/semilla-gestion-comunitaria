@@ -1,3 +1,5 @@
+import { randomBytes } from 'node:crypto';
+import { hashPassword } from '../security/password.js';
 import { Router } from 'express';
 import { esUuid } from '../domain/expediente.js';
 import { databasePool } from '../config/database.js';
@@ -71,6 +73,57 @@ administracionDonantes.use(
   requirePermission('proyectos.gestionar'),
   requirePermission('evidencias.gestionar'),
 );
+
+administracionDonantes.post('/cuentas', async (req, res) => {
+  const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+  if (email.length > 150 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    res.status(400).json({ message: 'Ingresá un correo electrónico válido.' });
+    return;
+  }
+  if (!databasePool) {
+    res.status(503).json({ message: 'La administración de donantes no está disponible.' });
+    return;
+  }
+
+  const acceso = req.auth!;
+  try {
+    const contrasenaTemporal = 'Aa1-' + randomBytes(18).toString('base64url');
+    const hash = await hashPassword(contrasenaTemporal);
+    const { rows } = await databasePool.query(
+      `WITH rol AS (
+         SELECT id FROM roles WHERE nombre = 'DONANTE' AND activo
+       ), cuenta AS (
+         INSERT INTO usuarios (email, hash_contrasena, organizacion_id, debe_cambiar_contrasena)
+         SELECT $1, $2, u.organizacion_id, TRUE
+         FROM usuarios u
+         WHERE u.id = $3 AND u.organizacion_id = $4 AND u.activo
+           AND EXISTS (SELECT 1 FROM rol)
+           AND EXISTS (
+             SELECT 1 FROM usuarios_roles ur JOIN roles r ON r.id = ur.rol_id
+             WHERE ur.usuario_id = u.id AND r.nombre = 'ADMINISTRADOR' AND r.activo
+           )
+         RETURNING id, email, activo
+       ), asignacion AS (
+         INSERT INTO usuarios_roles (usuario_id, rol_id)
+         SELECT cuenta.id, rol.id FROM cuenta CROSS JOIN rol
+       )
+       SELECT id, email, activo FROM cuenta`,
+      [email, hash, acceso.sub, acceso.organizacionId],
+    );
+    if (!rows.length) {
+      res.status(403).json({ message: 'Se requiere un administrador activo y el rol Donante habilitado.' });
+      return;
+    }
+    res.set('Cache-Control', 'no-store');
+    res.status(201).json({ donante: rows[0], contrasenaTemporal });
+  } catch (error) {
+    if ((error as { code?: string }).code === '23505') {
+      res.status(409).json({ message: 'Ya existe una cuenta con ese correo.' });
+      return;
+    }
+    res.status(500).json({ message: 'No fue posible crear la cuenta de donante.' });
+  }
+});
 
 administracionDonantes.get('/', async (req, res) => {
   if (!databasePool) {
