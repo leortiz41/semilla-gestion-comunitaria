@@ -9,6 +9,9 @@ datasource db {
 }
 
 model organizaciones {
+  diagnosticos_comunitarios diagnosticos_comunitarios[]
+  visiones_desarrollo_comunitarias visiones_desarrollo_comunitarias[]
+  diagnosticos_comunidad diagnosticos_comunidad[]
   id                String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   nombre            String       @db.VarChar(180)
   slug              String       @unique @db.VarChar(120)
@@ -111,6 +114,13 @@ model claves_idempotencia {
 }
 
 model comunidades {
+  capacidades_comunitarias capacidades_comunitarias[]
+  diagnostico_comunitario diagnosticos_comunitarios?
+  visiones_desarrollo    visiones_desarrollo_comunitarias[]
+  latitud Decimal? @db.Decimal(9, 6)
+  longitud Decimal? @db.Decimal(9, 6)
+  diagnosticos_comunidad diagnosticos_comunidad[]
+  @@unique([id, organizacion_id], map: "uq_comunidades_id_organizacion")
   id               String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   organizacion_id  String          @db.Uuid
   zona_id          String?         @db.Uuid
@@ -129,6 +139,7 @@ model comunidades {
 
   @@index([organizacion_id], map: "idx_comunidades_organizacion_id")
   @@index([zona_id], map: "idx_comunidades_zona_id")
+  necesidades necesidades_comunitarias[]
 }
 
 model contactos {
@@ -488,6 +499,9 @@ model tokens_refresco {
 }
 
 model usuarios {
+  capacidades_comunitarias capacidades_comunitarias[]
+  @@unique([id, organizacion_id], map: "uq_usuarios_id_organizacion")
+  diagnosticos_comunidad diagnosticos_comunidad[]
   id                          String                        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   organizacion_id             String                        @db.Uuid
   empleado_id                 String?                       @unique @db.Uuid
@@ -509,6 +523,7 @@ model usuarios {
 
   @@index([empleado_id], map: "idx_usuarios_empleado_id")
   @@index([organizacion_id], map: "idx_usuarios_organizacion_id")
+  necesidades necesidades_comunitarias[]
 }
 
 model usuarios_roles {
@@ -535,4 +550,159 @@ model zonas {
 
   @@unique([id, organizacion_id], map: "uq_zonas_id_organizacion")
   @@index([organizacion_id], map: "idx_zonas_organizacion_id")
+}
+
+/// Restricciones CHECK definidas en database/sql/005_expediente_comunitario.sql.
+model diagnosticos_comunidad {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizacion_id String @db.Uuid
+  comunidad_id String @db.Uuid
+  poblacion Int?
+  viviendas Int?
+  viviendas_intervencion Int?
+  observaciones_organizaciones String @default("")
+  potencial_productivo String @default("")
+  creado_en DateTime @default(now()) @db.Timestamptz(6)
+  creado_por_id String @db.Uuid
+  organizaciones organizaciones @relation(fields: [organizacion_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  comunidades comunidades @relation(fields: [comunidad_id, organizacion_id], references: [id, organizacion_id], onDelete: Restrict, onUpdate: NoAction)
+  usuarios usuarios @relation(fields: [creado_por_id, organizacion_id], references: [id, organizacion_id], onDelete: Restrict, onUpdate: NoAction)
+  visiones_comunidad visiones_comunidad[]
+  elementos_diagnostico elementos_diagnostico[]
+  @@unique([id, organizacion_id])
+  @@index([organizacion_id, comunidad_id, creado_en(sort: Desc)], map: "idx_diagnosticos_comunidad_fecha")
+}
+
+model visiones_comunidad {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizacion_id String @db.Uuid
+  diagnostico_id String @db.Uuid
+  categoria String @db.VarChar(80)
+  situacion String
+  meta String
+  prioridad String @db.VarChar(10)
+  diagnosticos_comunidad diagnosticos_comunidad @relation(fields: [diagnostico_id, organizacion_id], references: [id, organizacion_id], onDelete: Restrict, onUpdate: NoAction)
+  @@unique([diagnostico_id, categoria])
+}
+
+/// Índice único por lower(nombre) y CHECK de tipo definidos en SQL 005.
+model elementos_diagnostico {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizacion_id String @db.Uuid
+  diagnostico_id String @db.Uuid
+  tipo String @db.VarChar(30)
+  nombre String @db.VarChar(150)
+  diagnosticos_comunidad diagnosticos_comunidad @relation(fields: [diagnostico_id, organizacion_id], references: [id, organizacion_id], onDelete: Restrict, onUpdate: NoAction)
+}
+
+model diagnosticos_comunitarios {
+  id                       String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  comunidad_id             String         @unique @db.Uuid
+  organizacion_id          String         @db.Uuid
+  poblacion_aproximada     Int?
+  viviendas_aproximadas    Int?
+  viviendas_intervencion   Int?
+  tipos_vivienda           String?
+  creado_en                DateTime       @default(now()) @db.Timestamptz(6)
+  actualizado_en           DateTime       @default(now()) @db.Timestamptz(6)
+  comunidades              comunidades    @relation(fields: [comunidad_id, organizacion_id], references: [id, organizacion_id], onDelete: Cascade)
+  organizaciones           organizaciones @relation(fields: [organizacion_id], references: [id], onDelete: Restrict)
+
+  @@unique([comunidad_id, organizacion_id], map: "uq_diagnosticos_comunitarios_comunidad_organizacion")
+  @@index([organizacion_id], map: "idx_diagnosticos_comunitarios_organizacion_id")
+}
+
+model visiones_desarrollo_comunitarias {
+  id               String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  comunidad_id     String         @db.Uuid
+  organizacion_id  String         @db.Uuid
+  area             String         @db.VarChar(60)
+  situacion_actual String?
+  prioridad        String?        @db.VarChar(10)
+  meta_desarrollo  String?
+  creado_en        DateTime       @default(now()) @db.Timestamptz(6)
+  actualizado_en   DateTime       @default(now()) @db.Timestamptz(6)
+  comunidades      comunidades    @relation(fields: [comunidad_id, organizacion_id], references: [id, organizacion_id], onDelete: Cascade)
+  organizaciones   organizaciones @relation(fields: [organizacion_id], references: [id], onDelete: Restrict)
+
+  @@unique([comunidad_id, area], map: "uq_visiones_desarrollo_comunidad_area")
+  @@unique([comunidad_id, organizacion_id, area], map: "uq_visiones_desarrollo_comunidad_organizacion_area")
+  @@index([organizacion_id], map: "idx_visiones_desarrollo_organizacion_id")
+  revision Int @default(1)
+  metas metas_vision_desarrollo[]
+  @@unique([id, organizacion_id], map: "uq_vision_id_organizacion")
+  necesidades necesidades_comunitarias[]
+  @@unique([id, comunidad_id, organizacion_id, area], map: "uq_vision_territorio_area")
+}
+
+/// Migración 008: revisiones inmutables de organización y productividad.
+model capacidades_comunitarias {
+ id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+ comunidad_id String @db.Uuid
+ organizacion_id String @db.Uuid
+ revision Int
+ observaciones_organizaciones String @default("")
+ potencial_productivo String @default("")
+ registrado_por_id String? @db.Uuid
+ origen String @default("CAPTURA") @db.VarChar(20)
+ creado_en DateTime @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
+ comunidades comunidades @relation(fields:[comunidad_id,organizacion_id],references:[id,organizacion_id],onDelete:Restrict,onUpdate:NoAction)
+ usuarios usuarios? @relation(fields:[registrado_por_id,organizacion_id],references:[id,organizacion_id],onDelete:Restrict,onUpdate:NoAction)
+ elementos_capacidad elementos_capacidad[]
+ @@unique([comunidad_id,revision])
+ @@unique([id,organizacion_id])
+ @@index([organizacion_id,comunidad_id,revision(sort:Desc)],map:"idx_capacidades_organizacion_comunidad")
+}
+/// CHECK y unicidad por lower(nombre) definidos en SQL 008.
+model elementos_capacidad {
+ id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+ capacidad_id String @db.Uuid
+ organizacion_id String @db.Uuid
+ tipo String @db.VarChar(30)
+ nombre String @db.VarChar(150)
+ capacidades_comunitarias capacidades_comunitarias @relation(fields:[capacidad_id,organizacion_id],references:[id,organizacion_id],onDelete:Restrict,onUpdate:NoAction)
+}
+
+model metas_vision_desarrollo {
+ id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+ vision_id String @db.Uuid
+ organizacion_id String @db.Uuid
+ descripcion String
+ orden Int
+ activa Boolean @default(true)
+ creado_en DateTime @default(now()) @db.Timestamptz(6)
+ actualizado_en DateTime @default(now()) @db.Timestamptz(6)
+ vision visiones_desarrollo_comunitarias @relation(fields: [vision_id, organizacion_id], references: [id, organizacion_id], onDelete: Cascade)
+ @@index([vision_id, organizacion_id, activa, orden], map: "idx_metas_vision")
+  necesidades necesidades_comunitarias[]
+  @@unique([id, vision_id, organizacion_id], map: "uq_meta_vision_organizacion")
+}
+
+/// Historia #27, entrega 1. Las restricciones de campos se definen en 010.
+model necesidades_comunitarias {
+ id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+ comunidad_id String @db.Uuid
+ organizacion_id String @db.Uuid
+ area String @db.VarChar(60)
+ vision_id String? @db.Uuid
+ meta_id String? @db.Uuid
+ titulo String @db.VarChar(180)
+ descripcion String
+ situacion_inicial String
+ poblacion_afectada String?
+ cantidad_afectada Int?
+ resultado_esperado String
+ unidad_medida String? @db.VarChar(80)
+ cantidad_objetivo Decimal? @db.Decimal(14,2)
+ prioridad String @default("POR_EVALUAR") @db.VarChar(15)
+ motivo_prioridad String
+ estado String @default("IDENTIFICADA") @db.VarChar(20)
+ registrado_por_id String @db.Uuid
+ creado_en DateTime @default(now()) @db.Timestamptz(6)
+ comunidad comunidades @relation(fields: [comunidad_id, organizacion_id], references: [id, organizacion_id], onDelete: Restrict)
+ vision visiones_desarrollo_comunitarias? @relation(fields: [vision_id, comunidad_id, organizacion_id, area], references: [id, comunidad_id, organizacion_id, area], onDelete: Restrict)
+ meta metas_vision_desarrollo? @relation(fields: [meta_id, vision_id, organizacion_id], references: [id, vision_id, organizacion_id], onDelete: Restrict)
+ autor usuarios @relation(fields: [registrado_por_id, organizacion_id], references: [id, organizacion_id], onDelete: Restrict)
+ @@unique([id, organizacion_id])
+ @@index([organizacion_id, comunidad_id, area, creado_en], map: "idx_necesidades_comunidad_area")
 }

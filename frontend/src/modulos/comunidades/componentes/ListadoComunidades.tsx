@@ -4,6 +4,10 @@ import type { ComunidadResumen } from '../../../lib/api';
 interface PropiedadesListadoComunidades {
   comunidades: ComunidadResumen[];
   cargando?: boolean;
+  alEditar?: (comunidad: ComunidadResumen) => void;
+  alVerExpediente?: (comunidad: ComunidadResumen) => void;
+  alCambiarEstado?: (comunidad: ComunidadResumen) => void;
+  comunidadProcesandoId?: string | null;
 }
 
 function obtenerEstadoVisual(comunidad: ComunidadResumen) {
@@ -18,7 +22,14 @@ function obtenerEstadoVisual(comunidad: ComunidadResumen) {
   return { clase: 'activa', etiqueta: 'Activa' };
 }
 
-function ListadoComunidades({ comunidades, cargando = false }: PropiedadesListadoComunidades) {
+function ListadoComunidades({
+  comunidades,
+  cargando = false,
+  alEditar,
+  alVerExpediente,
+  alCambiarEstado,
+  comunidadProcesandoId,
+}: PropiedadesListadoComunidades) {
   return (
     <section className="listado-comunidades" aria-labelledby="titulo-listado-comunidades">
       <div className="listado-comunidades__encabezado">
@@ -49,10 +60,12 @@ function ListadoComunidades({ comunidades, cargando = false }: PropiedadesListad
             <span role="columnheader">Municipio</span>
             <span role="columnheader">Departamento</span>
             <span role="columnheader">Estado</span>
+            <span role="columnheader">Acciones</span>
           </div>
 
           {comunidades.map((comunidad) => {
             const estadoVisual = obtenerEstadoVisual(comunidad);
+            const procesando = comunidadProcesandoId === comunidad.id;
 
             return (
               <div className="listado-comunidades__fila" role="row" key={comunidad.id}>
@@ -70,6 +83,46 @@ function ListadoComunidades({ comunidades, cargando = false }: PropiedadesListad
                   <span className={`listado-comunidades__estado listado-comunidades__estado--${estadoVisual.clase}`}>
                     {estadoVisual.etiqueta}
                   </span>
+                </span>
+                <span role="cell" className="listado-comunidades__acciones">
+                  {alVerExpediente && (
+                    <button
+                      className="listado-comunidades__boton-editar listado-comunidades__boton-editar--expediente"
+                      type="button"
+                      disabled={procesando}
+                      onClick={() => alVerExpediente(comunidad)}
+                    >
+                      Expediente
+                    </button>
+                  )}
+                  {alEditar && (
+                    <button
+                      className="listado-comunidades__boton-editar"
+                      type="button"
+                      disabled={procesando}
+                      onClick={() => alEditar(comunidad)}
+                    >
+                      Editar
+                    </button>
+                  )}
+                  {alCambiarEstado && (
+                    <button
+                      className={
+                        comunidad.activo
+                          ? 'listado-comunidades__boton-editar listado-comunidades__boton-editar--desactivar'
+                          : 'listado-comunidades__boton-editar listado-comunidades__boton-editar--reactivar'
+                      }
+                      type="button"
+                      disabled={procesando}
+                      onClick={() => alCambiarEstado(comunidad)}
+                    >
+                      {procesando
+                        ? 'Guardando…'
+                        : comunidad.activo
+                          ? 'Desactivar'
+                          : 'Reactivar'}
+                    </button>
+                  )}
                 </span>
               </div>
             );

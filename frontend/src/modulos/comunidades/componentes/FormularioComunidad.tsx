@@ -1,343 +1,508 @@
-import { useEffect, useState } from 'react';
-import { listarZonas, type ZonaResumen } from '../../../lib/api';
+import { useEffect, useState, type FormEvent } from 'react';
+import {
+  listarZonas,
+  actualizarDiagnostico,
+  obtenerUsuario,
+  crearExpediente,
+  consultarExpediente,
+  type ZonaResumen,
+  type ExpedienteComunidad,
+} from '../../../lib/api';
 
-const categoriasVisionDesarrollo = [
+const categorias = [
   'Evangelismo',
   'Educación formal',
   'Educación comunitaria',
   'Infraestructura',
 ];
-
-const tiposOrganizacionComunitaria = [
-  'Patronato',
-  'Junta de agua',
-  'Iglesias',
-  'Comité de pescadores',
-  'Comité de mujeres',
-  'Comité de jóvenes',
-  'Cooperativa',
-  'Asociación de productores',
-  'Caja rural',
-];
-
-const tiposActividadProductiva = [
-  'Agricultura',
-  'Ganadería',
-  'Pesca',
-  'Agroindustria',
-  'Pulperías',
-  'Comercio',
-  'Microempresas',
-  'Artesanías',
-  'Turismo',
-  'Servicios',
-];
-
-interface PropiedadesFormularioComunidad {
+const vacio: ExpedienteComunidad = {
+  nombre: '',
+  zonaId: '',
+  municipio: '',
+  departamento: '',
+  latitud: null,
+  longitud: null,
+  poblacion: null,
+  viviendas: null,
+  viviendasIntervencion: null,
+  tiposVivienda: [],
+  visiones: [],
+  organizaciones: [],
+  actividadesProductivas: [],
+  productosServicios: [],
+  observacionesOrganizaciones: '',
+  potencialProductivo: '',
+};
+interface Props {
   tokenAcceso: string;
+  comunidadId?: string;
   alCerrar: () => void;
+  alGuardar?: () => void;
 }
 
-function FormularioComunidad({ tokenAcceso, alCerrar }: PropiedadesFormularioComunidad) {
+export default function FormularioComunidad({
+  tokenAcceso,
+  comunidadId,
+  alCerrar,
+  alGuardar,
+}: Props) {
+  const [datos, setDatos] = useState<ExpedienteComunidad>(vacio);
   const [zonas, setZonas] = useState<ZonaResumen[]>([]);
-  const [cargandoZonas, setCargandoZonas] = useState(true);
-  const [errorZonas, setErrorZonas] = useState<string | null>(null);
-
+  const [cargando, setCargando] = useState(true);
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [cargaCompleta, setCargaCompleta] = useState(false);
+  const [fecha, setFecha] = useState<string | null>(null);
+  const [editando, setEditando] = useState(false);
+  const [puedeEditar, setPuedeEditar] = useState(false);
+  const [diagnosticoId, setDiagnosticoId] = useState<string | null>(null);
+  const [mensaje, setMensaje] = useState<string | null>(null);
+  const consulta = Boolean(comunidadId) && !editando;
   useEffect(() => {
-    let activo = true;
-
-    listarZonas(tokenAcceso)
-      .then(({ zonas: zonasRegistradas }) => {
-        if (!activo) return;
-        setZonas(zonasRegistradas.filter((zona) => zona.activo));
-        setErrorZonas(null);
+    let vigente = true;
+    setCargando(true);
+    setCargaCompleta(false);
+    setError(null);
+    Promise.all([
+      listarZonas(tokenAcceso),
+      comunidadId
+        ? consultarExpediente(tokenAcceso, comunidadId)
+        : Promise.resolve(null),
+      obtenerUsuario(tokenAcceso),
+    ])
+      .then(([z, r, sesion]) => {
+        if (vigente) {
+          setPuedeEditar(
+            sesion.usuario.permisos.includes('comunidades.gestionar'),
+          );
+          setDiagnosticoId(r?.expediente.diagnosticoId ?? null);
+          setCargaCompleta(true);
+          setZonas(z.zonas);
+          setDatos(r?.expediente ?? vacio);
+          setFecha(r?.expediente.fechaDiagnostico ?? null);
+        }
       })
-      .catch((error) => {
-        if (!activo) return;
-        setErrorZonas(error instanceof Error ? error.message : 'No fue posible cargar las zonas.');
+      .catch((e) => {
+        if (vigente)
+          setError(
+            e instanceof Error ? e.message : 'No se pudo cargar el expediente.',
+          );
       })
       .finally(() => {
-        if (activo) setCargandoZonas(false);
+        if (vigente) setCargando(false);
       });
-
     return () => {
-      activo = false;
+      vigente = false;
     };
-  }, [tokenAcceso]);
+  }, [tokenAcceso, comunidadId]);
+  function cambiar<K extends keyof ExpedienteComunidad>(
+    k: K,
+    v: ExpedienteComunidad[K],
+  ) {
+    setDatos((d) => ({ ...d, [k]: v }));
+  }
+  async function guardar(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (guardando || consulta) return;
+    setError(null);
+    if ((datos.latitud === null) !== (datos.longitud === null)) {
+      setError('Registra ambas coordenadas o deja ambas vacías.');
+      return;
+    }
+    if (
+      datos.viviendasIntervencion !== null &&
+      (datos.viviendas === null ||
+        datos.viviendasIntervencion > datos.viviendas)
+    ) {
+      setError('Las viviendas por intervenir no pueden superar el total.');
+      return;
+    }
+    if (
+      datos.visiones.some(
+        (v) => !v.situacion.trim() || !v.meta.trim() || !v.prioridad,
+      )
+    ) {
+      setError('Completa situación, meta y prioridad de cada área iniciada.');
+      return;
+    }
+    setGuardando(true);
+    try {
+      if (comunidadId) {
+        await actualizarDiagnostico(
+          tokenAcceso,
+          comunidadId,
+          datos,
+          diagnosticoId,
+        );
+        const r = await consultarExpediente(tokenAcceso, comunidadId);
+        setDatos(r.expediente);
+        setDiagnosticoId(r.expediente.diagnosticoId);
+        setFecha(r.expediente.fechaDiagnostico);
+        setEditando(false);
+        setMensaje('Diagnóstico actualizado. La versión anterior se conserva.');
+      } else {
+        await crearExpediente(tokenAcceso, datos);
+        alGuardar?.();
+      }
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : 'No se pudo guardar el expediente.',
+      );
+    } finally {
+      setGuardando(false);
+    }
+  }
+  const texto = (
+    k:
+      | 'nombre'
+      | 'municipio'
+      | 'departamento'
+      | 'observacionesOrganizaciones'
+      | 'potencialProductivo',
+    label: string,
+    max: number,
+    required = false,
+  ) => (
+    <label className="pagina-comunidades__campo" key={k}>
+      {label}
+      {max > 150 ? (
+        <textarea
+          rows={3}
+          value={datos[k]}
+          maxLength={max}
+          onChange={(e) => cambiar(k, e.target.value)}
+        />
+      ) : (
+        <input
+          value={datos[k]}
+          maxLength={max}
+          required={required}
+          onChange={(e) => cambiar(k, e.target.value)}
+        />
+      )}
+    </label>
+  );
+  const numero = (
+    k:
+      | 'latitud'
+      | 'longitud'
+      | 'poblacion'
+      | 'viviendas'
+      | 'viviendasIntervencion',
+    label: string,
+    min: number,
+    max: number,
+    step: string,
+  ) => (
+    <label className="pagina-comunidades__campo" key={k}>
+      {label}
+      <input
+        type="number"
+        min={min}
+        max={max}
+        step={step}
+        value={datos[k] ?? ''}
+        onChange={(e) =>
+          cambiar(k, e.target.value === '' ? null : e.target.valueAsNumber)
+        }
+      />
+    </label>
+  );
+  const lista = (
+    k:
+      | 'tiposVivienda'
+      | 'organizaciones'
+      | 'actividadesProductivas'
+      | 'productosServicios',
+    label: string,
+  ) => (
+    <fieldset className="expediente-lista" key={k}>
+      <legend>{label}</legend>
+      {datos[k].length === 0 && <p>Sin información registrada.</p>}
+      {datos[k].map((valor, indice) => (
+        <div className="expediente-lista__fila" key={indice}>
+          <input
+            aria-label={`${label} ${indice + 1}`}
+            required
+            maxLength={150}
+            value={valor}
+            onChange={(e) =>
+              cambiar(
+                k,
+                datos[k].map((x, i) => (i === indice ? e.target.value : x)),
+              )
+            }
+          />
+          {!consulta && (
+            <button
+              type="button"
+              aria-label={`Quitar ${label} ${indice + 1}`}
+              onClick={() =>
+                cambiar(
+                  k,
+                  datos[k].filter((_, i) => i !== indice),
+                )
+              }
+            >
+              Quitar
+            </button>
+          )}
+        </div>
+      ))}
+      {!consulta && (
+        <button
+          type="button"
+          disabled={datos[k].length >= 50}
+          onClick={() => cambiar(k, [...datos[k], ''])}
+        >
+          Agregar elemento
+        </button>
+      )}
+      {!consulta && (
+        <small>
+          Hasta 50 elementos de 150 caracteres. Registra cada organización,
+          actividad o producto por separado.
+        </small>
+      )}
+    </fieldset>
+  );
 
   return (
-    <form className="formulario-comunidad">
+    <form
+      className="formulario-comunidad"
+      onSubmit={guardar}
+      onInvalidCapture={(e) => {
+        const detalle = (e.target as HTMLElement).closest('details');
+        if (detalle) detalle.open = true;
+      }}
+    >
       <div className="formulario-comunidad__encabezado">
         <div>
-          <p className="formulario-comunidad__etiqueta">Registro comunitario</p>
-          <h2>Nueva comunidad</h2>
+          <h2>{comunidadId ? 'Expediente comunitario' : 'Nueva comunidad'}</h2>
           <p>
-            Registra la información general y territorial que servirá como base para el diagnóstico comunitario.
+            {consulta
+              ? 'Consulta de la información registrada.'
+              : 'Completa los datos generales y las secciones que conozcas. Deja vacíos los datos aún no disponibles.'}
           </p>
         </div>
-
         <button
-          className="formulario-comunidad__cerrar"
           type="button"
+          className="formulario-comunidad__cerrar"
+          disabled={guardando}
           onClick={alCerrar}
-          aria-label="Cerrar formulario de comunidad"
+          aria-label="Cerrar expediente"
         >
           ×
         </button>
       </div>
-
-      <details className="formulario-comunidad__acordeon" open>
-        <summary className="formulario-comunidad__acordeon-resumen">
-          <div className="formulario-comunidad__seccion-encabezado">
-            <span className="formulario-comunidad__numero">01</span>
-            <div>
-              <h3>Información general</h3>
-              <p>Identificación y ubicación básica de la comunidad.</p>
-            </div>
-          </div>
-          <span className="formulario-comunidad__acordeon-indicador" aria-hidden="true">⌄</span>
-        </summary>
-
-        <div className="formulario-comunidad__acordeon-contenido">
-          <div className="formulario-comunidad__campos formulario-comunidad__campos--dos">
-            <div className="pagina-comunidades__campo">
-              <label htmlFor="nombre-comunidad">Nombre de la comunidad</label>
-              <input id="nombre-comunidad" type="text" placeholder="Ej. Agua Azul Rancho" />
-            </div>
-
-            <div className="pagina-comunidades__campo">
-              <label htmlFor="zona-comunidad">Zona</label>
-              <select id="zona-comunidad" defaultValue="" disabled={cargandoZonas || Boolean(errorZonas)}>
-                <option value="" disabled>
-                  {cargandoZonas
-                    ? 'Cargando zonas...'
-                    : errorZonas
-                      ? 'No fue posible cargar las zonas'
-                      : zonas.length === 0
-                        ? 'No hay zonas activas registradas'
-                        : 'Seleccionar zona'}
-                </option>
-                {zonas.map((zona) => (
-                  <option value={zona.id} key={zona.id}>
-                    {zona.nombre}
-                  </option>
-                ))}
-              </select>
-              {errorZonas && <span className="formulario-comunidad__aviso">{errorZonas}</span>}
-            </div>
-          </div>
-        </div>
-      </details>
-
-      <details className="formulario-comunidad__acordeon">
-        <summary className="formulario-comunidad__acordeon-resumen">
-          <div className="formulario-comunidad__seccion-encabezado">
-            <span className="formulario-comunidad__numero">02</span>
-            <div>
-              <h3>Población y vivienda</h3>
-              <p>Datos aproximados para comprender la dimensión y las necesidades habitacionales.</p>
-            </div>
-          </div>
-          <span className="formulario-comunidad__acordeon-indicador" aria-hidden="true">⌄</span>
-        </summary>
-
-        <div className="formulario-comunidad__acordeon-contenido">
-          <div className="formulario-comunidad__campos formulario-comunidad__campos--tres">
-            <div className="pagina-comunidades__campo">
-              <label htmlFor="poblacion-aproximada">Población aproximada</label>
-              <input id="poblacion-aproximada" type="number" min="0" placeholder="Ej. 850" />
-            </div>
-
-            <div className="pagina-comunidades__campo">
-              <label htmlFor="viviendas-aproximadas">Viviendas aproximadas</label>
-              <input id="viviendas-aproximadas" type="number" min="0" placeholder="Ej. 180" />
-            </div>
-
-            <div className="pagina-comunidades__campo">
-              <label htmlFor="viviendas-intervencion">Viviendas que necesitan intervención</label>
-              <input id="viviendas-intervencion" type="number" min="0" placeholder="Ej. 35" />
-            </div>
-          </div>
-
-          <div className="pagina-comunidades__campo">
-            <label htmlFor="tipos-vivienda">Tipos de vivienda predominantes</label>
-            <textarea
-              id="tipos-vivienda"
-              rows={3}
-              placeholder="Ej. bloque, adobe, madera, bahareque, techo de zinc..."
-            />
-          </div>
-        </div>
-      </details>
-
-      <details className="formulario-comunidad__acordeon">
-        <summary className="formulario-comunidad__acordeon-resumen">
-          <div className="formulario-comunidad__seccion-encabezado">
-            <span className="formulario-comunidad__numero">03</span>
-            <div>
-              <h3>Visión de desarrollo</h3>
-              <p>Define la situación actual, la prioridad y la visión futura de cada área de desarrollo.</p>
-            </div>
-          </div>
-          <span className="formulario-comunidad__acordeon-indicador" aria-hidden="true">⌄</span>
-        </summary>
-
-        <div className="formulario-comunidad__acordeon-contenido">
-          <div className="formulario-comunidad__vision">
-            {categoriasVisionDesarrollo.map((categoria, indice) => {
-              const identificador = `vision-${indice}`;
-
-              return (
-                <article className="formulario-comunidad__vision-item" key={categoria}>
-                  <div className="formulario-comunidad__vision-titulo">
-                    <span>{String(indice + 1).padStart(2, '0')}</span>
-                    <h4>{categoria}</h4>
-                  </div>
-
-                  <div className="formulario-comunidad__campos formulario-comunidad__campos--dos">
-                    <div className="pagina-comunidades__campo">
-                      <label htmlFor={`${identificador}-situacion`}>Situación actual</label>
-                      <textarea
-                        id={`${identificador}-situacion`}
-                        rows={3}
-                        placeholder="Describe brevemente la situación actual de esta área."
-                      />
-                    </div>
-
-                    <div className="pagina-comunidades__campo">
-                      <label htmlFor={`${identificador}-vision`}>Visión o meta de desarrollo</label>
-                      <textarea
-                        id={`${identificador}-vision`}
-                        rows={3}
-                        placeholder="¿Cómo espera la comunidad avanzar en esta área?"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="pagina-comunidades__campo formulario-comunidad__prioridad">
-                    <label htmlFor={`${identificador}-prioridad`}>Prioridad</label>
-                    <select id={`${identificador}-prioridad`} defaultValue="">
-                      <option value="" disabled>Seleccionar prioridad</option>
-                      <option value="alta">Alta</option>
-                      <option value="media">Media</option>
-                      <option value="baja">Baja</option>
+      {mensaje && <p role="status">{mensaje}</p>}
+      {consulta && cargaCompleta && puedeEditar && (
+        <button
+          type="button"
+          className="pagina-comunidades__boton-nuevo"
+          onClick={() => {
+            setEditando(true);
+            setMensaje(null);
+          }}
+        >
+          Completar o editar diagnóstico
+        </button>
+      )}
+      {error && (
+        <p role="alert" className="formulario-comunidad__aviso">
+          {error}
+        </p>
+      )}
+      {cargando ? (
+        <p role="status">Cargando expediente…</p>
+      ) : !cargaCompleta ? (
+        <p>Cierra y vuelve a abrir el expediente para reintentar.</p>
+      ) : (
+        <>
+          {consulta && (
+            <p>
+              {fecha
+                ? `Diagnóstico registrado: ${new Date(fecha).toLocaleDateString('es-HN')}`
+                : 'Esta comunidad tiene un registro básico; todavía no tiene diagnóstico completo.'}
+            </p>
+          )}
+          <fieldset
+            disabled={consulta || guardando}
+            className="expediente-campos"
+          >
+            <details className="formulario-comunidad__acordeon" open>
+              <summary>01 · Información general y ubicación</summary>
+              <fieldset
+                disabled={Boolean(comunidadId)}
+                className="expediente-campos"
+              >
+                <div className="formulario-comunidad__acordeon-contenido formulario-comunidad__campos formulario-comunidad__campos--dos">
+                  {texto('nombre', 'Nombre de la comunidad', 150, true)}
+                  <label className="pagina-comunidades__campo">
+                    Zona
+                    <select
+                      required
+                      value={datos.zonaId ?? ''}
+                      onChange={(e) => cambiar('zonaId', e.target.value)}
+                    >
+                      <option value="">Seleccionar zona</option>
+                      {zonas
+                        .filter((z) => Boolean(comunidadId) || z.activo)
+                        .map((z) => (
+                          <option key={z.id} value={z.id}>
+                            {z.nombre}
+                            {!z.activo ? ' (inactiva)' : ''}
+                          </option>
+                        ))}
                     </select>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        </div>
-      </details>
-
-      <details className="formulario-comunidad__acordeon">
-        <summary className="formulario-comunidad__acordeon-resumen">
-          <div className="formulario-comunidad__seccion-encabezado">
-            <span className="formulario-comunidad__numero">04</span>
-            <div>
-              <h3>Organizaciones comunitarias activas</h3>
-              <p>Identifica las estructuras locales que participan en la organización y representación comunitaria.</p>
-            </div>
-          </div>
-          <span className="formulario-comunidad__acordeon-indicador" aria-hidden="true">⌄</span>
-        </summary>
-
-        <div className="formulario-comunidad__acordeon-contenido">
-          <fieldset className="formulario-comunidad__selecciones">
-            <legend>Tipos de organización presentes</legend>
-            <div className="formulario-comunidad__selecciones-grid">
-              {tiposOrganizacionComunitaria.map((tipo) => (
-                <label className="formulario-comunidad__seleccion" key={tipo}>
-                  <input type="checkbox" name="organizaciones-comunitarias" value={tipo} />
-                  <span>{tipo}</span>
-                </label>
-              ))}
-            </div>
+                  </label>
+                  {texto('municipio', 'Municipio', 120, true)}
+                  {texto('departamento', 'Departamento', 120, true)}
+                  {numero('latitud', 'Latitud', -90, 90, '0.000001')}
+                  {numero('longitud', 'Longitud', -180, 180, '0.000001')}
+                </div>
+              </fieldset>
+            </details>
+            <details className="formulario-comunidad__acordeon" open>
+              <summary>02 · Población y vivienda</summary>
+              <div className="formulario-comunidad__acordeon-contenido">
+                <div className="formulario-comunidad__campos formulario-comunidad__campos--tres">
+                  {numero(
+                    'poblacion',
+                    'Población aproximada',
+                    0,
+                    2147483647,
+                    '1',
+                  )}
+                  {numero(
+                    'viviendas',
+                    'Viviendas aproximadas',
+                    0,
+                    2147483647,
+                    '1',
+                  )}
+                  {numero(
+                    'viviendasIntervencion',
+                    'Viviendas por intervenir',
+                    0,
+                    2147483647,
+                    '1',
+                  )}
+                </div>
+                {lista('tiposVivienda', 'Tipos de vivienda predominantes')}
+              </div>
+            </details>
+            <details className="formulario-comunidad__acordeon" open>
+              <summary>03 · Visión de desarrollo</summary>
+              <div className="formulario-comunidad__acordeon-contenido">
+                {categorias.map((categoria) => {
+                  const v = datos.visiones.find(
+                    (v) => v.categoria === categoria,
+                  ) ?? { categoria, situacion: '', meta: '', prioridad: '' };
+                  const actualizar = (
+                    campo: 'situacion' | 'meta' | 'prioridad',
+                    valor: string,
+                  ) => {
+                    const nuevo = { ...v, [campo]: valor };
+                    cambiar('visiones', [
+                      ...datos.visiones.filter(
+                        (v) => v.categoria !== categoria,
+                      ),
+                      ...(nuevo.situacion || nuevo.meta || nuevo.prioridad
+                        ? [nuevo]
+                        : []),
+                    ]);
+                  };
+                  return (
+                    <article
+                      className="formulario-comunidad__vision-item"
+                      key={categoria}
+                    >
+                      <h3>{categoria}</h3>
+                      <label className="pagina-comunidades__campo">
+                        Situación actual
+                        <textarea
+                          maxLength={3000}
+                          value={v.situacion}
+                          onChange={(e) =>
+                            actualizar('situacion', e.target.value)
+                          }
+                        />
+                      </label>
+                      <label className="pagina-comunidades__campo">
+                        Visión o meta
+                        <textarea
+                          maxLength={3000}
+                          value={v.meta}
+                          onChange={(e) => actualizar('meta', e.target.value)}
+                        />
+                      </label>
+                      <label className="pagina-comunidades__campo">
+                        Prioridad
+                        <select
+                          value={v.prioridad}
+                          onChange={(e) =>
+                            actualizar('prioridad', e.target.value)
+                          }
+                        >
+                          <option value="">Sin registrar</option>
+                          <option value="alta">Alta</option>
+                          <option value="media">Media</option>
+                          <option value="baja">Baja</option>
+                        </select>
+                      </label>
+                    </article>
+                  );
+                })}
+              </div>
+            </details>
+            <details className="formulario-comunidad__acordeon" open>
+              <summary>04 · Organizaciones comunitarias</summary>
+              <div className="formulario-comunidad__acordeon-contenido">
+                {lista(
+                  'organizaciones',
+                  'Organizaciones activas (por ejemplo, patronato o junta de agua)',
+                )}
+                {texto(
+                  'observacionesOrganizaciones',
+                  'Observaciones de las organizaciones',
+                  3000,
+                )}
+              </div>
+            </details>
+            <details className="formulario-comunidad__acordeon" open>
+              <summary>05 · Productividad local</summary>
+              <div className="formulario-comunidad__acordeon-contenido">
+                {lista('actividadesProductivas', 'Actividades económicas')}
+                {lista(
+                  'productosServicios',
+                  'Productos o servicios principales',
+                )}
+                {texto(
+                  'potencialProductivo',
+                  'Oportunidades de desarrollo productivo',
+                  3000,
+                )}
+              </div>
+            </details>
           </fieldset>
-
-          <div className="formulario-comunidad__campos formulario-comunidad__campos--dos">
-            <div className="pagina-comunidades__campo">
-              <label htmlFor="otras-organizaciones">Otras organizaciones</label>
-              <input
-                id="otras-organizaciones"
-                type="text"
-                placeholder="Ej. comité ambiental, grupo deportivo..."
-              />
-            </div>
-
-            <div className="pagina-comunidades__campo">
-              <label htmlFor="detalle-organizaciones">Observaciones</label>
-              <textarea
-                id="detalle-organizaciones"
-                rows={3}
-                placeholder="Nombres, alcance, nivel de actividad u otra información relevante."
-              />
-            </div>
-          </div>
-        </div>
-      </details>
-
-      <details className="formulario-comunidad__acordeon">
-        <summary className="formulario-comunidad__acordeon-resumen">
-          <div className="formulario-comunidad__seccion-encabezado">
-            <span className="formulario-comunidad__numero">05</span>
-            <div>
-              <h3>Productividad local</h3>
-              <p>Registra las principales actividades económicas, productos, servicios y oportunidades de la comunidad.</p>
-            </div>
-          </div>
-          <span className="formulario-comunidad__acordeon-indicador" aria-hidden="true">⌄</span>
-        </summary>
-
-        <div className="formulario-comunidad__acordeon-contenido">
-          <fieldset className="formulario-comunidad__selecciones">
-            <legend>Actividades productivas presentes</legend>
-            <div className="formulario-comunidad__selecciones-grid">
-              {tiposActividadProductiva.map((tipo) => (
-                <label className="formulario-comunidad__seleccion" key={tipo}>
-                  <input type="checkbox" name="actividades-productivas" value={tipo} />
-                  <span>{tipo}</span>
-                </label>
-              ))}
-            </div>
-          </fieldset>
-
-          <div className="formulario-comunidad__campos formulario-comunidad__campos--dos">
-            <div className="pagina-comunidades__campo">
-              <label htmlFor="productos-servicios-principales">Productos o servicios principales</label>
-              <textarea
-                id="productos-servicios-principales"
-                rows={3}
-                placeholder="Ej. café, granos básicos, tilapia, productos lácteos, abarrotes..."
-              />
-            </div>
-
-            <div className="pagina-comunidades__campo">
-              <label htmlFor="otras-actividades-productivas">Otras actividades económicas</label>
-              <textarea
-                id="otras-actividades-productivas"
-                rows={3}
-                placeholder="Registra otras actividades que no aparecen en la lista."
-              />
-            </div>
-          </div>
-
-          <div className="pagina-comunidades__campo">
-            <label htmlFor="potencial-productivo">Potencial u oportunidades de desarrollo productivo</label>
-            <textarea
-              id="potencial-productivo"
-              rows={3}
-              placeholder="Describe oportunidades, capacidades o necesidades que podrían fortalecer la economía local."
-            />
-          </div>
-        </div>
-      </details>
-
-      <p className="formulario-comunidad__aviso">
-        Este formulario todavía es visual. Los datos se conectarán progresivamente con el backend de Semilla.
-      </p>
+          {!consulta && (
+            <button
+              type="submit"
+              className="pagina-comunidades__boton-nuevo"
+              disabled={
+                guardando || (!comunidadId && !zonas.some((z) => z.activo))
+              }
+            >
+              {guardando
+                ? 'Guardando…'
+                : comunidadId
+                  ? 'Guardar diagnóstico'
+                  : 'Guardar comunidad y expediente'}
+            </button>
+          )}
+        </>
+      )}
     </form>
   );
 }
-
-export default FormularioComunidad;

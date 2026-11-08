@@ -49,10 +49,10 @@
 
 .listado-comunidades__fila {
   display: grid;
-  grid-template-columns: minmax(180px, 1.35fr) minmax(120px, 0.7fr) minmax(150px, 0.95fr) minmax(130px, 0.8fr) minmax(100px, 0.55fr);
+  grid-template-columns: minmax(180px, 1.35fr) minmax(120px, 0.7fr) minmax(150px, 0.95fr) minmax(130px, 0.8fr) minmax(100px, 0.55fr) minmax(86px, 0.45fr);
   gap: 16px;
   align-items: center;
-  min-width: 820px;
+  min-width: 930px;
   min-height: 62px;
   padding: 12px 15px;
   border-top: 1px solid rgba(53, 92, 58, 0.06);
@@ -121,6 +121,59 @@
 
 .listado-comunidades__estado--zona-inactiva {
   color: #8b6a34;
+  background: #f7efdf;
+}
+
+.listado-comunidades__boton-editar {
+  padding: 7px 10px;
+  border: 1px solid rgba(53, 92, 58, 0.15);
+  border-radius: 9px;
+  color: #3f5943;
+  background: #fff;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.listado-comunidades__boton-editar:hover {
+  background: #eef3eb;
+}
+
+.listado-comunidades__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.listado-comunidades__boton-editar:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.listado-comunidades__boton-editar--desactivar {
+  color: #8a6460;
+  border-color: rgba(138, 100, 96, 0.2);
+}
+
+.listado-comunidades__boton-editar--desactivar:hover {
+  background: #f4e9e7;
+}
+
+.listado-comunidades__boton-editar--reactivar {
+  color: #3f7547;
+  border-color: rgba(63, 117, 71, 0.2);
+}
+
+.listado-comunidades__boton-editar--reactivar:hover {
+  background: #e7f1e4;
+}
+
+.listado-comunidades__boton-editar--expediente {
+  color: #8b6a34;
+  border-color: rgba(139, 106, 52, 0.2);
+}
+
+.listado-comunidades__boton-editar--expediente:hover {
   background: #f7efdf;
 }
 

@@ -839,3 +839,37 @@ El backend obtiene la organización de la sesión autenticada. Nunca acepta el `
 | Offline | Dos tablas de soporte | Cola, resolución de conflictos y pruebas sin conexión. |
 
 Antes de cerrar cada historia: demostrar persistencia al recargar, permisos, rechazo de relaciones cruzadas, manejo de duplicados, evidencia de prueba y actualización de bitácora. No se cierran los issues #11–#19 solo por documentar el diseño.
+
+## 10. Evolución posterior al corte documental: expediente comunitario
+
+La migración [005](../database/sql/005_expediente_comunitario.sql), preparada en la rama de expediente, añade `comunidades.latitud/longitud`, `diagnosticos_comunidad`, `visiones_comunidad` y `elementos_diagnostico`. El schema Prisma de esta rama pasa de 29 a 32 modelos; las secciones anteriores conservan el corte original de semana 3. La aplicación de 005 en Neon debe verificarse separadamente.
+
+El diagnóstico conserva población, viviendas, viviendas por intervenir, observaciones, oportunidades, fecha y autor. Sus detalles usan FK compuestas de organización. `elementos_diagnostico` almacena selecciones estructuradas por tipo (vivienda, organización, actividad productiva o producto/servicio); no reemplaza los futuros directorios operativos. Las áreas de visión conservan las cuatro categorías del formulario mediante CHECK, en lugar del catálogo configurable propuesto. Véanse [decisiones, validación y despliegue](bitacora/expediente-comunitario-issue11.md).
+
+## Organización y productividad del expediente por secciones (008)
+
+`capacidades_comunitarias` guarda una revisión completa por comunidad: organización propietaria, número de revisión, observaciones de organización, potencial productivo, autor, origen y fecha. La combinación comunidad/revisión es única. El autor puede faltar en datos migrados; en capturas se exige un usuario activo de la misma organización.
+
+`elementos_capacidad` contiene las organizaciones locales, actividades productivas y productos/servicios de cada revisión. El tipo está restringido y los nombres no se repiten por revisión y tipo, sin distinguir mayúsculas. Las claves foráneas compuestas aseguran pertenencia a la misma organización para comunidad, autor y elementos.
+
+Cada guardado crea una revisión y sus elementos dentro de una transacción, junto con una entrada de auditoría. La API compara la revisión recibida con la vigente bajo bloqueo de comunidad y rechaza ediciones obsoletas con HTTP 409. Quitar un elemento de la revisión actual conserva las versiones anteriores. El historial se conserva en SQL; no se añade todavía una pantalla de historial.
+
+Los textos admiten 3000 caracteres y las listas hasta 50 elementos de 150 caracteres, validados por la API. La migración recupera el último diagnóstico alternativo sin borrar sus tablas. El servicio usa pg, consistente con el flujo existente; el schema Prisma documenta las relaciones, sin afirmar una migración de la persistencia a Prisma. Esta sección no implementa necesidades, proyectos ni cambios de prioridad de la historia #27.
+
+## Metas individuales de visión de desarrollo (009)
+
+Cada área de `visiones_desarrollo_comunitarias` contiene múltiples `metas_vision_desarrollo`. Cada meta tiene UUID estable, descripción (1–2000 caracteres), orden, estado activa/archivada y fechas. La clave foránea compuesta impide asociar una meta con otra organización. La API admite hasta 50 metas por área y rechaza duplicados y filas vacías.
+
+La migración copia el párrafo anterior como una única meta, sin inferir cómo dividirlo. `meta_desarrollo` queda como referencia histórica inalterada; el frontend utiliza exclusivamente la colección `metas`. Al editar se conserva el ID; quitar archiva. El guardado es transaccional y genera auditoría con las metas resultantes. La revisión del área impide sobrescribir ediciones concurrentes (HTTP 409). Clientes anteriores deben actualizarse, ya que el PUT requiere metas y revisión.
+
+La prioridad sigue siendo del área: no se reduce automáticamente por registrar una meta o por decidir invertir. Vinculación con necesidades/proyectos, indicadores de cumplimiento y seguimiento de prioridad pertenecen a la siguiente etapa, aún no implementada aquí.
+
+## Necesidades comunitarias — entrega 1 (010)
+
+`necesidades_comunitarias` representa un problema concreto de una comunidad y área. Guarda UUID, organización, título, descripción, situación inicial, población afectada, cantidad afectada (nullable), resultado esperado, cantidad objetivo/unidad (ambas opcionales juntas), prioridad, motivo, estado, autor y fecha. Cantidad afectada desconocida es NULL; cero sigue siendo un valor explícito. La cantidad objetivo es positiva con hasta dos decimales.
+
+Origen opcional: meta individual y visión correspondiente. Las claves compuestas validan que visión, meta, comunidad, área y organización coincidan. La API valida además que la meta esté activa al registrarse. El archivo posterior de la meta no elimina la necesidad ni su relación. La referencia muestra la descripción vigente de la meta; la auditoría de visiones conserva revisiones anteriores.
+
+Prioridad propia (POR_EVALUAR/ALTA/MEDIA/BAJA) y estado independiente. El POST asigna IDENTIFICADA, exige motivo incluso cuando queda por evaluar y registra auditoría en la misma transacción. Las otras transiciones previstas en el CHECK están reservadas para evaluaciones futuras: todavía no hay endpoints para cambiar estado, prioridad o cerrar una necesidad.
+
+Consulta y registro se filtran por organización autenticada; permisos actuales comunidades.ver y comunidades.gestionar. Las futuras relaciones con proyectos, evidencias e historial de evaluaciones no se consideran implementadas por esta migración.

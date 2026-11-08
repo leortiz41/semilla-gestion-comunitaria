@@ -75,3 +75,41 @@ También fue necesario diferenciar un script de validación existente de una pru
 5. Implementar revisión y publicación de evidencias, conforme a #15–#17.
 6. Preparar datos ficticios reproducibles y demostrar el flujo de trazabilidad con persistencia, permisos y pruebas entre dos organizaciones.
 7. Mantener los issues abiertos hasta cumplir sus criterios de aceptación; documentar pruebas y resultados en los siguientes avances.
+
+## Avance posterior: registro y consulta del expediente comunitario
+
+Se implementó un primer flujo de registro completo y consulta desde el listado, con coordenadas, diagnóstico y elementos repetibles normalizados. Incluye migración 005, validación, aislamiento organizacional y guardado transaccional. La aplicación en Neon y la edición del diagnóstico siguen pendientes. Las decisiones y los pasos de validación están en [Expediente comunitario — issue #11](expediente-comunitario-issue11.md).
+
+### Completar organizaciones y productividad
+
+Se agregó edición del diagnóstico con conservación de versiones y control de cambios simultáneos. Las listas ahora permiten agregar/quitar elementos individuales. Se mantiene el trabajo centrado en el diagnóstico antes de implementar la historia #27. No requiere migración adicional a 005; falta la comprobación funcional en Neon development.
+
+### Reconciliación con el avance local
+
+Se recuperó el respaldo `c7075a7` y se integró el expediente por secciones en develop. Se conservaron las dos variantes de 005 identificadas y se añadió una nueva migración 007 de compatibilidad, sin reescribir scripts aplicados. Backend, frontend, Prisma y pruebas de ambas bases de partida pasaron. Pendiente validación en Neon development y completar capacidades locales en este flujo antes de #27. [Detalle de la reconciliación](../arquitectura/reconciliacion-diagnostico.md).
+
+## Cierre de organización y productividad — 7 de noviembre de 2026
+
+Se completa la sección del expediente para consultar y editar organizaciones locales, actividades productivas, productos/servicios, observaciones y potencial productivo. Se conservan el diseño por secciones y el flujo de trabajo directo en develop, con promoción posterior mediante PR a main.
+
+Se agrega la migración incremental 008, sin modificar 005, 006 ni 007. Cada guardado conserva una nueva revisión, autor y auditoría; los conflictos de edición se rechazan y los fallos revierten la transacción completa. Las relaciones y consultas mantienen aislamiento por organización. Se recuperan las capacidades del diagnóstico alternativo sin eliminar su historial.
+
+Validación: compilaciones de backend/frontend, schema Prisma válido y cuatro pruebas automatizadas aprobadas, incluyendo ambas variantes de 005, migración 008, persistencia, aislamiento, revisión obsoleta y rollback. La ejecución en Neon y la comprobación autenticada del flujo siguen pendientes de conexión. La historia #27 no se inicia en este cambio.
+
+## Metas individuales por área — 7 de noviembre de 2026
+
+Visión de desarrollo permite agregar, editar y quitar metas independientes dentro de cada una de las cuatro áreas. Se usa una tarjeta por meta, con descripción, contador y lista de consulta. Se conserva el texto existente como una meta editable para que la persona decida cómo separarlo. Los permisos de consulta y edición se aplican también a la interfaz.
+
+Se agrega 009 sin modificar las migraciones anteriores. Guarda UUID estables, archiva metas retiradas, registra auditoría y rechaza versiones obsoletas. Compilaciones backend/frontend y validación Prisma aprobadas. Las cuatro pruebas automatizadas cubren ambas variantes de 005, migración de texto heredado, guardado/lectura, conservación de IDs, archivo, aislamiento, conflicto y rollback ante ID ajeno.
+
+009 aplicada en Neon `development` (base `neondb`), con copia previa `respaldo-development-antes-009-20261107` sin cómputo. La solicitud de snapshot no estaba admitida en esta rama derivada; se utilizó la copia como respaldo. Producción no modificada. Comprobación autenticada desde la aplicación local pendiente de actualizar y reiniciar el backend.
+
+## Historia #27 — entrega 1: necesidades comunitarias
+
+El usuario confirmó el funcionamiento de las metas individuales y su utilidad para orientar proyectos hacia resultados elegidos con la comunidad. Se continúa con registro y consulta de necesidades debajo de cada área, conservando el diagnóstico y vinculando opcionalmente una meta activa.
+
+El formulario registra problema, situación inicial, población afectada, resultado esperado, medición opcional y motivo de prioridad. No hereda prioridad ni modifica automáticamente el estado por inversión. El estado inicial es identificada. Se verifica organización, comunidad, área, meta y usuario en backend, con auditoría transaccional.
+
+Migración 010 aplicada en Neon development (neondb), después del respaldo sin cómputo `respaldo-development-antes-010-20261107`. No se modificaron migraciones anteriores ni producción. Backend/frontend compilan y Prisma valida. Cuatro pruebas integrales aprobadas cubren las dos variantes de 005, registro/consulta, validaciones, aislamiento, origen ajeno/inactivo, reintento duplicado, auditoría y conservación del vínculo al archivar metas.
+
+Pendiente: prueba del usuario en su sesión local. La entrega no cierra #27; evaluación con evidencia e historial, responsables, revisiones y vínculo con proyectos corresponden a las siguientes etapas.

@@ -1,22 +1,32 @@
 import { FormEvent, useEffect, useState } from 'react';
-import { crearComunidad, listarZonas, type ZonaResumen } from '../../../lib/api';
+import {
+  crearComunidad,
+  editarComunidad,
+  listarZonas,
+  type ComunidadResumen,
+  type ZonaResumen,
+} from '../../../lib/api';
 
 interface PropiedadesFormularioRegistroBasicoComunidad {
   tokenAcceso: string;
   alCerrar: () => void;
   alGuardar: () => void;
+  comunidad?: ComunidadResumen;
 }
 
 function FormularioRegistroBasicoComunidad({
   tokenAcceso,
   alCerrar,
   alGuardar,
+  comunidad,
 }: PropiedadesFormularioRegistroBasicoComunidad) {
   const [zonas, setZonas] = useState<ZonaResumen[]>([]);
-  const [nombre, setNombre] = useState('');
-  const [zonaId, setZonaId] = useState('');
-  const [municipio, setMunicipio] = useState('');
-  const [departamento, setDepartamento] = useState('');
+  const [nombre, setNombre] = useState(comunidad?.nombre ?? '');
+  const [zonaId, setZonaId] = useState(
+    comunidad?.zonaActiva ? comunidad.zonaId ?? '' : '',
+  );
+  const [municipio, setMunicipio] = useState(comunidad?.municipio ?? '');
+  const [departamento, setDepartamento] = useState(comunidad?.departamento ?? '');
   const [cargandoZonas, setCargandoZonas] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,16 +64,28 @@ function FormularioRegistroBasicoComunidad({
     setGuardando(true);
 
     try {
-      await crearComunidad(tokenAcceso, {
+      const datos = {
         nombre: nombre.trim(),
         zonaId,
         municipio: municipio.trim(),
         departamento: departamento.trim(),
-      });
+      };
+
+      if (comunidad) {
+        await editarComunidad(tokenAcceso, comunidad.id, datos);
+      } else {
+        await crearComunidad(tokenAcceso, datos);
+      }
 
       alGuardar();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No fue posible registrar la comunidad.');
+      setError(
+        err instanceof Error
+          ? err.message
+          : comunidad
+            ? 'No fue posible actualizar la comunidad.'
+            : 'No fue posible registrar la comunidad.',
+      );
     } finally {
       setGuardando(false);
     }
@@ -74,9 +96,11 @@ function FormularioRegistroBasicoComunidad({
       <div className="formulario-comunidad__encabezado">
         <div>
           <p className="formulario-comunidad__etiqueta">Registro comunitario</p>
-          <h2>Información general</h2>
+          <h2>{comunidad ? 'Editar comunidad' : 'Información general'}</h2>
           <p>
-            Registra primero la identificación territorial de la comunidad. El expediente completo se llenará progresivamente después del alta inicial.
+            {comunidad
+              ? 'Actualiza la identificación territorial y asigna la comunidad a una zona activa de la organización.'
+              : 'Registra primero la identificación territorial de la comunidad. El expediente completo se llenará progresivamente después del alta inicial.'}
           </p>
         </div>
 
@@ -92,13 +116,23 @@ function FormularioRegistroBasicoComunidad({
 
       {error && <div className="pagina-zonas__aviso pagina-zonas__aviso--error">{error}</div>}
 
+      {comunidad?.zonaActiva === false && (
+        <div className="pagina-zonas__aviso pagina-zonas__aviso--error">
+          La comunidad pertenece a una zona inactiva. Selecciona una zona activa para actualizarla.
+        </div>
+      )}
+
       <details className="formulario-comunidad__acordeon" open>
         <summary className="formulario-comunidad__acordeon-resumen">
           <div className="formulario-comunidad__seccion-encabezado">
             <span className="formulario-comunidad__numero">01</span>
             <div>
               <h3>Información general</h3>
-              <p>Identificación y ubicación obligatoria para crear la comunidad.</p>
+              <p>
+                {comunidad
+                  ? 'Identificación y ubicación que puedes corregir sin perder el registro existente.'
+                  : 'Identificación y ubicación obligatoria para crear la comunidad.'}
+              </p>
             </div>
           </div>
           <span className="formulario-comunidad__acordeon-indicador" aria-hidden="true">⌄</span>
@@ -176,7 +210,11 @@ function FormularioRegistroBasicoComunidad({
               type="submit"
               disabled={guardando || cargandoZonas || zonas.length === 0}
             >
-              {guardando ? 'Guardando…' : 'Guardar comunidad'}
+              {guardando
+                ? 'Guardando…'
+                : comunidad
+                  ? 'Guardar cambios'
+                  : 'Guardar comunidad'}
             </button>
           </div>
         </div>
