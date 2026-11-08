@@ -7,6 +7,7 @@ interface OpcionNavegacion {
 }
 
 interface PropiedadesBarraLateral {
+  esDonante: boolean;
   seccionActiva?: SeccionBarraLateral;
   subseccionComunidades: SubseccionComunidades;
   alCambiarSeccion: (seccion: SeccionBarraLateral) => void;
@@ -25,6 +26,7 @@ const opcionesNavegacion: OpcionNavegacion[] = [
 ];
 
 function BarraLateral({
+  esDonante,
   seccionActiva,
   subseccionComunidades,
   alCambiarSeccion,
@@ -52,7 +54,9 @@ function BarraLateral({
       <nav className="barra-lateral__navegacion" aria-label="Navegación administrativa">
         <p className="barra-lateral__titulo">Módulos</p>
         <ul className="barra-lateral__lista">
-          {opcionesNavegacion.map((opcion) => {
+           {opcionesNavegacion.filter(({ clave }) =>
+            !esDonante || clave === 'proyectos' || clave === 'evidencias'
+          ).map((opcion) => {
             const estaActiva = seccionActiva === opcion.clave;
             const esComunidades = opcion.clave === 'comunidades';
 

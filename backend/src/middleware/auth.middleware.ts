@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from 'express';
+import { limitarAccesoDonante } from '../security/acceso-donante.js';
 import { verifyAccessToken } from '../security/token.js';
 
 export function authenticateAccessToken(req: Request, res: Response, next: NextFunction): void {
@@ -12,7 +13,8 @@ export function authenticateAccessToken(req: Request, res: Response, next: NextF
   const token = authorization.slice('Bearer '.length).trim();
 
   try {
-    req.auth = verifyAccessToken(token);
+    const acceso = verifyAccessToken(token);
+    req.auth = { ...acceso, ...limitarAccesoDonante(acceso.roles, acceso.permisos) };
     next();
   } catch {
     res.status(401).json({ message: 'Token inválido o expirado.' });

@@ -175,8 +175,13 @@ function App() {
     }
   }
 
+  const esDonante = usuario?.roles.some((rol) => rol === 'DONANTE' || rol === 'CONSULTA') ?? false;
+  const seccionVisible = esDonante && !['proyectos', 'evidencias', 'perfil'].includes(seccionAdministrativa)
+    ? 'proyectos'
+    : seccionAdministrativa;
+
   function renderizarSeccionAdministrativa() {
-    switch (seccionAdministrativa) {
+    switch (seccionVisible) {
       case 'comunidades':
         if (!accessToken) return null;
 
@@ -190,9 +195,9 @@ function App() {
       case 'familias':
         return <PaginaFamilias />;
       case 'proyectos':
-        return <PaginaProyectos />;
+        return <PaginaProyectos soloLectura={esDonante} />;
       case 'evidencias':
-        return <PaginaEvidencias />;
+        return <PaginaEvidencias soloLectura={esDonante} />;
       case 'pagos':
         return <PaginaPagos />;
       case 'usuarios':
@@ -334,7 +339,8 @@ function App() {
         <EstructuraAdministrativa
           barraLateral={(
             <BarraLateral
-              seccionActiva={seccionAdministrativa === 'perfil' ? undefined : seccionAdministrativa}
+              seccionActiva={seccionVisible === 'perfil' ? undefined : seccionVisible}
+              esDonante={esDonante}
               subseccionComunidades={subseccionComunidades}
               alCambiarSeccion={setSeccionAdministrativa}
               alCambiarSubseccionComunidades={setSubseccionComunidades}

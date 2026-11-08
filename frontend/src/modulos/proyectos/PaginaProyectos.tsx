@@ -1,6 +1,6 @@
 import '../../estilos/modulos/paginaModuloBase.css';
 
-function PaginaProyectos() {
+function PaginaProyectos({ soloLectura = false }: { soloLectura?: boolean }) {
   return (
     <section className="pagina-modulo" aria-labelledby="titulo-proyectos">
       <div className="pagina-modulo__encabezado">
@@ -9,7 +9,9 @@ function PaginaProyectos() {
           Proyectos
         </h1>
         <p className="pagina-modulo__descripcion">
-          Planifica y da seguimiento a las iniciativas comunitarias, sus objetivos, responsables, etapas y resultados esperados.
+          {soloLectura
+            ? 'Consultá los proyectos autorizados y su estado de ejecución.'
+            : 'Planifica y da seguimiento a las iniciativas comunitarias, sus objetivos, responsables, etapas y resultados esperados.'}
         </p>
         <span className="pagina-modulo__estado">Diseño frontend en construcción</span>
       </div>

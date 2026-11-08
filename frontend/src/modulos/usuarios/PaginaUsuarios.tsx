@@ -8,7 +8,7 @@ const perfiles = [
   { codigo: 'COORDINADOR', titulo: 'Coordinador', proposito: 'Planifica intervenciones y da seguimiento a comunidades, familias y proyectos.' },
   { codigo: 'FINANZAS', titulo: 'Finanzas', proposito: 'Gestiona solicitudes y pagos y consulta su contexto operativo.' },
   { codigo: 'CAMPO', titulo: 'Campo', proposito: 'Recopila información de familias y registra evidencias del trabajo en terreno.' },
-  { codigo: 'CONSULTA', titulo: 'Consulta', proposito: 'Revisa información autorizada para seguimiento y supervisión.' },
+  { codigo: 'DONANTE', titulo: 'Donante', proposito: 'Consulta proyectos autorizados, su avance de ejecución y las evidencias relacionadas.' },
 ];
 
 function PaginaUsuarios({ tokenAcceso, puedeVer }: { tokenAcceso: string; puedeVer: boolean }) {

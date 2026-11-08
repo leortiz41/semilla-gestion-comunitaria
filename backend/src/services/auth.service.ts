@@ -1,3 +1,4 @@
+import { limitarAccesoDonante } from '../security/acceso-donante.js';
 import type { PoolClient } from 'pg';
 import { databasePool } from '../config/database.js';
 import { hashPassword, validateNewPassword, verifyPassword } from '../security/password.js';
@@ -90,10 +91,10 @@ async function loadAuthorization(usuarioId: string, runner: QueryRunner): Promis
     [usuarioId],
   );
 
-  return {
-    roles: rolesResult.rows.map((row: { nombre: string }) => row.nombre),
-    permisos: permissionsResult.rows.map((row: { codigo: string }) => row.codigo),
-  };
+  return limitarAccesoDonante(
+    rolesResult.rows.map((row: { nombre: string }) => row.nombre),
+    permissionsResult.rows.map((row: { codigo: string }) => row.codigo),
+  );
 }
 
 async function insertRefreshToken(

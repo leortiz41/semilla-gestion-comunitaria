@@ -12,16 +12,19 @@ usuariosRouter.get('/roles', authenticateAccessToken, requirePermission('usuario
     }
 
     const { rows } = await databasePool.query(`
-      SELECT r.nombre, r.activo,
+      SELECT CASE WHEN r.nombre = 'CONSULTA' THEN 'DONANTE' ELSE r.nombre END AS nombre, r.activo,
         COALESCE(
           jsonb_agg(jsonb_build_object('codigo', p.codigo, 'descripcion', p.descripcion)
-                    ORDER BY p.codigo) FILTER (WHERE p.id IS NOT NULL),
+                    ORDER BY p.codigo) FILTER (WHERE p.id IS NOT NULL AND (
+                      r.nombre NOT IN ('DONANTE', 'CONSULTA')
+                      OR p.codigo IN ('proyectos.ver', 'evidencias.ver')
+                    )),
           '[]'::jsonb
         ) AS permisos
       FROM roles r
       LEFT JOIN roles_permisos rp ON rp.rol_id = r.id
       LEFT JOIN permisos p ON p.id = rp.permiso_id
-      WHERE r.nombre IN ('ADMINISTRADOR', 'COORDINADOR', 'FINANZAS', 'CAMPO', 'CONSULTA')
+      WHERE r.nombre IN ('ADMINISTRADOR', 'COORDINADOR', 'FINANZAS', 'CAMPO', 'CONSULTA', 'DONANTE')
       GROUP BY r.id, r.nombre, r.activo
     `);
     res.json({ roles: rows });
