@@ -1,10 +1,17 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import {
-  guardarProyectoAdministrativo, obtenerProyectosAdministrativos, type ProyectoAdministrativo,
+  guardarProyectoAdministrativo, obtenerProyectosAdministrativos, type ProyectoAdministrativo, type AreaVisionDesarrollo,
 } from '../../lib/api';
 import '../../estilos/modulos/paginaModuloBase.css';
 import '../../estilos/modulos/roles.css';
 import '../donantes/donantes.css';
+
+const categorias: Record<AreaVisionDesarrollo, string> = {
+  EVANGELISMO: 'Evangelismo',
+  EDUCACION_FORMAL: 'Educación formal',
+  EDUCACION_COMUNITARIA: 'Educación comunitaria',
+  INFRAESTRUCTURA: 'Infraestructura',
+};
 
 const estados: Record<string, string> = {
   PLANIFICADO: 'Planificado',
@@ -54,6 +61,8 @@ function PaginaProyectos({ token, puedeVer, puedeGestionar }: {
         fechaInicio: valor('fechaInicio'),
         fechaFin: valor('fechaFin'),
         descripcion: valor('descripcion'),
+        presupuesto: valor('presupuesto'),
+        donanteIds: campos.getAll('donanteIds').map(String),
       }, proyecto?.id);
       setMensaje(proyecto ? 'Proyecto actualizado.' : 'Proyecto registrado.');
       setFormulario(null);
@@ -106,8 +115,24 @@ function PaginaProyectos({ token, puedeVer, puedeGestionar }: {
                       </select>
                     </label>
                   )}
-                  <label>Nombre<input name="nombre" required maxLength={200} defaultValue={proyecto?.nombre} /></label>
-                  <label>Tipo<input name="tipo" required maxLength={60} defaultValue={proyecto?.tipo} /></label>
+                  <label>Título del proyecto
+                    <input name="nombre" required maxLength={200} placeholder="Ej. Construcción de tres viviendas"
+                      defaultValue={proyecto?.nombre} />
+                  </label>
+                  <label>Área del diagnóstico
+                    <select name="tipo" required defaultValue={proyecto?.tipo ?? ''}>
+                      <option value="">Seleccioná un área</option>
+                      {proyecto && !Object.hasOwn(categorias, proyecto.tipo) &&
+                        <option value={proyecto.tipo}>{proyecto.tipo} (tipo anterior)</option>}
+                      {Object.entries(categorias).map(([codigo, etiqueta]) => (
+                        <option key={codigo} value={codigo}>{etiqueta}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>Presupuesto asignado ({datos.moneda})
+                    <input name="presupuesto" type="number" required min="0" max="999999999999.99" step="0.01"
+                      defaultValue={proyecto?.presupuesto ?? '0'} />
+                  </label>
                   <label>Estado
                     <select name="estado" defaultValue={proyecto?.estado ?? 'PLANIFICADO'}>
                       {Object.entries(estados).map(([codigo, nombre]) => <option key={codigo} value={codigo}>{nombre}</option>)}
@@ -117,6 +142,20 @@ function PaginaProyectos({ token, puedeVer, puedeGestionar }: {
                   <label>Fecha de fin<input name="fechaFin" type="date" defaultValue={proyecto?.fechaFin ?? ''} /></label>
                   <label>Descripción<textarea name="descripcion" maxLength={3000} defaultValue={proyecto?.descripcion ?? ''} /></label>
                 </div>
+                <fieldset>
+                  <legend>Donantes vinculados directamente</legend>
+                  <p>Seleccioná las organizaciones o iglesias que apoyan el proyecto. El acceso al portal se administra en Usuarios.</p>
+                  {datos.donantes.filter((d) => d.activo || proyecto?.donanteIds.includes(d.id)).map((d) => (
+                    <div key={d.id}>
+                      <label><input type="checkbox" name="donanteIds" value={d.id}
+                        defaultChecked={proyecto?.donanteIds.includes(d.id)} />{' '}
+                        {d.nombre}{!d.activo && ' (inactivo)'}
+                      </label>
+                    </div>
+                  ))}
+                  {!datos.donantes.some((d) => d.activo || proyecto?.donanteIds.includes(d.id)) &&
+                    <p>Registrá una ficha activa en Donantes para vincularla.</p>}
+                </fieldset>
                 <button type="submit">{guardando ? 'Guardando…' : 'Guardar proyecto'}</button>{' '}
                 <button className="brigadas-accion" type="button" onClick={() => { setFormulario(null); setError(''); }}>Cancelar</button>
               </fieldset>
@@ -128,7 +167,11 @@ function PaginaProyectos({ token, puedeVer, puedeGestionar }: {
               <article className="roles-panel__tarjeta" key={item.id}>
                 <h2>{item.nombre}</h2>
                 <span className="pagina-modulo__estado">{estados[item.estado] ?? item.estado}</span>
-                <p>{item.comunidad} · {item.tipo}</p>
+                <p>{item.comunidad} · {categorias[item.tipo as AreaVisionDesarrollo] ?? item.tipo}</p>
+                <p><strong>Presupuesto</strong> · {new Intl.NumberFormat('es-HN', {
+                  minimumFractionDigits: 2, maximumFractionDigits: 2,
+                }).format(Number(item.presupuesto))} {datos.moneda}</p>
+                <p><strong>Donantes asociados</strong> · {item.donantes.join(', ') || 'Por asignar'}</p>
                 <p>{item.fechaInicio}{item.fechaFin && ` — ${item.fechaFin}`}</p>
                 {item.descripcion && <p>{item.descripcion}</p>}
                 {puedeGestionar && (

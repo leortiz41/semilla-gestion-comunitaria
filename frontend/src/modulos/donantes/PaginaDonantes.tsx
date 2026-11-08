@@ -61,7 +61,7 @@ export default function PaginaDonantes({ token }: { token: string }) {
       datos[clave] = clave === 'miembros' ? Number(valor) : String(valor);
     }
     if (fichaId) {
-      for (const campo of ['actividades', 'contrataciones', 'comunidadIds']) {
+      for (const campo of ['actividades', 'contrataciones', 'comunidadIds', 'proyectoIds']) {
         datos[campo] = campos.getAll(campo).map((valor) => String(valor).trim());
       }
     }
@@ -154,6 +154,7 @@ export default function PaginaDonantes({ token }: { token: string }) {
                 {ficha.activo ? 'Desactivar donante' : 'Reactivar donante'}
               </button>
             </header>
+            <p><strong>Proyectos asociados</strong> · {ficha.proyectos.join(", ") || "Por asignar"}</p>
             <h3>Brigadas registradas · {ficha.brigadas.length}</h3>
             {!total && <p>Todavía no hay brigadas registradas.</p>}
             <div className="brigadas-tarjetas">
@@ -233,7 +234,8 @@ export default function PaginaDonantes({ token }: { token: string }) {
                 <p>Llegada: {ventana.brigada.llegada ?? 'Por definir'}</p>
                 <p>Zona: {ventana.brigada.zona ?? 'Por asignar'}</p>
                 <p>Comunidades: {ventana.brigada.comunidades.join(', ') || 'Por definir'}</p>
-                <p>Salida: {ventana.brigada.salida ?? 'Por definir'} · Proyecto: {ventana.brigada.proyecto ?? 'Por asignar'}</p>
+                <p>Salida: {ventana.brigada.salida ?? 'Por definir'}</p>
+                <p><strong>Proyectos</strong> · {ventana.brigada.proyectos.join(', ') || 'Por asignar'}</p>
                 {ventana.brigada.actividades.length > 0 && (
                   <><h4>Actividades</h4><ul>{ventana.brigada.actividades.map((texto, indice) => <li key={indice}>{texto}</li>)}</ul></>
                 )}

@@ -467,17 +467,18 @@ export interface FichaDonante {
   correo: string;
   telefono: string | null;
   activo: boolean;
+  proyectos: string[];
   brigadas: {
     id: string;
     activo: boolean;
     zonaId: string | null;
-    proyectoId: string | null;
+    proyectoIds: string[];
     comunidadIds: string[];
     lider: string;
     miembros: number;
     llegada: string | null;
     salida: string | null;
-    proyecto: string | null;
+    proyectos: string[];
     zona: string | null;
     comunidades: string[];
     actividades: string[];
@@ -518,16 +519,21 @@ export interface DatosProyecto {
   fechaInicio: string;
   fechaFin: string | null;
   descripcion: string | null;
+  presupuesto: string;
+  donanteIds: string[];
 }
 
 export interface ProyectoAdministrativo extends DatosProyecto {
   id: string;
   comunidad: string;
+  donantes: string[];
 }
 
 export function obtenerProyectosAdministrativos(token: string) {
   return request<{
     proyectos: ProyectoAdministrativo[];
+    donantes: { id: string; nombre: string; activo: boolean }[];
+    moneda: string;
     comunidades: { id: string; nombre: string; municipio: string }[];
   }>('/proyectos', { headers: { Authorization: `Bearer ${token}` } });
 }

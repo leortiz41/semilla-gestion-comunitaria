@@ -247,9 +247,17 @@ administracionDonantes.get('/fichas', async (req, res) => {
     if (!databasePool) throw new Error('Base de datos no disponible');
     const { rows } = await databasePool.query(
       `SELECT d.id, d.nombre, d.correo, d.telefono, d.activo,
+              ARRAY(SELECT p.nombre FROM proyectos p JOIN comunidades c ON c.id = p.comunidad_id
+                WHERE c.organizacion_id = d.organizacion_id AND (
+                  EXISTS (SELECT 1 FROM proyectos_fichas_donantes pd WHERE pd.donante_id = d.id AND pd.proyecto_id = p.id)
+                  OR EXISTS (SELECT 1 FROM brigadas_donantes b JOIN brigadas_donantes_proyectos bp ON bp.brigada_id = b.id
+                    WHERE b.donante_id = d.id AND bp.proyecto_id = p.id)
+                ) ORDER BY p.nombre, p.id) AS proyectos,
               COALESCE((SELECT jsonb_agg(jsonb_build_object(
                 'id', b.id, 'lider', b.lider, 'miembros', b.miembros, 'activo', b.activo,
-                'zonaId', b.zona_id, 'proyectoId', b.proyecto_id,
+                'zonaId', b.zona_id,
+                'proyectoIds', ARRAY(SELECT bp.proyecto_id FROM brigadas_donantes_proyectos bp
+                  WHERE bp.brigada_id = b.id),
                 'comunidadIds', ARRAY(SELECT bc.comunidad_id FROM brigadas_donantes_comunidades bc
                   WHERE bc.brigada_id = b.id),
                 'llegada', b.fecha_llegada::text, 'salida', b.fecha_salida::text,
@@ -260,9 +268,10 @@ administracionDonantes.get('/fichas', async (req, res) => {
                   JOIN comunidades c ON c.id = bc.comunidad_id AND c.organizacion_id = d.organizacion_id
                   WHERE bc.brigada_id = b.id ORDER BY c.nombre, c.id),
                 'observaciones', b.observaciones,
-                'proyecto', (SELECT p.nombre FROM proyectos p
+                'proyectos', ARRAY(SELECT p.nombre FROM brigadas_donantes_proyectos bp
+                  JOIN proyectos p ON p.id = bp.proyecto_id
                   JOIN comunidades c ON c.id = p.comunidad_id
-                  WHERE p.id = b.proyecto_id AND c.organizacion_id = d.organizacion_id)
+                  WHERE bp.brigada_id = b.id AND c.organizacion_id = d.organizacion_id ORDER BY p.nombre, p.id)
               ) ORDER BY b.fecha_llegada DESC NULLS LAST, b.id)
               FROM brigadas_donantes b WHERE b.donante_id = d.id), '[]'::jsonb) AS brigadas
          FROM donantes d WHERE d.organizacion_id = $1 ORDER BY d.nombre, d.id`,
@@ -320,6 +329,7 @@ function esListaPlan(valor: unknown): valor is string[] {
 const guardarBrigada: RequestHandler = async (req, res) => {
   const { id, brigadaId } = req.params;
   const { miembros, llegada, salida, proyectoId, zonaId, comunidadIds, actividades, contrataciones } = req.body ?? {};
+  const proyectoIds = req.body?.proyectoIds ?? (proyectoId ? [proyectoId] : []);
   const lider = typeof req.body?.lider === 'string' ? req.body.lider.trim() : '';
   const observaciones = req.body?.observaciones ?? '';
   if (!esUuid(id) || (brigadaId !== undefined && !esUuid(brigadaId)) || !esUuid(zonaId) || !Array.isArray(comunidadIds) ||
@@ -327,7 +337,8 @@ const guardarBrigada: RequestHandler = async (req, res) => {
       !Number.isInteger(miembros) || miembros < 1 || miembros > 100000 ||
       (llegada && !esFechaValida(llegada)) ||
       (salida && (!esFechaValida(salida) || !llegada || salida < llegada)) ||
-      (proyectoId && !esUuid(proyectoId)) ||
+      !Array.isArray(proyectoIds) || !proyectoIds.every(esUuid) ||
+      new Set(proyectoIds.map((valor: string) => valor.toLowerCase())).size !== proyectoIds.length ||
       !esListaPlan(actividades) || !esListaPlan(contrataciones) ||
       typeof observaciones !== 'string' || observaciones.length > 3000) {
     res.status(400).json({ message: 'Revisá la zona, las comunidades y los datos del viaje.' });
@@ -352,7 +363,7 @@ const guardarBrigada: RequestHandler = async (req, res) => {
         }
       }
 
-      const datos = `SELECT d.id AS donante_id, $3::uuid AS proyecto_id, $4::text AS lider,
+      const datos = `SELECT d.id AS donante_id, ($3::uuid[])[1] AS proyecto_id, $4::text AS lider,
               $5::integer AS miembros, $6::date AS llegada, $7::date AS salida,
               $8::text[] AS actividades, $9::text[] AS contrataciones, $10::text AS observaciones,
               z.id AS zona_id
@@ -361,10 +372,10 @@ const guardarBrigada: RequestHandler = async (req, res) => {
          WHERE d.id = $1 AND d.organizacion_id = $2
            ${brigadaId ? '' : 'AND d.activo'}
            AND (SELECT count(*) FROM comunidades_validas) = cardinality($12::uuid[])
-           AND ($3::uuid IS NULL OR EXISTS (
-             SELECT 1 FROM proyectos p JOIN comunidades_validas c ON c.id = p.comunidad_id
-             WHERE p.id = $3::uuid
-           ))`;
+           AND (SELECT count(*)
+             FROM proyectos p JOIN comunidades_validas c ON c.id = p.comunidad_id
+             WHERE p.id = ANY($3::uuid[])
+           ) = cardinality($3::uuid[])`;
       const operacion = brigadaId
         ? `UPDATE brigadas_donantes b SET proyecto_id = d.proyecto_id, lider = d.lider,
              miembros = d.miembros, fecha_llegada = d.llegada, fecha_salida = d.salida,
@@ -375,7 +386,7 @@ const guardarBrigada: RequestHandler = async (req, res) => {
              (donante_id, proyecto_id, lider, miembros, fecha_llegada, fecha_salida,
               lista_actividades, lista_contrataciones, observaciones, zona_id)
            SELECT * FROM datos RETURNING id`;
-      const parametros = [id, organizacion, proyectoId || null, lider, miembros,
+      const parametros = [id, organizacion, proyectoIds, lider, miembros,
         llegada || null, salida || null, actividades.map((texto) => texto.trim()),
         contrataciones.map((texto) => texto.trim()), observaciones.trim() || null, zonaId, comunidadIds];
       if (brigadaId) parametros.push(brigadaId);
@@ -395,11 +406,16 @@ const guardarBrigada: RequestHandler = async (req, res) => {
       const guardada = resultado.rows[0].id;
       if (brigadaId) {
         await cliente.query('DELETE FROM brigadas_donantes_comunidades WHERE brigada_id = $1', [guardada]);
+        await cliente.query('DELETE FROM brigadas_donantes_proyectos WHERE brigada_id = $1', [guardada]);
       }
       await cliente.query(
         `INSERT INTO brigadas_donantes_comunidades (brigada_id, comunidad_id)
          SELECT $1, id FROM unnest($2::uuid[]) AS seleccion(id)`,
         [guardada, comunidadIds],
+      );
+      await cliente.query(
+        'INSERT INTO brigadas_donantes_proyectos (brigada_id, proyecto_id) SELECT $1, unnest($2::uuid[])',
+        [guardada, proyectoIds],
       );
       await cliente.query('COMMIT');
       res.sendStatus(204);

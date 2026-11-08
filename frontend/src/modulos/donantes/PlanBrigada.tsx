@@ -50,15 +50,17 @@ export default function PlanBrigada({ zonas, comunidades, proyectos, inicial }: 
   inicial?: {
     zonaId: string | null;
     comunidadIds: string[];
-    proyectoId: string | null;
+    proyectoIds: string[];
     actividades: string[];
     contrataciones: string[];
   };
 }) {
   const [zonaId, setZonaId] = useState(inicial?.zonaId ?? '');
   const [comunidadIds, setComunidadIds] = useState(inicial?.comunidadIds ?? []);
-  const [proyectoId, setProyectoId] = useState(inicial?.proyectoId ?? '');
+  const [proyectoIds, setProyectoIds] = useState(inicial?.proyectoIds ?? []);
   const comunidadesZona = comunidades.filter((comunidad) => comunidad.zonaId === zonaId);
+
+  const proyectosDisponibles = proyectos.filter((proyecto) => comunidadIds.includes(proyecto.comunidadId));
 
   return (
     <>
@@ -67,18 +69,10 @@ export default function PlanBrigada({ zonas, comunidades, proyectos, inicial }: 
           <select name="zonaId" required value={zonaId} onChange={(evento) => {
             setZonaId(evento.target.value);
             setComunidadIds([]);
-            setProyectoId('');
+            setProyectoIds([]);
           }}>
             <option value="">Seleccioná una zona</option>
             {zonas.map((zona) => <option key={zona.id} value={zona.id}>{zona.nombre}</option>)}
-          </select>
-        </label>
-        <label>Proyecto relacionado
-          <select name="proyectoId" value={proyectoId} onChange={(evento) => setProyectoId(evento.target.value)} disabled={!comunidadIds.length}>
-            <option value="">Por asignar</option>
-            {proyectos.filter((proyecto) => comunidadIds.includes(proyecto.comunidadId)).map((proyecto) => (
-              <option key={proyecto.id} value={proyecto.id}>{proyecto.nombre}</option>
-            ))}
           </select>
         </label>
       </div>
@@ -93,8 +87,9 @@ export default function PlanBrigada({ zonas, comunidades, proyectos, inicial }: 
                   checked={comunidadIds.includes(comunidad.id)}
                   onChange={(evento) => {
                     const marcada = evento.target.checked;
-                    if (!marcada && proyectos.some((p) => p.id === proyectoId && p.comunidadId === comunidad.id)) {
-                      setProyectoId('');
+                    if (!marcada) {
+                      setProyectoIds((actual) => actual.filter((id) =>
+                        !proyectos.some((p) => p.id === id && p.comunidadId === comunidad.id)));
                     }
                     setComunidadIds((actual) => marcada
                       ? [...actual, comunidad.id]
@@ -106,6 +101,25 @@ export default function PlanBrigada({ zonas, comunidades, proyectos, inicial }: 
           ))}
         </fieldset>
       )}
+      <fieldset>
+        <legend>Proyectos de la brigada</legend>
+        {!proyectosDisponibles.length && <p>{comunidadIds.length
+          ? 'Las comunidades seleccionadas aún no tienen proyectos registrados.'
+          : 'Seleccioná las comunidades de trabajo para ver sus proyectos.'}</p>}
+        {proyectosDisponibles.map((proyecto) => (
+          <div key={proyecto.id}>
+            <label>
+              <input type="checkbox" name="proyectoIds" value={proyecto.id}
+                checked={proyectoIds.includes(proyecto.id)}
+                onChange={(evento) => {
+                  const marcado = evento.target.checked;
+                  setProyectoIds((actual) => marcado ? [...actual, proyecto.id] : actual.filter((id) => id !== proyecto.id));
+                }} />
+              {' '}{proyecto.nombre} · {comunidadesZona.find((c) => c.id === proyecto.comunidadId)?.nombre}
+            </label>
+          </div>
+        ))}
+      </fieldset>
       <ListaPlan nombre="actividades" titulo="Actividades" singular="Actividad" inicial={inicial?.actividades} />
       <ListaPlan nombre="contrataciones" titulo="Contrataciones previstas" singular="Contratación" inicial={inicial?.contrataciones} />
     </>
