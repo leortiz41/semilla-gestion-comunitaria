@@ -1,4 +1,3 @@
-import { donantesRouter } from './routes/donantes.routes.js';
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
@@ -7,6 +6,7 @@ import { checkDatabaseConnection } from './config/database.js';
 import { authRouter } from './routes/auth.routes.js';
 import { comunidadesRouter } from './routes/comunidades.routes.js';
 import { dashboardRouter } from './routes/dashboard.routes.js';
+import { donantesRouter } from './routes/donantes.routes.js';
 import { zonasRouter } from './routes/zonas.routes.js';
 import { usuariosRouter } from './routes/usuarios.routes.js';
 
