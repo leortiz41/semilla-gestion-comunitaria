@@ -416,3 +416,35 @@ export function obtenerProyectosDonante(tokenAcceso: string) {
     headers: { Authorization: `Bearer ${tokenAcceso}` },
   });
 }
+
+export interface AdministracionDonantes {
+  donantes: { id: string; email: string; activo: boolean }[];
+  proyectos: {
+    id: string;
+    nombre: string;
+    donanteIds: string[];
+    evidencias: { id: string; titulo: string; compartida: boolean }[];
+  }[];
+}
+
+export function obtenerAdministracionDonantes(token: string) {
+  return request<AdministracionDonantes>('/donantes/administracion', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function actualizarAccesoDonante(token: string, proyectoId: string, donanteId: string, asignado: boolean) {
+  return request<void>(`/donantes/administracion/proyectos/${proyectoId}/donantes/${donanteId}`, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ asignado }),
+  });
+}
+
+export function actualizarEvidenciaDonante(token: string, proyectoId: string, evidenciaId: string, compartida: boolean) {
+  return request<void>(`/donantes/administracion/proyectos/${proyectoId}/evidencias/${evidenciaId}`, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ compartida }),
+  });
+}

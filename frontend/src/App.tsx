@@ -207,7 +207,13 @@ function App() {
         return <PaginaPagos />;
       case 'usuarios':
         return usuario && accessToken ? (
-          <PaginaUsuarios tokenAcceso={accessToken} puedeVer={usuario.permisos.includes("usuarios.ver")} />
+          <PaginaUsuarios
+            tokenAcceso={accessToken}
+            puedeVer={usuario.permisos.includes('usuarios.ver')}
+            puedeGestionarDonantes={usuario.roles.includes('ADMINISTRADOR') &&
+              ['usuarios.gestionar', 'proyectos.gestionar', 'evidencias.gestionar']
+                .every((permiso) => usuario.permisos.includes(permiso))}
+          />
         ) : null;
       case 'auditoria':
         return <PaginaAuditoria />;
