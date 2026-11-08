@@ -1,7 +1,7 @@
 import PlanBrigada, { type ComunidadBrigada, type ProyectoBrigada } from './PlanBrigada';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import {
-  eliminarBrigada, guardarFichaDonante, obtenerAdministracionDonantes, obtenerFichasDonantes, type FichaDonante,
+  actualizarEstadoDonante, guardarFichaDonante, obtenerAdministracionDonantes, obtenerFichasDonantes, type FichaDonante,
 } from '../../lib/api';
 import PanelAccesoDonantes from '../usuarios/PanelAccesoDonantes';
 import '../../estilos/modulos/paginaModuloBase.css';
@@ -85,24 +85,32 @@ export default function PaginaDonantes({ token }: { token: string }) {
     }
   }
 
-  async function borrar(fichaId: string, brigada: Brigada) {
-    if (ocupado || !window.confirm(`¿Eliminar permanentemente la brigada de ${brigada.lider}?`)) return;
+  async function cambiarEstado(ficha: FichaDonante, brigada?: Brigada) {
+    if (ocupado) return;
+    const activo = !(brigada?.activo ?? ficha.activo);
     setOcupado(true);
     setError('');
     setMensaje('');
     try {
-      await eliminarBrigada(token, fichaId, brigada.id);
-      setFichas((actual) => actual.map((ficha) => ficha.id === fichaId
-        ? { ...ficha, brigadas: ficha.brigadas.filter((item) => item.id !== brigada.id) }
-        : ficha));
-      setPaginas((actual) => ({ ...actual, [fichaId]: 0 }));
-      setMensaje('Brigada eliminada.');
+      await actualizarEstadoDonante(token, ficha.id, activo, brigada?.id);
+      setFichas((actual) => actual.map((item) => {
+        if (item.id !== ficha.id) return item;
+        if (!brigada) return { ...item, activo };
+        return {
+          ...item,
+          brigadas: item.brigadas.map((registro) => registro.id === brigada.id
+            ? { ...registro, activo } : registro),
+        };
+      }));
+      setMensaje(activo ? 'Registro reactivado.' : 'Registro desactivado.');
     } catch (fallo) {
-      setError(fallo instanceof Error ? fallo.message : 'No fue posible eliminar la brigada.');
+      setError(fallo instanceof Error ? fallo.message : 'No fue posible cambiar el estado.');
     } finally {
       setOcupado(false);
     }
   }
+
+  const donantesActivos = fichas.filter((ficha) => ficha.activo);
 
   return (
     <section className="pagina-modulo donantes-modulo">
@@ -136,10 +144,15 @@ export default function PaginaDonantes({ token }: { token: string }) {
             <header className="brigadas-encabezado">
               <div>
                 <h2>{ficha.nombre}</h2>
+                <span className="pagina-modulo__estado">{ficha.activo ? 'Activo' : 'Inactivo'}</span>
                 <p>{ficha.correo}{ficha.telefono && ` · ${ficha.telefono}`}</p>
               </div>
-              <button type="button" className="brigadas-accion" onClick={() => abrirAlta(ficha.id)}>
+              <button type="button" className="brigadas-accion" disabled={ocupado || !ficha.activo} onClick={() => abrirAlta(ficha.id)}>
                 + Agregar brigada
+              </button>
+              <button type="button" className="brigadas-accion" disabled={ocupado}
+                onClick={() => void cambiarEstado(ficha)}>
+                {ficha.activo ? 'Desactivar donante' : 'Reactivar donante'}
               </button>
             </header>
             <h3>Brigadas registradas · {ficha.brigadas.length}</h3>
@@ -148,6 +161,7 @@ export default function PaginaDonantes({ token }: { token: string }) {
               {ficha.brigadas.slice(inicio, inicio + tarjetasPorPagina).map((brigada) => (
                 <article className="brigadas-tarjeta" key={brigada.id}>
                   <h4>{brigada.lider}</h4>
+                  <span className="pagina-modulo__estado">{brigada.activo ? 'Activa' : 'Inactiva'}</span>
                   <p>{brigada.miembros} integrantes · {brigada.llegada ?? 'Fecha por definir'}</p>
                   <p>{brigada.zona ?? 'Zona por asignar'} · {brigada.comunidades.length} comunidades</p>
                   <button type="button" className="brigadas-accion" aria-label={`Ver brigada de ${brigada.lider}`}
@@ -156,8 +170,8 @@ export default function PaginaDonantes({ token }: { token: string }) {
                   </button>
                   {' '}<button type="button" className="brigadas-accion" disabled={ocupado}
                     onClick={() => abrirAlta(ficha.id, brigada)}>Editar</button>
-                  {' '}<button type="button" className="brigadas-accion brigadas-accion--eliminar" disabled={ocupado}
-                    onClick={() => void borrar(ficha.id, brigada)}>Eliminar</button>
+                  {' '}<button type="button" className="brigadas-accion" disabled={ocupado}
+                    onClick={() => void cambiarEstado(ficha, brigada)}>{brigada.activo ? 'Desactivar' : 'Reactivar'}</button>
                 </article>
               ))}
             </div>
@@ -171,9 +185,9 @@ export default function PaginaDonantes({ token }: { token: string }) {
           </article>
         );
       })}
-      {fichas.length > 0 && (
+      {donantesActivos.length > 0 && (
         <button type="button" className="brigadas-accion brigadas-flotante"
-          onClick={() => abrirAlta(fichas.length === 1 ? fichas[0].id : '')}>
+          onClick={() => abrirAlta(donantesActivos.length === 1 ? donantesActivos[0].id : '')}>
           + Agregar brigada
         </button>
       )}
@@ -195,7 +209,7 @@ export default function PaginaDonantes({ token }: { token: string }) {
                   <select value={ventana.fichaId} disabled={ocupado || Boolean(ventana.brigada)}
                     onChange={(evento) => setVentana({ tipo: 'alta', fichaId: evento.target.value })}>
                     <option value="">Seleccioná un donante</option>
-                    {fichas.map((ficha) => <option key={ficha.id} value={ficha.id}>{ficha.nombre}</option>)}
+                    {(ventana.brigada ? fichas : donantesActivos).map((ficha) => <option key={ficha.id} value={ficha.id}>{ficha.nombre}</option>)}
                   </select>
                 </label>
                 <form onSubmit={(evento) => void guardar(evento, ventana.fichaId, ventana.brigada?.id)}>

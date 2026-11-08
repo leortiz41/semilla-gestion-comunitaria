@@ -246,9 +246,9 @@ administracionDonantes.get('/fichas', async (req, res) => {
   try {
     if (!databasePool) throw new Error('Base de datos no disponible');
     const { rows } = await databasePool.query(
-      `SELECT d.id, d.nombre, d.correo, d.telefono,
+      `SELECT d.id, d.nombre, d.correo, d.telefono, d.activo,
               COALESCE((SELECT jsonb_agg(jsonb_build_object(
-                'id', b.id, 'lider', b.lider, 'miembros', b.miembros,
+                'id', b.id, 'lider', b.lider, 'miembros', b.miembros, 'activo', b.activo,
                 'zonaId', b.zona_id, 'proyectoId', b.proyecto_id,
                 'comunidadIds', ARRAY(SELECT bc.comunidad_id FROM brigadas_donantes_comunidades bc
                   WHERE bc.brigada_id = b.id),
@@ -359,6 +359,7 @@ const guardarBrigada: RequestHandler = async (req, res) => {
          FROM donantes d
          JOIN zonas z ON z.id = $11 AND z.organizacion_id = d.organizacion_id AND z.activo
          WHERE d.id = $1 AND d.organizacion_id = $2
+           ${brigadaId ? '' : 'AND d.activo'}
            AND (SELECT count(*) FROM comunidades_validas) = cardinality($12::uuid[])
            AND ($3::uuid IS NULL OR EXISTS (
              SELECT 1 FROM proyectos p JOIN comunidades_validas c ON c.id = p.comunidad_id
@@ -416,27 +417,37 @@ const guardarBrigada: RequestHandler = async (req, res) => {
 administracionDonantes.post('/fichas/:id/brigadas', guardarBrigada);
 administracionDonantes.put('/fichas/:id/brigadas/:brigadaId', guardarBrigada);
 
-administracionDonantes.delete('/fichas/:id/brigadas/:brigadaId', async (req, res) => {
+const actualizarEstadoFicha: RequestHandler = async (req, res) => {
   const { id, brigadaId } = req.params;
-  if (!esUuid(id) || !esUuid(brigadaId)) {
-    res.status(400).json({ message: 'Identificador de brigada inválido.' });
+  const activo = req.body?.activo;
+  if (!esUuid(id) || (brigadaId !== undefined && !esUuid(brigadaId)) || typeof activo !== 'boolean') {
+    res.status(400).json({ message: 'Indicá un registro y un estado válidos.' });
     return;
   }
   try {
     if (!databasePool) throw new Error('Base de datos no disponible');
-    const resultado = await databasePool.query(
-      `DELETE FROM brigadas_donantes b USING donantes d
-       WHERE b.id = $1 AND b.donante_id = d.id AND d.id = $2 AND d.organizacion_id = $3`,
-      [brigadaId, id, req.auth!.organizacionId],
-    );
+    const parametros = [activo, id, req.auth!.organizacionId];
+    const resultado = brigadaId
+      ? await databasePool.query(
+        `UPDATE brigadas_donantes b SET activo = $1 FROM donantes d
+         WHERE d.id = $2 AND d.organizacion_id = $3 AND b.donante_id = d.id AND b.id = $4`,
+        [...parametros, brigadaId],
+      )
+      : await databasePool.query(
+        'UPDATE donantes SET activo = $1 WHERE id = $2 AND organizacion_id = $3',
+        parametros,
+      );
     if (!resultado.rowCount) {
-      res.status(404).json({ message: 'No se encontró la brigada.' });
+      res.status(404).json({ message: 'No se encontró el registro.' });
       return;
     }
     res.sendStatus(204);
   } catch {
-    res.status(500).json({ message: 'No fue posible eliminar la brigada.' });
+    res.status(500).json({ message: 'No fue posible actualizar el estado.' });
   }
-});
+};
+
+administracionDonantes.put('/fichas/:id/estado', actualizarEstadoFicha);
+administracionDonantes.put('/fichas/:id/brigadas/:brigadaId/estado', actualizarEstadoFicha);
 
 donantesRouter.use('/administracion', administracionDonantes);

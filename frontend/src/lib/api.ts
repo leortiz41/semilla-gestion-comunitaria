@@ -466,8 +466,10 @@ export interface FichaDonante {
   nombre: string;
   correo: string;
   telefono: string | null;
+  activo: boolean;
   brigadas: {
     id: string;
+    activo: boolean;
     zonaId: string | null;
     proyectoId: string | null;
     comunidadIds: string[];
@@ -499,9 +501,11 @@ export function guardarFichaDonante(token: string, datos: Record<string, string 
   });
 }
 
-export function eliminarBrigada(token: string, fichaId: string, brigadaId: string) {
-  return request<void>(`/donantes/administracion/fichas/${fichaId}/brigadas/${brigadaId}`, {
-    method: 'DELETE',
+export function actualizarEstadoDonante(token: string, fichaId: string, activo: boolean, brigadaId?: string) {
+  const ruta = brigadaId ? `/fichas/${fichaId}/brigadas/${brigadaId}` : `/fichas/${fichaId}`;
+  return request<void>(`/donantes/administracion${ruta}/estado`, {
+    method: 'PUT',
     headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ activo }),
   });
 }
