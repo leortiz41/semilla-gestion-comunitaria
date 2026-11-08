@@ -400,3 +400,19 @@ export function obtenerRoles(tokenAcceso: string) {
     headers: { Authorization: `Bearer ${tokenAcceso}` },
   });
 }
+
+export interface ProyectoDonante {
+  id: string;
+  nombre: string;
+  estado: string;
+  fechaInicio: string;
+  porcentajeAvance: number | null;
+  fechaAvance: string | null;
+  evidencias: { id: string; titulo: string | null; tipo: string; url: string }[];
+}
+
+export function obtenerProyectosDonante(tokenAcceso: string) {
+  return request<{ proyectos: ProyectoDonante[] }>('/donantes/proyectos', {
+    headers: { Authorization: `Bearer ${tokenAcceso}` },
+  });
+}

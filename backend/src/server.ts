@@ -1,3 +1,4 @@
+import { donantesRouter } from './routes/donantes.routes.js';
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
@@ -26,6 +27,7 @@ app.use('/api/comunidades', comunidadesRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/zonas', zonasRouter);
 app.use('/api/usuarios', usuariosRouter);
+app.use('/api/donantes', donantesRouter);
 
 app.get('/api/health', async (_req, res) => {
   const database = await checkDatabaseConnection();

@@ -1,3 +1,4 @@
+import SeguimientoDonante from './modulos/proyectos/SeguimientoDonante';
 import { FormEvent, useEffect, useState } from 'react';
 import logoSemilla from './assets/logo-semilla-app.png';
 import BarraLateral from './componentes/estructura/BarraLateral';
@@ -195,9 +196,13 @@ function App() {
       case 'familias':
         return <PaginaFamilias />;
       case 'proyectos':
-        return <PaginaProyectos soloLectura={esDonante} />;
+        return esDonante && accessToken
+          ? <SeguimientoDonante tokenAcceso={accessToken} vista="proyectos" />
+          : <PaginaProyectos />;
       case 'evidencias':
-        return <PaginaEvidencias soloLectura={esDonante} />;
+        return esDonante && accessToken
+          ? <SeguimientoDonante tokenAcceso={accessToken} vista="evidencias" />
+          : <PaginaEvidencias />;
       case 'pagos':
         return <PaginaPagos />;
       case 'usuarios':
