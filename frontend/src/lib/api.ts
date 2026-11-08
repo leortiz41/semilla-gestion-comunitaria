@@ -509,3 +509,33 @@ export function actualizarEstadoDonante(token: string, fichaId: string, activo: 
     body: JSON.stringify({ activo }),
   });
 }
+
+export interface DatosProyecto {
+  comunidadId: string;
+  nombre: string;
+  tipo: string;
+  estado: string;
+  fechaInicio: string;
+  fechaFin: string | null;
+  descripcion: string | null;
+}
+
+export interface ProyectoAdministrativo extends DatosProyecto {
+  id: string;
+  comunidad: string;
+}
+
+export function obtenerProyectosAdministrativos(token: string) {
+  return request<{
+    proyectos: ProyectoAdministrativo[];
+    comunidades: { id: string; nombre: string; municipio: string }[];
+  }>('/proyectos', { headers: { Authorization: `Bearer ${token}` } });
+}
+
+export function guardarProyectoAdministrativo(token: string, datos: DatosProyecto, id?: string) {
+  return request<{ id: string }>(id ? `/proyectos/${id}` : '/proyectos', {
+    method: id ? 'PUT' : 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(datos),
+  });
+}

@@ -202,7 +202,13 @@ function App() {
       case 'proyectos':
         return esDonante && accessToken
           ? <SeguimientoDonante tokenAcceso={accessToken} vista="proyectos" />
-          : <PaginaProyectos />;
+          : usuario && accessToken ? (
+            <PaginaProyectos
+              token={accessToken}
+              puedeVer={usuario.permisos.includes('proyectos.ver')}
+              puedeGestionar={usuario.permisos.includes('proyectos.gestionar')}
+            />
+          ) : null;
       case 'evidencias':
         return esDonante && accessToken
           ? <SeguimientoDonante tokenAcceso={accessToken} vista="evidencias" />
