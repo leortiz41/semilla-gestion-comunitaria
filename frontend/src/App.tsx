@@ -1,3 +1,5 @@
+import PaginaDonantes from './modulos/donantes/PaginaDonantes';
+import SeguimientoDonante from './modulos/proyectos/SeguimientoDonante';
 import { FormEvent, useEffect, useState } from 'react';
 import logoSemilla from './assets/logo-semilla-app.png';
 import BarraLateral from './componentes/estructura/BarraLateral';
@@ -175,8 +177,16 @@ function App() {
     }
   }
 
+  const esDonante = usuario?.roles.some((rol) => rol === 'DONANTE' || rol === 'CONSULTA') ?? false;
+  const puedeGestionarDonantes = usuario?.roles.includes('ADMINISTRADOR') &&
+    ['usuarios.gestionar', 'proyectos.gestionar', 'evidencias.gestionar']
+      .every((permiso) => usuario.permisos.includes(permiso));
+  const seccionVisible = esDonante && !['proyectos', 'evidencias', 'perfil'].includes(seccionAdministrativa)
+    ? 'proyectos'
+    : seccionAdministrativa;
+
   function renderizarSeccionAdministrativa() {
-    switch (seccionAdministrativa) {
+    switch (seccionVisible) {
       case 'comunidades':
         if (!accessToken) return null;
 
@@ -190,13 +200,32 @@ function App() {
       case 'familias':
         return <PaginaFamilias />;
       case 'proyectos':
-        return <PaginaProyectos />;
+        return esDonante && accessToken
+          ? <SeguimientoDonante tokenAcceso={accessToken} vista="proyectos" />
+          : usuario && accessToken ? (
+            <PaginaProyectos
+              token={accessToken}
+              puedeVer={usuario.permisos.includes('proyectos.ver')}
+              puedeGestionar={usuario.permisos.includes('proyectos.gestionar')}
+            />
+          ) : null;
       case 'evidencias':
-        return <PaginaEvidencias />;
+        return esDonante && accessToken
+          ? <SeguimientoDonante tokenAcceso={accessToken} vista="evidencias" />
+          : <PaginaEvidencias />;
       case 'pagos':
         return <PaginaPagos />;
+      case 'donantes':
+        return puedeGestionarDonantes && accessToken ? <PaginaDonantes token={accessToken} /> : null;
       case 'usuarios':
-        return <PaginaUsuarios />;
+        return usuario && accessToken ? (
+          <PaginaUsuarios
+            tokenAcceso={accessToken}
+            puedeVer={usuario.permisos.includes('usuarios.ver')}
+            puedeGestionarAcceso={Boolean(puedeGestionarDonantes)}
+
+          />
+        ) : null;
       case 'auditoria':
         return <PaginaAuditoria />;
       case 'perfil':
@@ -332,7 +361,9 @@ function App() {
         <EstructuraAdministrativa
           barraLateral={(
             <BarraLateral
-              seccionActiva={seccionAdministrativa === 'perfil' ? undefined : seccionAdministrativa}
+              seccionActiva={seccionVisible === 'perfil' ? undefined : seccionVisible}
+              esDonante={esDonante}
+              puedeGestionarDonantes={Boolean(puedeGestionarDonantes)}
               subseccionComunidades={subseccionComunidades}
               alCambiarSeccion={setSeccionAdministrativa}
               alCambiarSubseccionComunidades={setSubseccionComunidades}

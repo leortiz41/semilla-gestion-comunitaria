@@ -1,6 +1,6 @@
 import '../../estilos/modulos/paginaModuloBase.css';
 
-function PaginaEvidencias() {
+function PaginaEvidencias({ soloLectura = false }: { soloLectura?: boolean }) {
   return (
     <section className="pagina-modulo" aria-labelledby="titulo-evidencias">
       <div className="pagina-modulo__encabezado">
@@ -9,7 +9,9 @@ function PaginaEvidencias() {
           Evidencias
         </h1>
         <p className="pagina-modulo__descripcion">
-          Documenta avances, actividades y resultados mediante fotografías, archivos, observaciones y otros respaldos de campo.
+          {soloLectura
+            ? 'Consultá las evidencias de ejecución de los proyectos autorizados.'
+            : 'Documenta avances, actividades y resultados mediante fotografías, archivos, observaciones y otros respaldos de campo.'}
         </p>
         <span className="pagina-modulo__estado">Diseño frontend en construcción</span>
       </div>

@@ -388,3 +388,160 @@ export interface NecesidadComunitaria extends DatosNecesidad {
 }
 export function obtenerNecesidades(token:string,id:string) { return request<{necesidades:NecesidadComunitaria[]}>(`/comunidades/${id}/expediente/necesidades`,{headers:{Authorization:`Bearer ${token}`}}); }
 export function registrarNecesidad(token:string,id:string,datos:DatosNecesidad) {return request<{necesidad:NecesidadComunitaria}>(`/comunidades/${id}/expediente/necesidades`,{method:'POST',headers:{Authorization:`Bearer ${token}`},body:JSON.stringify(datos)});}
+
+export interface RolCatalogo {
+  nombre: string;
+  activo: boolean;
+  permisos: { codigo: string; descripcion: string | null }[];
+}
+
+export function obtenerRoles(tokenAcceso: string) {
+  return request<{ roles: RolCatalogo[] }>('/usuarios/roles', {
+    headers: { Authorization: `Bearer ${tokenAcceso}` },
+  });
+}
+
+export interface ProyectoDonante {
+  id: string;
+  nombre: string;
+  estado: string;
+  fechaInicio: string;
+  porcentajeAvance: number | null;
+  fechaAvance: string | null;
+  evidencias: { id: string; titulo: string | null; tipo: string; url: string }[];
+}
+
+export function obtenerProyectosDonante(tokenAcceso: string) {
+  return request<{ proyectos: ProyectoDonante[] }>('/donantes/proyectos', {
+    headers: { Authorization: `Bearer ${tokenAcceso}` },
+  });
+}
+
+export interface AdministracionDonantes {
+  donantes: { id: string; email: string; activo: boolean }[];
+  proyectos: {
+    id: string;
+    nombre: string;
+    comunidadId: string;
+    donanteIds: string[];
+    evidencias: { id: string; titulo: string; compartida: boolean }[];
+  }[];
+}
+
+export function obtenerAdministracionDonantes(token: string) {
+  return request<AdministracionDonantes>('/donantes/administracion', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function actualizarAccesoDonante(token: string, proyectoId: string, donanteId: string, asignado: boolean) {
+  return request<void>(`/donantes/administracion/proyectos/${proyectoId}/donantes/${donanteId}`, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ asignado }),
+  });
+}
+
+export function actualizarEvidenciaDonante(token: string, proyectoId: string, evidenciaId: string, compartida: boolean) {
+  return request<void>(`/donantes/administracion/proyectos/${proyectoId}/evidencias/${evidenciaId}`, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ compartida }),
+  });
+}
+
+export function crearCuentaDonante(token: string, email: string) {
+  return request<{ donante: AdministracionDonantes['donantes'][number]; contrasenaTemporal: string }>(
+    '/donantes/administracion/cuentas',
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ email }),
+    },
+  );
+}
+
+export interface FichaDonante {
+  id: string;
+  nombre: string;
+  correo: string;
+  telefono: string | null;
+  activo: boolean;
+  proyectos: string[];
+  brigadas: {
+    id: string;
+    activo: boolean;
+    zonaId: string | null;
+    proyectoIds: string[];
+    comunidadIds: string[];
+    lider: string;
+    miembros: number;
+    llegada: string | null;
+    salida: string | null;
+    proyectos: string[];
+    zona: string | null;
+    comunidades: string[];
+    actividades: string[];
+    contrataciones: string[];
+    observaciones: string | null;
+  }[];
+}
+
+export function obtenerFichasDonantes(token: string) {
+  return request<{ fichas: FichaDonante[]; comunidades: { id: string; nombre: string; municipio: string; zonaId: string | null }[]; zonas: { id: string; nombre: string }[] }>('/donantes/administracion/fichas', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function guardarFichaDonante(token: string, datos: Record<string, string | number | string[]>, fichaId?: string, brigadaId?: string) {
+  const ruta = fichaId ? `/fichas/${fichaId}/brigadas${brigadaId ? '/' + brigadaId : ''}` : '/fichas';
+  return request<void>(`/donantes/administracion${ruta}`, {
+    method: brigadaId ? 'PUT' : 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(datos),
+  });
+}
+
+export function actualizarEstadoDonante(token: string, fichaId: string, activo: boolean, brigadaId?: string) {
+  const ruta = brigadaId ? `/fichas/${fichaId}/brigadas/${brigadaId}` : `/fichas/${fichaId}`;
+  return request<void>(`/donantes/administracion${ruta}/estado`, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ activo }),
+  });
+}
+
+export interface DatosProyecto {
+  comunidadId: string;
+  nombre: string;
+  tipo: string;
+  estado: string;
+  fechaInicio: string;
+  fechaFin: string | null;
+  descripcion: string | null;
+  presupuesto: string;
+  donanteIds: string[];
+}
+
+export interface ProyectoAdministrativo extends DatosProyecto {
+  id: string;
+  comunidad: string;
+  donantes: string[];
+}
+
+export function obtenerProyectosAdministrativos(token: string) {
+  return request<{
+    proyectos: ProyectoAdministrativo[];
+    donantes: { id: string; nombre: string; activo: boolean }[];
+    moneda: string;
+    comunidades: { id: string; nombre: string; municipio: string }[];
+  }>('/proyectos', { headers: { Authorization: `Bearer ${token}` } });
+}
+
+export function guardarProyectoAdministrativo(token: string, datos: DatosProyecto, id?: string) {
+  return request<{ id: string }>(id ? `/proyectos/${id}` : '/proyectos', {
+    method: id ? 'PUT' : 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(datos),
+  });
+}
