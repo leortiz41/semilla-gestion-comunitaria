@@ -459,3 +459,36 @@ export function crearCuentaDonante(token: string, email: string) {
     },
   );
 }
+
+export interface FichaDonante {
+  id: string;
+  nombre: string;
+  correo: string;
+  telefono: string | null;
+  brigadas: {
+    id: string;
+    lider: string;
+    miembros: number;
+    llegada: string | null;
+    salida: string | null;
+    proyecto: string | null;
+    actividades: string | null;
+    contrataciones: string | null;
+    observaciones: string | null;
+  }[];
+}
+
+export function obtenerFichasDonantes(token: string) {
+  return request<{ fichas: FichaDonante[] }>('/donantes/administracion/fichas', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function guardarFichaDonante(token: string, datos: Record<string, string | number>, fichaId?: string) {
+  const ruta = fichaId ? `/fichas/${fichaId}/brigadas` : '/fichas';
+  return request<void>(`/donantes/administracion${ruta}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(datos),
+  });
+}

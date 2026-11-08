@@ -5,6 +5,7 @@ export type SeccionAdministrativa =
   | 'proyectos'
   | 'evidencias'
   | 'pagos'
+  | 'donantes'
   | 'usuarios'
   | 'auditoria'
   | 'perfil';

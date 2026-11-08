@@ -1,3 +1,4 @@
+import PaginaDonantes from './modulos/donantes/PaginaDonantes';
 import SeguimientoDonante from './modulos/proyectos/SeguimientoDonante';
 import { FormEvent, useEffect, useState } from 'react';
 import logoSemilla from './assets/logo-semilla-app.png';
@@ -177,6 +178,9 @@ function App() {
   }
 
   const esDonante = usuario?.roles.some((rol) => rol === 'DONANTE' || rol === 'CONSULTA') ?? false;
+  const puedeGestionarDonantes = usuario?.roles.includes('ADMINISTRADOR') &&
+    ['usuarios.gestionar', 'proyectos.gestionar', 'evidencias.gestionar']
+      .every((permiso) => usuario.permisos.includes(permiso));
   const seccionVisible = esDonante && !['proyectos', 'evidencias', 'perfil'].includes(seccionAdministrativa)
     ? 'proyectos'
     : seccionAdministrativa;
@@ -205,14 +209,14 @@ function App() {
           : <PaginaEvidencias />;
       case 'pagos':
         return <PaginaPagos />;
+      case 'donantes':
+        return puedeGestionarDonantes && accessToken ? <PaginaDonantes token={accessToken} /> : null;
       case 'usuarios':
         return usuario && accessToken ? (
           <PaginaUsuarios
             tokenAcceso={accessToken}
             puedeVer={usuario.permisos.includes('usuarios.ver')}
-            puedeGestionarDonantes={usuario.roles.includes('ADMINISTRADOR') &&
-              ['usuarios.gestionar', 'proyectos.gestionar', 'evidencias.gestionar']
-                .every((permiso) => usuario.permisos.includes(permiso))}
+
           />
         ) : null;
       case 'auditoria':
@@ -352,6 +356,7 @@ function App() {
             <BarraLateral
               seccionActiva={seccionVisible === 'perfil' ? undefined : seccionVisible}
               esDonante={esDonante}
+              puedeGestionarDonantes={Boolean(puedeGestionarDonantes)}
               subseccionComunidades={subseccionComunidades}
               alCambiarSeccion={setSeccionAdministrativa}
               alCambiarSubseccionComunidades={setSubseccionComunidades}

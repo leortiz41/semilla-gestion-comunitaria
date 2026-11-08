@@ -1,4 +1,3 @@
-import PanelAccesoDonantes from './PanelAccesoDonantes';
 import { useEffect, useState } from 'react';
 import { obtenerRoles, type RolCatalogo } from '../../lib/api';
 import '../../estilos/modulos/paginaModuloBase.css';
@@ -12,7 +11,7 @@ const perfiles = [
   { codigo: 'DONANTE', titulo: 'Donante', proposito: 'Consulta proyectos autorizados, su avance de ejecución y las evidencias relacionadas.' },
 ];
 
-function PaginaUsuarios({ tokenAcceso, puedeVer, puedeGestionarDonantes }: { tokenAcceso: string; puedeVer: boolean; puedeGestionarDonantes: boolean }) {
+function PaginaUsuarios({ tokenAcceso, puedeVer }: { tokenAcceso: string; puedeVer: boolean }) {
   const [roles, setRoles] = useState<RolCatalogo[] | null>(null);
   const [error, setError] = useState('');
   const [intento, setIntento] = useState(0);
@@ -38,7 +37,6 @@ function PaginaUsuarios({ tokenAcceso, puedeVer, puedeGestionarDonantes }: { tok
           La disponibilidad de cada acción depende del módulo y de las reglas de tu organización.
         </p>
       </div>
-      {puedeGestionarDonantes && <PanelAccesoDonantes token={tokenAcceso} />}
       {!puedeVer ? <p>Tu cuenta necesita el permiso usuarios.ver para consultar el catálogo.</p> :
         error ? (
           <div role="alert">

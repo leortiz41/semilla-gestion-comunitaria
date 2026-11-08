@@ -242,4 +242,92 @@ administracionDonantes.put('/proyectos/:proyectoId/evidencias/:evidenciaId', asy
   }
 });
 
+administracionDonantes.get('/fichas', async (req, res) => {
+  try {
+    if (!databasePool) throw new Error('Base de datos no disponible');
+    const { rows } = await databasePool.query(
+      `SELECT d.id, d.nombre, d.correo, d.telefono,
+              COALESCE((SELECT jsonb_agg(jsonb_build_object(
+                'id', b.id, 'lider', b.lider, 'miembros', b.miembros,
+                'llegada', b.fecha_llegada::text, 'salida', b.fecha_salida::text,
+                'actividades', b.actividades, 'contrataciones', b.contrataciones,
+                'observaciones', b.observaciones,
+                'proyecto', (SELECT p.nombre FROM proyectos p
+                  JOIN comunidades c ON c.id = p.comunidad_id
+                  WHERE p.id = b.proyecto_id AND c.organizacion_id = d.organizacion_id)
+              ) ORDER BY b.fecha_llegada DESC NULLS LAST, b.id)
+              FROM brigadas_donantes b WHERE b.donante_id = d.id), '[]'::jsonb) AS brigadas
+         FROM donantes d WHERE d.organizacion_id = $1 ORDER BY d.nombre, d.id`,
+      [req.auth!.organizacionId],
+    );
+    res.json({ fichas: rows });
+  } catch {
+    res.status(500).json({ message: 'No fue posible consultar las fichas.' });
+  }
+});
+
+administracionDonantes.post('/fichas', async (req, res) => {
+  const nombre = typeof req.body?.nombre === 'string' ? req.body.nombre.trim() : '';
+  const correo = typeof req.body?.correo === 'string' ? req.body.correo.trim().toLowerCase() : '';
+  const telefono = typeof req.body?.telefono === 'string' ? req.body.telefono.trim() : '';
+  if (!nombre || nombre.length > 180 || correo.length > 150 ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo) || telefono.length > 50) {
+    res.status(400).json({ message: 'Revisá el nombre, el correo y el teléfono.' });
+    return;
+  }
+  try {
+    if (!databasePool) throw new Error('Base de datos no disponible');
+    await databasePool.query(
+      'INSERT INTO donantes (organizacion_id, nombre, correo, telefono) VALUES ($1, $2, $3, $4)',
+      [req.auth!.organizacionId, nombre, correo, telefono || null],
+    );
+    res.sendStatus(204);
+  } catch {
+    res.status(500).json({ message: 'No fue posible guardar el donante.' });
+  }
+});
+
+function esFechaValida(valor: unknown): valor is string {
+  if (typeof valor !== 'string' || !/^[1-9]\d{3}-\d{2}-\d{2}$/.test(valor)) return false;
+  const fecha = new Date(valor);
+  return Number.isFinite(fecha.getTime()) && fecha.toISOString().slice(0, 10) === valor;
+}
+
+administracionDonantes.post('/fichas/:id/brigadas', async (req, res) => {
+  const { id } = req.params;
+  const { miembros, llegada, salida, proyectoId } = req.body ?? {};
+  const lider = typeof req.body?.lider === 'string' ? req.body.lider.trim() : '';
+  const textos = ['actividades', 'contrataciones', 'observaciones'].map((campo) => req.body?.[campo] ?? '');
+  if (!esUuid(id) || !lider || lider.length > 180 || !Number.isInteger(miembros) ||
+      miembros < 1 || miembros > 100000 || (llegada && !esFechaValida(llegada)) ||
+      (salida && (!esFechaValida(salida) || !llegada || salida < llegada)) ||
+      (proyectoId && !esUuid(proyectoId)) ||
+      textos.some((texto) => typeof texto !== 'string' || texto.length > 3000)) {
+    res.status(400).json({ message: 'Revisá el líder, la cantidad de miembros, las fechas y el proyecto.' });
+    return;
+  }
+  try {
+    if (!databasePool) throw new Error('Base de datos no disponible');
+    const resultado = await databasePool.query(
+      `INSERT INTO brigadas_donantes
+         (donante_id, proyecto_id, lider, miembros, fecha_llegada, fecha_salida, actividades, contrataciones, observaciones)
+       SELECT d.id, $3::uuid, $4, $5, $6, $7, $8, $9, $10
+         FROM donantes d WHERE d.id = $1 AND d.organizacion_id = $2
+           AND ($3::uuid IS NULL OR EXISTS (
+             SELECT 1 FROM proyectos p JOIN comunidades c ON c.id = p.comunidad_id
+             WHERE p.id = $3::uuid AND c.organizacion_id = d.organizacion_id
+           ))`,
+      [id, req.auth!.organizacionId, proyectoId || null, lider, miembros,
+        llegada || null, salida || null, ...textos.map((texto) => texto.trim() || null)],
+    );
+    if (!resultado.rowCount) {
+      res.status(404).json({ message: 'El donante o proyecto no está disponible en tu organización.' });
+      return;
+    }
+    res.sendStatus(204);
+  } catch {
+    res.status(500).json({ message: 'No fue posible registrar la brigada.' });
+  }
+});
+
 donantesRouter.use('/administracion', administracionDonantes);
