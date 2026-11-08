@@ -144,7 +144,7 @@ administracionDonantes.get('/', async (req, res) => {
           ORDER BY u.email, u.id`, parametros,
       ),
       databasePool.query(
-        `SELECT p.id, p.nombre,
+        `SELECT p.id, p.nombre, p.comunidad_id AS "comunidadId",
                 ARRAY(SELECT pd.usuario_id FROM proyectos_donantes pd
                       JOIN usuarios u ON u.id = pd.usuario_id AND u.organizacion_id = $1
                       WHERE pd.proyecto_id = p.id) AS "donanteIds",
@@ -250,7 +250,9 @@ administracionDonantes.get('/fichas', async (req, res) => {
               COALESCE((SELECT jsonb_agg(jsonb_build_object(
                 'id', b.id, 'lider', b.lider, 'miembros', b.miembros,
                 'llegada', b.fecha_llegada::text, 'salida', b.fecha_salida::text,
-                'actividades', b.actividades, 'contrataciones', b.contrataciones,
+                'actividades', b.lista_actividades, 'contrataciones', b.lista_contrataciones,
+                'comunidad', (SELECT c.nombre FROM comunidades c
+                  WHERE c.id = b.comunidad_id AND c.organizacion_id = d.organizacion_id),
                 'observaciones', b.observaciones,
                 'proyecto', (SELECT p.nombre FROM proyectos p
                   JOIN comunidades c ON c.id = p.comunidad_id
@@ -260,7 +262,11 @@ administracionDonantes.get('/fichas', async (req, res) => {
          FROM donantes d WHERE d.organizacion_id = $1 ORDER BY d.nombre, d.id`,
       [req.auth!.organizacionId],
     );
-    res.json({ fichas: rows });
+    const comunidades = await databasePool.query(
+      'SELECT id, nombre, municipio FROM comunidades WHERE organizacion_id = $1 AND activo ORDER BY nombre, id',
+      [req.auth!.organizacionId],
+    );
+    res.json({ fichas: rows, comunidades: comunidades.rows });
   } catch {
     res.status(500).json({ message: 'No fue posible consultar las fichas.' });
   }
@@ -293,32 +299,42 @@ function esFechaValida(valor: unknown): valor is string {
   return Number.isFinite(fecha.getTime()) && fecha.toISOString().slice(0, 10) === valor;
 }
 
+function esListaPlan(valor: unknown): valor is string[] {
+  return Array.isArray(valor) && valor.length <= 50 &&
+    valor.every((texto) => typeof texto === 'string' && texto.trim().length > 0 && texto.length <= 3000);
+}
+
 administracionDonantes.post('/fichas/:id/brigadas', async (req, res) => {
   const { id } = req.params;
-  const { miembros, llegada, salida, proyectoId } = req.body ?? {};
+  const { miembros, llegada, salida, proyectoId, comunidadId, actividades, contrataciones } = req.body ?? {};
   const lider = typeof req.body?.lider === 'string' ? req.body.lider.trim() : '';
-  const textos = ['actividades', 'contrataciones', 'observaciones'].map((campo) => req.body?.[campo] ?? '');
-  if (!esUuid(id) || !lider || lider.length > 180 || !Number.isInteger(miembros) ||
-      miembros < 1 || miembros > 100000 || (llegada && !esFechaValida(llegada)) ||
+  const observaciones = req.body?.observaciones ?? '';
+  if (!esUuid(id) || !esUuid(comunidadId) || !lider || lider.length > 180 ||
+      !Number.isInteger(miembros) || miembros < 1 || miembros > 100000 ||
+      (llegada && !esFechaValida(llegada)) ||
       (salida && (!esFechaValida(salida) || !llegada || salida < llegada)) ||
       (proyectoId && !esUuid(proyectoId)) ||
-      textos.some((texto) => typeof texto !== 'string' || texto.length > 3000)) {
-    res.status(400).json({ message: 'Revisá el líder, la cantidad de miembros, las fechas y el proyecto.' });
+      !esListaPlan(actividades) || !esListaPlan(contrataciones) ||
+      typeof observaciones !== 'string' || observaciones.length > 3000) {
+    res.status(400).json({ message: 'Revisá la comunidad, los datos del viaje y las listas del plan.' });
     return;
   }
   try {
     if (!databasePool) throw new Error('Base de datos no disponible');
     const resultado = await databasePool.query(
       `INSERT INTO brigadas_donantes
-         (donante_id, proyecto_id, lider, miembros, fecha_llegada, fecha_salida, actividades, contrataciones, observaciones)
-       SELECT d.id, $3::uuid, $4, $5, $6, $7, $8, $9, $10
-         FROM donantes d WHERE d.id = $1 AND d.organizacion_id = $2
-           AND ($3::uuid IS NULL OR EXISTS (
-             SELECT 1 FROM proyectos p JOIN comunidades c ON c.id = p.comunidad_id
-             WHERE p.id = $3::uuid AND c.organizacion_id = d.organizacion_id
-           ))`,
+         (donante_id, proyecto_id, lider, miembros, fecha_llegada, fecha_salida,
+          lista_actividades, lista_contrataciones, observaciones, comunidad_id)
+       SELECT d.id, $3::uuid, $4, $5, $6, $7, $8, $9, $10, c.id
+         FROM donantes d
+         JOIN comunidades c ON c.id = $11 AND c.organizacion_id = d.organizacion_id AND c.activo
+        WHERE d.id = $1 AND d.organizacion_id = $2
+          AND ($3::uuid IS NULL OR EXISTS (
+            SELECT 1 FROM proyectos p WHERE p.id = $3::uuid AND p.comunidad_id = c.id
+          ))`,
       [id, req.auth!.organizacionId, proyectoId || null, lider, miembros,
-        llegada || null, salida || null, ...textos.map((texto) => texto.trim() || null)],
+        llegada || null, salida || null, actividades.map((texto) => texto.trim()),
+        contrataciones.map((texto) => texto.trim()), observaciones.trim() || null, comunidadId],
     );
     if (!resultado.rowCount) {
       res.status(404).json({ message: 'El donante o proyecto no está disponible en tu organización.' });

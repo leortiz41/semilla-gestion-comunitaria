@@ -422,6 +422,7 @@ export interface AdministracionDonantes {
   proyectos: {
     id: string;
     nombre: string;
+    comunidadId: string;
     donanteIds: string[];
     evidencias: { id: string; titulo: string; compartida: boolean }[];
   }[];
@@ -472,19 +473,20 @@ export interface FichaDonante {
     llegada: string | null;
     salida: string | null;
     proyecto: string | null;
-    actividades: string | null;
-    contrataciones: string | null;
+    comunidad: string | null;
+    actividades: string[];
+    contrataciones: string[];
     observaciones: string | null;
   }[];
 }
 
 export function obtenerFichasDonantes(token: string) {
-  return request<{ fichas: FichaDonante[] }>('/donantes/administracion/fichas', {
+  return request<{ fichas: FichaDonante[]; comunidades: { id: string; nombre: string; municipio: string }[] }>('/donantes/administracion/fichas', {
     headers: { Authorization: `Bearer ${token}` },
   });
 }
 
-export function guardarFichaDonante(token: string, datos: Record<string, string | number>, fichaId?: string) {
+export function guardarFichaDonante(token: string, datos: Record<string, string | number | string[]>, fichaId?: string) {
   const ruta = fichaId ? `/fichas/${fichaId}/brigadas` : '/fichas';
   return request<void>(`/donantes/administracion${ruta}`, {
     method: 'POST',

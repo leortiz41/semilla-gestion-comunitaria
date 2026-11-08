@@ -1,3 +1,4 @@
+import PlanBrigada, { type ComunidadBrigada, type ProyectoBrigada } from './PlanBrigada';
 import { useEffect, useState, type FormEvent } from 'react';
 import {
   guardarFichaDonante, obtenerAdministracionDonantes, obtenerFichasDonantes, type FichaDonante,
@@ -9,7 +10,9 @@ import './donantes.css';
 
 export default function PaginaDonantes({ token }: { token: string }) {
   const [fichas, setFichas] = useState<FichaDonante[]>([]);
-  const [proyectos, setProyectos] = useState<{ id: string; nombre: string }[]>([]);
+  const [proyectos, setProyectos] = useState<ProyectoBrigada[]>([]);
+  const [comunidades, setComunidades] = useState<ComunidadBrigada[]>([]);
+  const [versionesPlan, setVersionesPlan] = useState<Record<string, number>>({});
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
   const [ocupado, setOcupado] = useState(false);
@@ -21,6 +24,7 @@ export default function PaginaDonantes({ token }: { token: string }) {
       .then(([registro, catalogo]) => {
         if (!vigente) return;
         setFichas(registro.fichas);
+        setComunidades(registro.comunidades);
         setProyectos(catalogo.proyectos);
       })
       .catch((fallo: Error) => { if (vigente) setError(fallo.message); })
@@ -32,9 +36,15 @@ export default function PaginaDonantes({ token }: { token: string }) {
     evento.preventDefault();
     if (ocupado) return;
     const formulario = evento.currentTarget;
-    const datos: Record<string, string | number> = {};
-    for (const [clave, valor] of new FormData(formulario)) {
+    const datos: Record<string, string | number | string[]> = {};
+    const campos = new FormData(formulario);
+    for (const [clave, valor] of campos) {
       datos[clave] = clave === 'miembros' ? Number(valor) : String(valor);
+    }
+    if (fichaId) {
+      for (const campo of ['actividades', 'contrataciones']) {
+        datos[campo] = campos.getAll(campo).map((valor) => String(valor).trim());
+      }
     }
     setOcupado(true);
     setError('');
@@ -42,6 +52,9 @@ export default function PaginaDonantes({ token }: { token: string }) {
     try {
       await guardarFichaDonante(token, datos, fichaId);
       formulario.reset();
+      if (fichaId) {
+        setVersionesPlan((actual) => ({ ...actual, [fichaId]: (actual[fichaId] ?? 0) + 1 }));
+      }
       setMensaje(fichaId ? 'Brigada registrada.' : 'Donante registrado.');
       setFichas((await obtenerFichasDonantes(token)).fichas);
     } catch (fallo) {
@@ -81,9 +94,14 @@ export default function PaginaDonantes({ token }: { token: string }) {
           {ficha.brigadas.map((brigada) => (
             <details key={brigada.id}>
               <summary>{brigada.lider} · {brigada.miembros} integrantes · {brigada.llegada ?? 'Fecha por definir'}</summary>
+              <p>Comunidad: {brigada.comunidad ?? 'Por asignar'}</p>
               <p>Salida: {brigada.salida ?? 'Por definir'} · Proyecto: {brigada.proyecto ?? 'Por asignar'}</p>
-              {brigada.actividades && <p>Actividades: {brigada.actividades}</p>}
-              {brigada.contrataciones && <p>Contrataciones: {brigada.contrataciones}</p>}
+              {brigada.actividades.length > 0 && (
+                <><h4>Actividades</h4><ul>{brigada.actividades.map((texto, indice) => <li key={indice}>{texto}</li>)}</ul></>
+              )}
+              {brigada.contrataciones.length > 0 && (
+                <><h4>Contrataciones</h4><ul>{brigada.contrataciones.map((texto, indice) => <li key={indice}>{texto}</li>)}</ul></>
+              )}
               {brigada.observaciones && <p>Observaciones: {brigada.observaciones}</p>}
             </details>
           ))}
@@ -97,17 +115,11 @@ export default function PaginaDonantes({ token }: { token: string }) {
                   <label>Cantidad de integrantes<input name="miembros" type="number" required min={1} max={100000} /></label>
                   <label>Llegada tentativa<input name="llegada" type="date" /></label>
                   <label>Salida tentativa<input name="salida" type="date" /></label>
-                  <label>Proyecto relacionado
-                    <select name="proyectoId">
-                      <option value="">Por asignar</option>
-                      {proyectos.map((proyecto) => <option key={proyecto.id} value={proyecto.id}>{proyecto.nombre}</option>)}
-                    </select>
-                  </label>
-                  <label>Actividades<textarea name="actividades" maxLength={3000} /></label>
-                  <label>Contrataciones previstas<textarea name="contrataciones" maxLength={3000} placeholder="Transporte, alojamiento, alimentación u otros servicios" /></label>
                   <label>Observaciones<textarea name="observaciones" maxLength={3000} /></label>
                 </div>
-                <button type="submit">Guardar brigada</button>
+                <PlanBrigada key={versionesPlan[ficha.id] ?? 0} comunidades={comunidades} proyectos={proyectos} />
+                {!comunidades.length && <p>Registrá una comunidad activa antes de guardar la brigada.</p>}
+                <button type="submit" disabled={!comunidades.length}>Guardar brigada</button>
               </fieldset>
             </form>
           </details>

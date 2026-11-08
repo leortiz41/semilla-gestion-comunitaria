@@ -38,3 +38,24 @@
   font: inherit;
   cursor: pointer;
 }
+
+.donantes-fila {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .75rem;
+  align-items: end;
+  margin-bottom: .75rem;
+}
+
+.donantes-fila label {
+  display: grid;
+  gap: .4rem;
+  flex: 1 1 220px;
+}
+
+.donantes-fila textarea {
+  padding: .6rem;
+  border: 1px solid #c8d6c6;
+  border-radius: .5rem;
+  font: inherit;
+}
