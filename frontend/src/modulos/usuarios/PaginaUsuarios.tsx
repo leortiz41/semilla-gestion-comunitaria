@@ -1,3 +1,4 @@
+import PanelAccesoDonantes from './PanelAccesoDonantes';
 import { useEffect, useState } from 'react';
 import { obtenerRoles, type RolCatalogo } from '../../lib/api';
 import '../../estilos/modulos/paginaModuloBase.css';
@@ -11,7 +12,7 @@ const perfiles = [
   { codigo: 'DONANTE', titulo: 'Donante', proposito: 'Consulta proyectos autorizados, su avance de ejecución y las evidencias relacionadas.' },
 ];
 
-function PaginaUsuarios({ tokenAcceso, puedeVer }: { tokenAcceso: string; puedeVer: boolean }) {
+function PaginaUsuarios({ tokenAcceso, puedeVer, puedeGestionarAcceso }: { tokenAcceso: string; puedeVer: boolean; puedeGestionarAcceso: boolean }) {
   const [roles, setRoles] = useState<RolCatalogo[] | null>(null);
   const [error, setError] = useState('');
   const [intento, setIntento] = useState(0);
@@ -77,6 +78,7 @@ function PaginaUsuarios({ tokenAcceso, puedeVer }: { tokenAcceso: string; puedeV
             })}
           </div>
         )}
+      {puedeGestionarAcceso && <PanelAccesoDonantes token={tokenAcceso} />}
     </section>
   );
 }

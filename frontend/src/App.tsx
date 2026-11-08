@@ -216,6 +216,7 @@ function App() {
           <PaginaUsuarios
             tokenAcceso={accessToken}
             puedeVer={usuario.permisos.includes('usuarios.ver')}
+            puedeGestionarAcceso={Boolean(puedeGestionarDonantes)}
 
           />
         ) : null;

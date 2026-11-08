@@ -3,7 +3,6 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import {
   actualizarEstadoDonante, guardarFichaDonante, obtenerAdministracionDonantes, obtenerFichasDonantes, type FichaDonante,
 } from '../../lib/api';
-import PanelAccesoDonantes from '../usuarios/PanelAccesoDonantes';
 import '../../estilos/modulos/paginaModuloBase.css';
 import '../../estilos/modulos/roles.css';
 import './donantes.css';
@@ -247,7 +246,6 @@ export default function PaginaDonantes({ token }: { token: string }) {
           </>
         )}
       </dialog>
-      <PanelAccesoDonantes token={token} />
     </section>
   );
 }
