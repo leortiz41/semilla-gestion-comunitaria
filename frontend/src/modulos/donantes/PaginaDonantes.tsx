@@ -1,5 +1,5 @@
 import PlanBrigada, { type ComunidadBrigada, type ProyectoBrigada } from './PlanBrigada';
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import {
   guardarFichaDonante, obtenerAdministracionDonantes, obtenerFichasDonantes, type FichaDonante,
 } from '../../lib/api';
@@ -8,12 +8,25 @@ import '../../estilos/modulos/paginaModuloBase.css';
 import '../../estilos/modulos/roles.css';
 import './donantes.css';
 
+const tarjetasPorPagina = 6;
+type Brigada = FichaDonante['brigadas'][number];
+type VentanaBrigada = { tipo: 'alta'; fichaId: string } |
+  { tipo: 'detalle'; brigada: Brigada; donante: string };
+
 export default function PaginaDonantes({ token }: { token: string }) {
   const [fichas, setFichas] = useState<FichaDonante[]>([]);
   const [proyectos, setProyectos] = useState<ProyectoBrigada[]>([]);
   const [zonas, setZonas] = useState<{ id: string; nombre: string }[]>([]);
   const [comunidades, setComunidades] = useState<ComunidadBrigada[]>([]);
-  const [versionesPlan, setVersionesPlan] = useState<Record<string, number>>({});
+  const [paginas, setPaginas] = useState<Record<string, number>>({});
+  const [ventana, setVentana] = useState<VentanaBrigada | null>(null);
+  const dialogo = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const elemento = dialogo.current;
+    if (ventana && elemento && !elemento.open) elemento.showModal();
+    if (!ventana && elemento?.open) elemento.close();
+  }, [ventana]);
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
   const [ocupado, setOcupado] = useState(false);
@@ -33,6 +46,11 @@ export default function PaginaDonantes({ token }: { token: string }) {
       .finally(() => { if (vigente) setCargando(false); });
     return () => { vigente = false; };
   }, [token]);
+
+  function abrirAlta(fichaId: string) {
+    setError('');
+    setVentana({ tipo: 'alta', fichaId });
+  }
 
   async function guardar(evento: FormEvent<HTMLFormElement>, fichaId?: string) {
     evento.preventDefault();
@@ -55,7 +73,8 @@ export default function PaginaDonantes({ token }: { token: string }) {
       await guardarFichaDonante(token, datos, fichaId);
       formulario.reset();
       if (fichaId) {
-        setVersionesPlan((actual) => ({ ...actual, [fichaId]: (actual[fichaId] ?? 0) + 1 }));
+        setPaginas((actual) => ({ ...actual, [fichaId]: 0 }));
+        setVentana(null);
       }
       setMensaje(fichaId ? 'Brigada registrada.' : 'Donante registrado.');
       setFichas((await obtenerFichasDonantes(token)).fichas);
@@ -73,7 +92,7 @@ export default function PaginaDonantes({ token }: { token: string }) {
         <h1 className="pagina-modulo__titulo">Donantes y brigadas</h1>
         <p className="pagina-modulo__descripcion">Registrá organizaciones e iglesias y planificá sus viajes.</p>
       </header>
-      {error && <p role="alert">{error}</p>}
+      {error && !ventana && <p role="alert">{error}</p>}
       {mensaje && <p role="status">{mensaje}</p>}
       {cargando && <p role="status">Cargando donantes…</p>}
       <form className="roles-panel__tarjeta" onSubmit={guardar}>
@@ -87,47 +106,110 @@ export default function PaginaDonantes({ token }: { token: string }) {
           <button type="submit">Registrar donante</button>
         </fieldset>
       </form>
-      {fichas.map((ficha) => (
-        <article className="roles-panel__tarjeta" key={ficha.id}>
-          <h2>{ficha.nombre}</h2>
-          <p>{ficha.correo}{ficha.telefono && ` · ${ficha.telefono}`}</p>
-          <h3>Brigadas registradas</h3>
-          {!ficha.brigadas.length && <p>Todavía no hay brigadas registradas.</p>}
-          {ficha.brigadas.map((brigada) => (
-            <details key={brigada.id}>
-              <summary>{brigada.lider} · {brigada.miembros} integrantes · {brigada.llegada ?? 'Fecha por definir'}</summary>
-              <p>Zona: {brigada.zona ?? 'Por asignar'}</p>
-              <p>Comunidades: {brigada.comunidades.join(', ') || 'Por definir'}</p>
-              <p>Salida: {brigada.salida ?? 'Por definir'} · Proyecto: {brigada.proyecto ?? 'Por asignar'}</p>
-              {brigada.actividades.length > 0 && (
-                <><h4>Actividades</h4><ul>{brigada.actividades.map((texto, indice) => <li key={indice}>{texto}</li>)}</ul></>
-              )}
-              {brigada.contrataciones.length > 0 && (
-                <><h4>Contrataciones</h4><ul>{brigada.contrataciones.map((texto, indice) => <li key={indice}>{texto}</li>)}</ul></>
-              )}
-              {brigada.observaciones && <p>Observaciones: {brigada.observaciones}</p>}
-            </details>
-          ))}
-          <details>
-            <summary>Registrar brigada</summary>
-            <form onSubmit={(evento) => void guardar(evento, ficha.id)}>
-              <fieldset disabled={ocupado}>
-                <legend>Plan del viaje</legend>
-                <div className="donantes-campos">
-                  <label>Líder del grupo<input name="lider" required maxLength={180} /></label>
-                  <label>Cantidad de integrantes<input name="miembros" type="number" required min={1} max={100000} /></label>
-                  <label>Llegada tentativa<input name="llegada" type="date" /></label>
-                  <label>Salida tentativa<input name="salida" type="date" /></label>
-                  <label>Observaciones<textarea name="observaciones" maxLength={3000} /></label>
-                </div>
-                <PlanBrigada key={versionesPlan[ficha.id] ?? 0} zonas={zonas} comunidades={comunidades} proyectos={proyectos} />
-                {!zonas.length && <p>Registrá una zona activa antes de guardar la brigada.</p>}
-                <button type="submit" disabled={!zonas.length}>Guardar brigada</button>
-              </fieldset>
-            </form>
-          </details>
-        </article>
-      ))}
+      {fichas.map((ficha) => {
+        const pagina = paginas[ficha.id] ?? 0;
+        const total = Math.ceil(ficha.brigadas.length / tarjetasPorPagina);
+        const inicio = pagina * tarjetasPorPagina;
+        const cambiarPagina = (nueva: number) => setPaginas((actual) => ({ ...actual, [ficha.id]: nueva }));
+
+        return (
+          <article className="roles-panel__tarjeta" key={ficha.id}>
+            <header className="brigadas-encabezado">
+              <div>
+                <h2>{ficha.nombre}</h2>
+                <p>{ficha.correo}{ficha.telefono && ` · ${ficha.telefono}`}</p>
+              </div>
+              <button type="button" className="brigadas-accion" onClick={() => abrirAlta(ficha.id)}>
+                + Agregar brigada
+              </button>
+            </header>
+            <h3>Brigadas registradas · {ficha.brigadas.length}</h3>
+            {!total && <p>Todavía no hay brigadas registradas.</p>}
+            <div className="brigadas-tarjetas">
+              {ficha.brigadas.slice(inicio, inicio + tarjetasPorPagina).map((brigada) => (
+                <article className="brigadas-tarjeta" key={brigada.id}>
+                  <h4>{brigada.lider}</h4>
+                  <p>{brigada.miembros} integrantes · {brigada.llegada ?? 'Fecha por definir'}</p>
+                  <p>{brigada.zona ?? 'Zona por asignar'} · {brigada.comunidades.length} comunidades</p>
+                  <button type="button" className="brigadas-accion" aria-label={`Ver brigada de ${brigada.lider}`}
+                    onClick={() => setVentana({ tipo: 'detalle', brigada, donante: ficha.nombre })}>
+                    Ver detalles
+                  </button>
+                </article>
+              ))}
+            </div>
+            {total > 1 && (
+              <nav className="brigadas-paginacion" aria-label={`Páginas de brigadas de ${ficha.nombre}`}>
+                <button type="button" disabled={pagina === 0} onClick={() => cambiarPagina(pagina - 1)}>Anterior</button>
+                <span role="status">Página {pagina + 1} de {total}</span>
+                <button type="button" disabled={pagina + 1 >= total} onClick={() => cambiarPagina(pagina + 1)}>Siguiente</button>
+              </nav>
+            )}
+          </article>
+        );
+      })}
+      {fichas.length > 0 && (
+        <button type="button" className="brigadas-accion brigadas-flotante"
+          onClick={() => abrirAlta(fichas.length === 1 ? fichas[0].id : '')}>
+          + Agregar brigada
+        </button>
+      )}
+      <dialog ref={dialogo} className="brigadas-dialogo" aria-labelledby="titulo-ventana-brigada"
+        onClose={() => setVentana(null)} onCancel={(evento) => { if (ocupado) evento.preventDefault(); }}>
+        {ventana && (
+          <>
+            <header className="brigadas-encabezado">
+              <h2 id="titulo-ventana-brigada">
+                {ventana.tipo === 'alta' ? 'Agregar brigada' : `Brigada de ${ventana.brigada.lider}`}
+              </h2>
+              <button type="button" disabled={ocupado} onClick={() => setVentana(null)}>Cerrar</button>
+            </header>
+            {ventana.tipo === 'alta' ? (
+              <>
+                {error && <p role="alert">{error}</p>}
+                <label className="brigadas-selector">
+                  Donante
+                  <select value={ventana.fichaId} disabled={ocupado}
+                    onChange={(evento) => setVentana({ tipo: 'alta', fichaId: evento.target.value })}>
+                    <option value="">Seleccioná un donante</option>
+                    {fichas.map((ficha) => <option key={ficha.id} value={ficha.id}>{ficha.nombre}</option>)}
+                  </select>
+                </label>
+                <form onSubmit={(evento) => void guardar(evento, ventana.fichaId)}>
+                  <fieldset disabled={ocupado || !ventana.fichaId}>
+                    <legend>Plan del viaje</legend>
+                    <div className="donantes-campos">
+                      <label>Líder del grupo<input name="lider" required maxLength={180} /></label>
+                      <label>Cantidad de integrantes<input name="miembros" type="number" required min={1} max={100000} /></label>
+                      <label>Llegada tentativa<input name="llegada" type="date" /></label>
+                      <label>Salida tentativa<input name="salida" type="date" /></label>
+                      <label>Observaciones<textarea name="observaciones" maxLength={3000} /></label>
+                    </div>
+                    <PlanBrigada zonas={zonas} comunidades={comunidades} proyectos={proyectos} />
+                    {!zonas.length && <p>Registrá una zona activa antes de guardar la brigada.</p>}
+                    <button type="submit" disabled={!zonas.length || !ventana.fichaId}>Guardar brigada</button>
+                  </fieldset>
+                </form>
+              </>
+            ) : (
+              <>
+                <p>{ventana.donante} · {ventana.brigada.miembros} integrantes</p>
+                <p>Llegada: {ventana.brigada.llegada ?? 'Por definir'}</p>
+                <p>Zona: {ventana.brigada.zona ?? 'Por asignar'}</p>
+                <p>Comunidades: {ventana.brigada.comunidades.join(', ') || 'Por definir'}</p>
+                <p>Salida: {ventana.brigada.salida ?? 'Por definir'} · Proyecto: {ventana.brigada.proyecto ?? 'Por asignar'}</p>
+                {ventana.brigada.actividades.length > 0 && (
+                  <><h4>Actividades</h4><ul>{ventana.brigada.actividades.map((texto, indice) => <li key={indice}>{texto}</li>)}</ul></>
+                )}
+                {ventana.brigada.contrataciones.length > 0 && (
+                  <><h4>Contrataciones</h4><ul>{ventana.brigada.contrataciones.map((texto, indice) => <li key={indice}>{texto}</li>)}</ul></>
+                )}
+                {ventana.brigada.observaciones && <p>Observaciones: {ventana.brigada.observaciones}</p>}
+              </>
+            )}
+          </>
+        )}
+      </dialog>
       <PanelAccesoDonantes token={token} />
     </section>
   );

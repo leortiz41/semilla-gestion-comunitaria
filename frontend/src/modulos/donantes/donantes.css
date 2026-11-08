@@ -59,3 +59,87 @@
   border-radius: .5rem;
   font: inherit;
 }
+
+.brigadas-encabezado,
+.brigadas-paginacion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  flex-wrap: wrap;
+}
+
+.brigadas-paginacion {
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+.brigadas-tarjetas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: .85rem;
+}
+
+.brigadas-tarjeta {
+  padding: 1rem;
+  border: 1px solid #dbe7d8;
+  border-radius: .8rem;
+  background: #f4f8f2;
+  overflow-wrap: anywhere;
+}
+
+.brigadas-tarjeta h4 {
+  margin: 0;
+  color: #315737;
+}
+
+.brigadas-accion {
+  border: 1px solid #b7cdb5;
+  background: #e6f0e3;
+  color: #25462b;
+  border-radius: .65rem;
+  padding: .55rem .85rem;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.brigadas-flotante {
+  position: fixed;
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  z-index: 10;
+  background: #315737;
+  color: #fff;
+  box-shadow: 0 .25rem 1rem #18331b38;
+}
+
+.donantes-modulo {
+  padding-bottom: 4rem;
+}
+
+.brigadas-dialogo {
+  box-sizing: border-box;
+  width: min(720px, calc(100% - 2rem));
+  max-height: 85dvh;
+  overflow: auto;
+  padding: 1.25rem;
+  border: 1px solid #c8d6c6;
+  border-radius: 1rem;
+  color: #203526;
+  background: white;
+}
+
+.brigadas-dialogo::backdrop {
+  background: #142b20a6;
+}
+
+.brigadas-selector {
+  display: grid;
+  gap: .4rem;
+}
+
+.brigadas-selector select {
+  padding: .6rem;
+  font: inherit;
+}
