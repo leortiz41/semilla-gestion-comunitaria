@@ -152,6 +152,7 @@ test('HU-12: conserva avances legados y audita estados, permisos, resultados e a
       [proyecto, actividad, usuario],
     )).rows[0].id;
     await aplicarMigracion(db, '020_planificacion_ejecucion_resultados');
+    await aplicarMigracion(db, '021_autorrevision_avances');
 
     const legadoMigrado = (await db.query<{ estado_revision: string }>(
       'SELECT estado_revision FROM avances_proyecto WHERE id = $1',
@@ -211,12 +212,12 @@ test('HU-12: conserva avances legados y audita estados, permisos, resultados e a
       [revisor, 'coordina@semilla.test'],
       [usuarioOtraOrg, 'otra@semilla.test'],
     ]);
-    const crearToken = (usuarioId: string, organizacionId: string, permisos: string[]) =>
+    const crearToken = (usuarioId: string, organizacionId: string, permisos: string[], roles: string[] = []) =>
       createAccessToken({
         usuarioId,
         email: correos.get(usuarioId) ?? 'otro@semilla.test',
         organizacionId,
-        roles: [],
+        roles,
         permisos,
         debeCambiarContrasena: false,
       });
@@ -226,6 +227,8 @@ test('HU-12: conserva avances legados y audita estados, permisos, resultados e a
     const tokenSoloConsulta = crearToken(usuario, org, ['proyectos.ver']);
     const tokenRevisor = crearToken(revisor, org, ['proyectos.ver', 'actividades.avance.revisar']);
     const tokenCorrector = crearToken(usuario, org, ['proyectos.ver', 'actividades.avance.corregir']);
+    const tokenCoordinador = crearToken(revisor, org, ['proyectos.ver', 'actividades.avance.gestionar', 'actividades.avance.revisar'], ['COORDINADOR']);
+    const tokenAdministrador = crearToken(revisor, org, ['proyectos.ver', 'actividades.avance.gestionar', 'actividades.avance.revisar'], ['ADMINISTRADOR']);
     const headers = (token: string, conJson = false) => ({
       Authorization: `Bearer ${token}`,
       ...(conJson ? { 'Content-Type': 'application/json' } : {}),
@@ -389,6 +392,31 @@ test('HU-12: conserva avances legados y audita estados, permisos, resultados e a
     assert.equal(corregida.porcentajeProyecto, 80);
     assert.ok(resultadoCorregido?.avances.find((avance) => avance.id === segundoAvance.id)
       ?.historial.some((evento) => evento.accion === 'CORREGIR_AVANCE_VALIDADO'));
+
+    // Los permisos aislados no habilitan la revisión propia sin rol autorizado.
+    for (const [rol, token] of [['COORDINADOR', tokenCoordinador], ['ADMINISTRADOR', tokenAdministrador]] as const) {
+      const respuesta = await crearAvance(actividad, token, datosEstimacion(33));
+      assert.equal(respuesta.status, 201);
+      const propio = await respuesta.json() as { id: string };
+      assert.equal((await enviar(actividad, propio.id, token)).status, 204);
+      if (rol === 'COORDINADOR') {
+        assert.equal((await revisar(actividad, propio.id, 'validar', tokenRevisor)).status, 204);
+      } else {
+        assert.equal((await revisar(actividad, propio.id, 'devolver', token, 'Corregir visita.')).status, 204);
+        assert.equal((await enviar(actividad, propio.id, token)).status, 204);
+        assert.equal((await revisar(actividad, propio.id, 'validar', token)).status, 204);
+      }
+      const auditoria = await db.query<{ accion: string; usuario_id: string; autorrevision: boolean }>(
+        `SELECT accion, usuario_id, (valores_nuevos->>'autorrevision')::boolean AS autorrevision
+         FROM bitacora_auditoria WHERE entidad_id = $1 AND accion = 'AUTOVALIDAR_AVANCE'`,
+        [propio.id],
+      );
+      if (rol === 'ADMINISTRADOR') {
+        assert.equal(auditoria.rows.length, 1);
+        assert.equal(auditoria.rows[0].usuario_id, revisor);
+        assert.equal(auditoria.rows[0].autorrevision, true);
+      }
+    }
 
     const countLegacy = await db.query<{ total: string }>(
       `SELECT count(*)::text AS total FROM bitacora_auditoria
