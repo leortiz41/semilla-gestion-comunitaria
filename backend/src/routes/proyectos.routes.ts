@@ -456,6 +456,8 @@ const guardarActividad: RequestHandler = async (req, res) => {
     const valores = [proyectoId, req.auth!.organizacionId, nombre, descripcion.trim() || null,
       estado, fechaInicio ?? null, fechaFin ?? null, actividadId ?? null,
       presupuestoEstimado, responsableAsignadoId, metaCantidad, unidadMedida || null, pesoResultado];
+    // La creación no tiene actividadId: no enviar un parámetro $8 sin tipo.
+    const valoresCreacion = [...valores.slice(0, 7), ...valores.slice(8)];
     const { rows } = actividadId
       ? await databasePool.query(
         `WITH proyecto AS MATERIALIZED (
@@ -495,13 +497,13 @@ const guardarActividad: RequestHandler = async (req, res) => {
            responsable_asignado_usuario_id, meta_cantidad, unidad_medida,
            presupuesto_estimado, peso_resultado
          )
-         SELECT p.id, $3, $4, $5, $6, $7, $10, $11, $12, $9, $13
+         SELECT p.id, $3, $4, $5, $6, $7, $9, $10, $11, $8, $12
          FROM proyecto p CROSS JOIN otros o
-         WHERE COALESCE($9::numeric, 0) + o.total <= p.presupuesto_asignado
-           AND ($10::uuid IS NULL OR EXISTS (
-             SELECT 1 FROM usuarios u WHERE u.id = $10 AND u.organizacion_id = p.organizacion_id AND u.activo
+         WHERE COALESCE($8::numeric, 0) + o.total <= p.presupuesto_asignado
+           AND ($9::uuid IS NULL OR EXISTS (
+             SELECT 1 FROM usuarios u WHERE u.id = $9 AND u.organizacion_id = p.organizacion_id AND u.activo
            ))
-         RETURNING id`, valores,
+         RETURNING id`, valoresCreacion,
       );
     if (!rows.length) {
       const disponible = await databasePool.query(
