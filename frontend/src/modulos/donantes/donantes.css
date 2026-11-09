@@ -529,3 +529,146 @@
     transform: none;
   }
 }
+
+.actividad-avances {
+  display: grid;
+  gap: .75rem;
+  margin-top: .35rem;
+  padding: .9rem;
+  border: 1px solid rgba(61, 112, 70, .12);
+  border-radius: .85rem;
+  background: rgba(255, 255, 255, .72);
+}
+
+.actividad-avances__encabezado {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+}
+
+.actividad-avances__encabezado h5 {
+  margin: 0;
+  color: #355f3d;
+  font-size: .82rem;
+  font-weight: 800;
+}
+
+.actividad-avances__encabezado > span {
+  display: grid;
+  min-width: 1.65rem;
+  min-height: 1.65rem;
+  place-items: center;
+  border-radius: 999px;
+  color: #315f3a;
+  background: #e7f1e2;
+  font-size: .72rem;
+  font-weight: 800;
+}
+
+.actividad-avances__vacio {
+  margin: 0;
+  color: #768178;
+  font-size: .82rem;
+}
+
+.actividad-avances__lista {
+  display: grid;
+  gap: .55rem;
+  max-height: 16rem;
+  overflow: auto;
+  margin: 0;
+  padding: 0 .2rem 0 0;
+  list-style: none;
+}
+
+.actividad-avances__lista li {
+  padding: .75rem .8rem;
+  border: 1px solid rgba(61, 112, 70, .1);
+  border-radius: .7rem;
+  background: linear-gradient(135deg, #fff, #f8fbf6);
+}
+
+.actividad-avances__detalle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+}
+
+.actividad-avances__detalle strong {
+  color: #356840;
+  font-size: .95rem;
+}
+
+.actividad-avances__detalle time,
+.actividad-avances__lista li > span {
+  color: #788378;
+  font-size: .73rem;
+}
+
+.actividad-avances__lista li p {
+  margin: .4rem 0;
+  color: #45564a;
+  font-size: .84rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.actividad-avance-form {
+  padding: .95rem;
+  border: 1px solid rgba(61, 112, 70, .16);
+  border-radius: .9rem;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(226, 239, 218, .48), transparent 40%),
+    #f8fbf6;
+}
+
+.actividad-avance-form fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.actividad-avance-form legend {
+  margin-bottom: .8rem;
+  color: #315f3a;
+  font-weight: 800;
+}
+
+.actividad-avance-form .donantes-campos label {
+  color: #526457;
+  font-size: .84rem;
+  font-weight: 650;
+}
+
+.actividad-avance-form__descripcion {
+  grid-column: 1 / -1;
+}
+
+.actividad-avance-form__responsable {
+  margin: .7rem 0;
+  color: #718073;
+  font-size: .78rem;
+}
+
+.actividad-avance-form__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .6rem;
+}
+
+.actividad-avance-form__acciones button[type="submit"] {
+  margin-top: 0;
+  padding: .62rem 1rem;
+  border-radius: .7rem;
+  background: linear-gradient(135deg, #477e50, #315f3a);
+  box-shadow: 0 7px 17px rgba(53, 92, 58, .16);
+  font-weight: 750;
+}
+
+.actividad-avance-form__acciones button[type="submit"]:hover:not(:disabled) {
+  background: linear-gradient(135deg, #548b5d, #356a40);
+  box-shadow: 0 10px 22px rgba(53, 92, 58, .22);
+}

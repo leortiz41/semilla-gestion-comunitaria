@@ -45,7 +45,7 @@ El recorrido principal del usuario se organiza en las siguientes actividades:
 | HU-09 | Familias | Como personal de campo quiero registrar familias vinculadas a una comunidad para mantener un expediente familiar ordenado. | Must | Pendiente |
 | HU-10 | Beneficiarios | Como coordinador quiero asociar personas y beneficiarios a una familia para evitar duplicidad y mejorar la trazabilidad. | Must | Pendiente |
 | HU-11 | Proyectos | Como coordinador quiero registrar programas y proyectos vinculados a comunidades para controlar las intervenciones realizadas. | Must | Página base |
-| HU-12 | Actividades | Como personal de campo quiero registrar actividades de un proyecto para documentar su ejecución. | Must | Pendiente |
+| HU-12 | Actividades | Como personal de campo quiero registrar actividades de un proyecto y documentar su ejecución. | Must | Planificación y avances por actividad implementados; evidencias pertenecen a HU-15 |
 | HU-13 | Recursos | Como finanzas quiero registrar donaciones y recursos recibidos para conocer su origen y disponibilidad. | Must | Pendiente |
 | HU-14 | Recursos | Como finanzas quiero relacionar compras, gastos o pagos con un proyecto para conocer cómo se utilizaron los recursos. | Must | Página base de pagos |
 | HU-15 | Evidencias | Como personal de campo quiero adjuntar evidencias de una actividad para demostrar el trabajo realizado. | Should | Página base |
@@ -83,6 +83,15 @@ El expediente debe permitir capturar, como mínimo:
 - Productividad local.
 
 La historia se considerará terminada cuando estos datos puedan validarse, enviarse al backend, persistirse en PostgreSQL y recuperarse nuevamente desde la aplicación.
+
+### HU-12 - Planificación y avance de ejecución por actividad
+
+- Personal con permiso de captura puede registrar en una actividad el porcentaje acumulado (de 0 a 100), la fecha y la descripción de lo ejecutado.
+- La sesión autenticada queda registrada como responsable; el cliente no puede suplantar ese dato.
+- El historial se consulta en **Proyectos → Ver actividades**, ordenado del avance más reciente al más antiguo.
+- Solo se consultan y registran avances si el proyecto pertenece a la organización de la sesión y la actividad pertenece a ese proyecto.
+- Los avances son registros históricos: este incremento no permite editarlos ni eliminarlos.
+- La aprobación o publicación de evidencias queda fuera de este alcance y se atiende en HU-15.
 
 ## Cortes de entrega
 

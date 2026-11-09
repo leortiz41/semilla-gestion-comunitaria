@@ -1,5 +1,10 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { guardarActividadProyecto, obtenerActividadesProyecto, type ActividadProyecto } from '../../lib/api';
+import {
+  guardarActividadProyecto,
+  obtenerActividadesProyecto,
+  registrarAvanceActividadProyecto,
+  type ActividadProyecto,
+} from '../../lib/api';
 
 const estados: Record<string, string> = {
   PLANIFICADA: 'Planificada',
@@ -8,10 +13,18 @@ const estados: Record<string, string> = {
   CANCELADA: 'Cancelada',
 };
 
-export default function ActividadesProyecto({ token, proyectoId, puedeGestionar }: {
+function fechaLocalHoy() {
+  const hoy = new Date();
+  const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+  const dia = String(hoy.getDate()).padStart(2, '0');
+  return `${hoy.getFullYear()}-${mes}-${dia}`;
+}
+
+export default function ActividadesProyecto({ token, proyectoId, puedeGestionar, puedeRegistrarAvance }: {
   token: string;
   proyectoId: string;
   puedeGestionar: boolean;
+  puedeRegistrarAvance: boolean;
 }) {
   const [actividades, setActividades] = useState<ActividadProyecto[] | null>(null);
   const [formulario, setFormulario] = useState<ActividadProyecto | 'nueva' | null>(null);
@@ -19,6 +32,8 @@ export default function ActividadesProyecto({ token, proyectoId, puedeGestionar 
   const [mensaje, setMensaje] = useState('');
   const [guardando, setGuardando] = useState(false);
   const [recarga, setRecarga] = useState(0);
+  const [actividadAvance, setActividadAvance] = useState<string | null>(null);
+  const [guardandoAvance, setGuardandoAvance] = useState(false);
   const actividad = formulario === 'nueva' ? null : formulario;
 
   useEffect(() => {
@@ -54,6 +69,30 @@ export default function ActividadesProyecto({ token, proyectoId, puedeGestionar 
       setError(fallo instanceof Error ? fallo.message : 'No fue posible guardar la actividad.');
     } finally {
       setGuardando(false);
+    }
+  }
+
+  async function guardarAvance(evento: FormEvent<HTMLFormElement>, item: ActividadProyecto) {
+    evento.preventDefault();
+    if (guardandoAvance || !puedeRegistrarAvance) return;
+    const campos = new FormData(evento.currentTarget);
+    setGuardandoAvance(true);
+    setError('');
+    setMensaje('');
+    try {
+      await registrarAvanceActividadProyecto(token, proyectoId, item.id, {
+        porcentajeAvance: Number(campos.get('porcentajeAvance')),
+        fecha: String(campos.get('fecha') ?? ''),
+        descripcion: String(campos.get('descripcion') ?? ''),
+      });
+      setMensaje('Avance registrado en el historial de la actividad.');
+      setActividadAvance(null);
+      setActividades(null);
+      setRecarga((actual) => actual + 1);
+    } catch (fallo) {
+      setError(fallo instanceof Error ? fallo.message : 'No fue posible registrar el avance.');
+    } finally {
+      setGuardandoAvance(false);
     }
   }
 
@@ -103,6 +142,66 @@ export default function ActividadesProyecto({ token, proyectoId, puedeGestionar 
           <span className="pagina-modulo__estado">{estados[item.estado] ?? item.estado}</span>
           <p>{item.fechaInicio ?? 'Inicio por definir'}{item.fechaFin && ` · Fin ${item.fechaFin}`}</p>
           {item.descripcion && <p>{item.descripcion}</p>}
+          <section className="actividad-avances" aria-label={`Historial de avances de ${item.nombre}`}>
+            <header className="actividad-avances__encabezado">
+              <h5>Avances de ejecución</h5>
+              <span>{item.avances?.length ?? 0}</span>
+            </header>
+            {!item.avances?.length && (
+              <p className="actividad-avances__vacio">Aún no se han registrado avances para esta actividad.</p>
+            )}
+            {Boolean(item.avances?.length) && (
+              <ol className="actividad-avances__lista">
+                {item.avances.map((avance) => (
+                  <li key={avance.id}>
+                    <div className="actividad-avances__detalle">
+                      <strong>{avance.porcentajeAvance.toLocaleString('es-HN', { maximumFractionDigits: 2 })}%</strong>
+                      <time dateTime={avance.fecha}>{avance.fecha}</time>
+                    </div>
+                    <p>{avance.descripcion}</p>
+                    <span>Responsable · {avance.responsable}</span>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </section>
+          {puedeRegistrarAvance && !formulario && actividadAvance !== item.id && (
+            <button type="button" className="brigadas-accion"
+              onClick={() => { setError(''); setMensaje(''); setActividadAvance(item.id); }}>
+              + Registrar avance
+            </button>
+          )}
+          {puedeRegistrarAvance && actividadAvance === item.id && (
+            <form className="actividad-avance-form" onSubmit={(evento) => void guardarAvance(evento, item)}>
+              <fieldset disabled={guardandoAvance}>
+                <legend>Registrar avance</legend>
+                <div className="donantes-campos">
+                  <label>Avance acumulado (%)
+                    <input name="porcentajeAvance" type="number" min="0" max="100" step="0.01"
+                      defaultValue="0" required />
+                  </label>
+                  <label>Fecha de ejecución
+                    <input name="fecha" type="date" defaultValue={fechaLocalHoy()} required />
+                  </label>
+                  <label className="actividad-avance-form__descripcion">Descripción de lo ejecutado
+                    <textarea name="descripcion" maxLength={3000} required />
+                  </label>
+                </div>
+                <p className="actividad-avance-form__responsable">
+                  El usuario de tu sesión quedará registrado como responsable de este avance.
+                </p>
+                <div className="actividad-avance-form__acciones">
+                  <button type="submit" disabled={guardandoAvance}>
+                    {guardandoAvance ? 'Guardando…' : 'Guardar avance'}
+                  </button>
+                  <button type="button" className="brigadas-accion" disabled={guardandoAvance}
+                    onClick={() => { setError(''); setActividadAvance(null); }}>
+                    Cancelar
+                  </button>
+                </div>
+              </fieldset>
+            </form>
+          )}
           {puedeGestionar && !formulario && (
             <button type="button" className="brigadas-accion"
               onClick={() => { setError(''); setMensaje(''); setFormulario(item); }}>Editar actividad</button>

@@ -37,6 +37,8 @@ erDiagram
 ```mermaid
 erDiagram
     proyectos ||--o{ avances_proyecto : registra
+    actividades_programadas ||--o{ avances_proyecto : seguimiento
+    usuarios ||--o{ avances_proyecto : responsable
     proyectos ||--o{ solicitudes_pago : genera
     solicitudes_pago ||--o{ pagos : recibe
     proyectos ||--o{ evidencias : documenta
@@ -84,7 +86,7 @@ Los campos, tipos y relaciones siguientes se extrajeron del `schema.prisma` vers
 | Campo | Tipo Prisma / PostgreSQL | Nulo | Restricciones y valores por defecto |
 |---|---|---|---|
 | `id` | `String` / `Uuid` | No | `@id @default(dbgenerated("gen_random_uuid()"))` |
-| `equipo_misionero_id` | `String` / `Uuid` | No | — |
+| `equipo_misionero_id` | `String` / `Uuid` | Sí | — |
 | `proyecto_id` | `String` / `Uuid` | Sí | — |
 | `nombre` | `String` / `VarChar(180)` | No | — |
 | `descripcion` | `String` / `text` | Sí | — |
@@ -98,9 +100,11 @@ Relaciones salientes:
 
 - `equipos_misioneros` → `equipos_misioneros`: `@relation(fields: [equipo_misionero_id], references: [id], onDelete: Cascade)`.
 - `proyectos` → `proyectos`: `@relation(fields: [proyecto_id], references: [id])`.
+- `avances_proyecto` → `avances_proyecto`: historial de ejecución de la actividad.
 
 Claves e índices declarados:
 
+- `@@unique([id, proyecto_id], map: "uq_actividades_id_proyecto")`
 - `@@index([equipo_misionero_id], map: "idx_actividades_equipo_id")`
 - `@@index([proyecto_id], map: "idx_actividades_proyecto_id")`
 
@@ -110,8 +114,10 @@ Claves e índices declarados:
 |---|---|---|---|
 | `id` | `String` / `Uuid` | No | `@id @default(dbgenerated("gen_random_uuid()"))` |
 | `proyecto_id` | `String` / `Uuid` | No | — |
+| `actividad_id` | `String` / `Uuid` | Sí | —; avances nuevos se asocian a una actividad del mismo proyecto |
+| `responsable_usuario_id` | `String` / `Uuid` | Sí | —; obligatorio cuando `actividad_id` no es nulo |
 | `personal_contratado_id` | `String` / `Uuid` | Sí | — |
-| `porcentaje_avance` | `Decimal` / `Decimal(5, 2)` | No | — |
+| `porcentaje_avance` | `Decimal` / `Decimal(5, 2)` | No | `CHECK` entre 0 y 100 |
 | `fecha_avance` | `DateTime` / `Date` | No | `@default(dbgenerated("CURRENT_DATE"))` |
 | `comentarios` | `String` / `text` | Sí | — |
 | `creado_en` | `DateTime` / `Timestamptz(6)` | No | `@default(now())` |
@@ -121,11 +127,17 @@ Relaciones salientes:
 
 - `personal_contratado` → `personal_contratado`: `@relation(fields: [personal_contratado_id], references: [id])`.
 - `proyectos` → `proyectos`: `@relation(fields: [proyecto_id], references: [id], onDelete: Cascade)`.
+- `actividades_programadas` → `actividades_programadas`: `@relation(fields: [actividad_id], references: [id], onDelete: Restrict)`. La migración 019 agrega además la FK compuesta `(actividad_id, proyecto_id)` para impedir asociar un avance a una actividad de otro proyecto.
+- `responsable` → `usuarios`: `@relation(fields: [responsable_usuario_id], references: [id], onDelete: Restrict)`.
+
+Para avances asociados a actividad, `comentarios` contiene la descripción de lo ejecutado y no puede quedar vacía. El rango de `porcentaje_avance` se conserva entre 0 y 100.
 
 Claves e índices declarados:
 
+- `@@index([actividad_id, proyecto_id, fecha_avance(sort: Desc), creado_en(sort: Desc)], map: "idx_avances_actividad_fecha")`
 - `@@index([personal_contratado_id], map: "idx_avances_personal_id")`
 - `@@index([proyecto_id], map: "idx_avances_proyecto_id")`
+- `@@index([responsable_usuario_id], map: "idx_avances_responsable_usuario_id")`
 
 ### 4.5. `bitacora_auditoria`
 

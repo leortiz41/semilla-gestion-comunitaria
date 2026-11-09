@@ -553,6 +553,15 @@ export interface ActividadProyecto {
   estado: string;
   fechaInicio: string | null;
   fechaFin: string | null;
+  avances: AvanceActividadProyecto[];
+}
+
+export interface AvanceActividadProyecto {
+  id: string;
+  porcentajeAvance: number;
+  fecha: string;
+  descripcion: string;
+  responsable: string;
 }
 
 export function obtenerActividadesProyecto(token: string, proyectoId: string) {
@@ -562,10 +571,19 @@ export function obtenerActividadesProyecto(token: string, proyectoId: string) {
 }
 
 export function guardarActividadProyecto(token: string, proyectoId: string,
-  datos: Omit<ActividadProyecto, 'id'>, actividadId?: string) {
+  datos: Omit<ActividadProyecto, 'id' | 'avances'>, actividadId?: string) {
   const ruta = `/proyectos/${proyectoId}/actividades${actividadId ? '/' + actividadId : ''}`;
   return request<{ id: string }>(ruta, {
     method: actividadId ? 'PUT' : 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(datos),
+  });
+}
+
+export function registrarAvanceActividadProyecto(token: string, proyectoId: string, actividadId: string,
+  datos: Omit<AvanceActividadProyecto, 'id' | 'responsable'>) {
+  return request<AvanceActividadProyecto>(`/proyectos/${proyectoId}/actividades/${actividadId}/avances`, {
+    method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify(datos),
   });

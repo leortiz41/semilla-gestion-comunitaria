@@ -207,6 +207,7 @@ function App() {
               token={accessToken}
               puedeVer={usuario.permisos.includes('proyectos.ver')}
               puedeGestionar={usuario.permisos.includes('proyectos.gestionar')}
+              puedeRegistrarAvance={usuario.permisos.includes('actividades.avance.gestionar')}
             />
           ) : null;
       case 'evidencias':

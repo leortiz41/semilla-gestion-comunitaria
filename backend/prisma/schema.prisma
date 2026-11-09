@@ -53,7 +53,9 @@ model actividades_programadas {
   actualizado_en      DateTime           @default(now()) @db.Timestamptz(6)
   equipos_misioneros  equipos_misioneros? @relation(fields: [equipo_misionero_id], references: [id], onDelete: Cascade)
   proyectos           proyectos?         @relation(fields: [proyecto_id], references: [id])
+  avances_proyecto    avances_proyecto[]
 
+  @@unique([id, proyecto_id], map: "uq_actividades_id_proyecto")
   @@index([equipo_misionero_id], map: "idx_actividades_equipo_id")
   @@index([proyecto_id], map: "idx_actividades_proyecto_id")
 }
@@ -62,19 +64,25 @@ model actividades_programadas {
 model avances_proyecto {
   id                     String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   proyecto_id            String               @db.Uuid
+  actividad_id           String?              @db.Uuid
+  responsable_usuario_id String?              @db.Uuid
   personal_contratado_id String?              @db.Uuid
   porcentaje_avance      Decimal              @db.Decimal(5, 2)
   fecha_avance           DateTime             @default(dbgenerated("CURRENT_DATE")) @db.Date
   comentarios            String?
   creado_en              DateTime             @default(now()) @db.Timestamptz(6)
   actualizado_en         DateTime             @default(now()) @db.Timestamptz(6)
+  actividades_programadas actividades_programadas? @relation(fields: [actividad_id], references: [id], onDelete: Restrict)
   personal_contratado    personal_contratado? @relation(fields: [personal_contratado_id], references: [id])
   proyectos              proyectos            @relation(fields: [proyecto_id], references: [id], onDelete: Cascade)
+  responsable            usuarios?            @relation(fields: [responsable_usuario_id], references: [id], onDelete: Restrict)
   evidencias             evidencias[]
   solicitudes_pago       solicitudes_pago[]
 
+  @@index([actividad_id, proyecto_id, fecha_avance(sort: Desc), creado_en(sort: Desc)], map: "idx_avances_actividad_fecha")
   @@index([personal_contratado_id], map: "idx_avances_personal_id")
   @@index([proyecto_id], map: "idx_avances_proyecto_id")
+  @@index([responsable_usuario_id], map: "idx_avances_responsable_usuario_id")
 }
 
 model bitacora_auditoria {
@@ -516,6 +524,7 @@ model usuarios {
   claves_idempotencia         claves_idempotencia[]
   dispositivos_sincronizacion dispositivos_sincronizacion[]
   evidencias                  evidencias[]
+  avances_proyecto            avances_proyecto[]
   tokens_refresco             tokens_refresco[]
   empleados                   empleados?                    @relation(fields: [empleado_id], references: [id])
   organizaciones              organizaciones                @relation(fields: [organizacion_id], references: [id], onDelete: Restrict)

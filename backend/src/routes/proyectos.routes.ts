@@ -2,16 +2,13 @@ import { Router, type RequestHandler } from 'express';
 import { databasePool } from '../config/database.js';
 import { areasNecesidad } from '../domain/necesidades.js';
 import { esUuid } from '../domain/expediente.js';
+import { esFecha } from '../domain/fecha.js';
+import { validarAvanceActividad } from '../domain/avances-actividad.js';
 import { authenticateAccessToken, requirePermission } from '../middleware/auth.middleware.js';
+import { listarActividadesProyecto, registrarAvanceActividad } from '../services/avances-actividad.service.js';
 
 export const proyectosRouter = Router();
 const estados = ['PLANIFICADO', 'EN_EJECUCION', 'PAUSADO', 'FINALIZADO', 'CANCELADO'];
-
-function esFecha(valor: unknown): valor is string {
-  if (typeof valor !== 'string' || !/^[1-9]\d{3}-\d{2}-\d{2}$/.test(valor)) return false;
-  const fecha = new Date(valor);
-  return Number.isFinite(fecha.getTime()) && fecha.toISOString().slice(0, 10) === valor;
-}
 
 proyectosRouter.use(authenticateAccessToken, requirePermission('proyectos.ver'), (req, res, next) => {
   if (req.auth?.roles.includes('DONANTE')) {
@@ -149,36 +146,67 @@ proyectosRouter.put('/:id', requirePermission('proyectos.gestionar'), guardarPro
 
 const estadosActividad = ['PLANIFICADA', 'EN_PROCESO', 'COMPLETADA', 'CANCELADA'];
 
-proyectosRouter.get('/:proyectoId/actividades', async (req, res) => {
-  const { proyectoId } = req.params;
-  if (!esUuid(proyectoId)) {
-    res.status(400).json({ message: 'Seleccioná un proyecto válido.' });
-    return;
-  }
-  try {
-    if (!databasePool) throw new Error('Base de datos no disponible');
-    const { rows } = await databasePool.query(
-      `SELECT COALESCE((
-         SELECT jsonb_agg(jsonb_build_object(
-           'id', a.id, 'nombre', a.nombre, 'descripcion', a.descripcion, 'estado', a.estado,
-           'fechaInicio', a.fecha_inicio, 'fechaFin', a.fecha_fin
-         ) ORDER BY a.fecha_inicio NULLS LAST, a.nombre, a.id)
-         FROM actividades_programadas a WHERE a.proyecto_id = p.id
-       ), '[]'::jsonb) AS actividades
-       FROM proyectos p JOIN comunidades c ON c.id = p.comunidad_id
-       WHERE p.id = $1 AND c.organizacion_id = $2`,
-      [proyectoId, req.auth!.organizacionId],
-    );
-    if (!rows.length) {
-      res.status(404).json({ message: 'No se encontró el proyecto.' });
+export function crearRouterActividades(pool: typeof databasePool = databasePool) {
+  const router = Router();
+
+  router.get('/:proyectoId/actividades', async (req, res) => {
+    const { proyectoId } = req.params;
+    if (!esUuid(proyectoId)) {
+      res.status(400).json({ message: 'Seleccioná un proyecto válido.' });
       return;
     }
-    res.json(rows[0]);
-  } catch (error) {
-    console.error('Error consultando actividades:', error);
-    res.status(500).json({ message: 'No fue posible consultar las actividades.' });
-  }
-});
+    try {
+      if (!pool) throw new Error('Base de datos no disponible');
+      const actividades = await listarActividadesProyecto(
+        pool, proyectoId, req.auth!.organizacionId,
+      );
+      if (!actividades) {
+        res.status(404).json({ message: 'No se encontró el proyecto.' });
+        return;
+      }
+      res.json({ actividades });
+    } catch (error) {
+      console.error('Error consultando actividades:', error);
+      res.status(500).json({ message: 'No fue posible consultar las actividades.' });
+    }
+  });
+
+  router.post(
+    '/:proyectoId/actividades/:actividadId/avances',
+    requirePermission('actividades.avance.gestionar'),
+    async (req, res) => {
+      const { proyectoId, actividadId } = req.params;
+      const datos = validarAvanceActividad(req.body);
+      if (!esUuid(proyectoId) || !esUuid(actividadId) || !datos) {
+        res.status(400).json({ message: 'Revisá la actividad, el porcentaje, la fecha y la descripción del avance.' });
+        return;
+      }
+      try {
+        if (!pool) throw new Error('Base de datos no disponible');
+        const avance = await registrarAvanceActividad(
+          pool,
+          proyectoId,
+          actividadId,
+          req.auth!.organizacionId,
+          req.auth!.sub,
+          datos,
+        );
+        if (!avance) {
+          res.status(404).json({ message: 'No se encontró la actividad del proyecto en la organización activa.' });
+          return;
+        }
+        res.status(201).json(avance);
+      } catch (error) {
+        console.error('Error registrando avance de actividad:', error);
+        res.status(500).json({ message: 'No fue posible registrar el avance de la actividad.' });
+      }
+    },
+  );
+
+  return router;
+}
+
+proyectosRouter.use(crearRouterActividades());
 
 const guardarActividad: RequestHandler = async (req, res) => {
   const { proyectoId, actividadId } = req.params;

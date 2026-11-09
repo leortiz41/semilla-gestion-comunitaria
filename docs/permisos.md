@@ -1,6 +1,6 @@
 # Matriz de permisos — Semilla
 
-Fecha de revisión: 7 de noviembre de 2026. Base: rama `develop`, hasta `376713c` (necesidades comunitarias, entrega 1 de #27).
+Fecha de revisión: 8 de noviembre de 2026. Base: rama `develop`, commit `b52ed03`; esta entrega agrega la migración 019 para avances por actividad.
 
 ## Alcance y fuente de verdad
 
@@ -12,8 +12,8 @@ Fuentes revisadas:
 
 - [001: roles y catálogo de permisos](../database/sql/001_esquema_inicial.sql) y [002: asignaciones a roles](../database/sql/002_configurar_roles_permisos.sql).
 - [Middleware de autenticación y autorización](../backend/src/middleware/auth.middleware.ts), [servicio de autenticación](../backend/src/services/auth.service.ts) y [montaje de rutas](../backend/src/server.ts).
-- Rutas de [comunidades](../backend/src/routes/comunidades.routes.ts), [zonas](../backend/src/routes/zonas.routes.ts), [dashboard](../backend/src/routes/dashboard.routes.ts), [capacidades](../backend/src/routes/capacidades.routes.ts) y [necesidades](../backend/src/routes/necesidades.routes.ts), junto con sus servicios.
-- Migraciones 003–010, [modelo de datos](modelo-datos.md) y [diseño de necesidades](arquitectura/necesidades-comunitarias.md).
+- Rutas de [comunidades](../backend/src/routes/comunidades.routes.ts), [zonas](../backend/src/routes/zonas.routes.ts), [dashboard](../backend/src/routes/dashboard.routes.ts), [capacidades](../backend/src/routes/capacidades.routes.ts), [necesidades](../backend/src/routes/necesidades.routes.ts) y [proyectos](../backend/src/routes/proyectos.routes.ts), junto con sus servicios.
+- Migraciones 003–019, [modelo de datos](modelo-datos.md) y [diseño de necesidades](arquitectura/necesidades-comunitarias.md).
 
 ## Roles y lectura de las matrices
 
@@ -31,7 +31,7 @@ Los roles se pueden acumular: el servicio reúne los permisos de los roles activ
 
 ## Catálogo RBAC versionado
 
-Esta tabla representa únicamente las asignaciones de 002, aunque el módulo aún no tenga API.
+Esta tabla representa las asignaciones versionadas de las migraciones 002 y 019.
 
 | Permiso | A | C | F | T | L |
 |---|---|---|---|---|---|
@@ -43,6 +43,7 @@ Esta tabla representa únicamente las asignaciones de 002, aunque el módulo aú
 | familias.gestionar | ✓ | ✓ | — | ✓ | — |
 | proyectos.ver | ✓ | ✓ | ✓ | ✓ | ✓ |
 | proyectos.gestionar | ✓ | ✓ | — | — | — |
+| actividades.avance.gestionar | ✓ | ✓ | — | ✓ | — |
 | pagos.ver | ✓ | ✓ | ✓ | — | ✓ |
 | pagos.gestionar | ✓ | — | ✓ | — | — |
 | evidencias.gestionar | ✓ | ✓ | — | ✓ | — |
@@ -59,7 +60,7 @@ Esta tabla representa únicamente las asignaciones de 002, aunque el módulo aú
 | R5 | Autoría no equivale a propiedad exclusiva: con el permiso de gestión se puede modificar información comunitaria de la propia organización, aunque la haya capturado otro usuario. Autor/fecha sirven para auditoría; no hay filtro «solo mis registros» ni asignación de comunidades por usuario. | Comportamiento actual. |
 | R6 | Concurrencia e historia: capacidades y visión/metas rechazan revisiones obsoletas; las metas retiradas se archivan. No hay edición/borrado de necesidades ni de auditoría mediante la API actual. | Implementado en esos flujos; no extender esta garantía a todas las pantallas. |
 | R7 | Familia/persona/beneficiario debe pertenecer a una comunidad de la organización; datos personales no se vuelven públicos por tener acceso a un reporte. | Regla requerida; API y alcance detallado de datos pendientes. |
-| R8 | Proyecto, actividad y necesidad vinculada deben compartir organización y ámbito comunitario. Una relación multicomunidad exige autorización territorial explícita. | Regla requerida; vinculación operativa pendiente. |
+| R8 | Proyecto, actividad y necesidad vinculada deben compartir organización y ámbito comunitario. Una relación multicomunidad exige autorización territorial explícita. | El alcance de proyectos, actividades y avances se verifica por organización; la vinculación proyectos-necesidades sigue pendiente. |
 | R9 | Donación, compra, gasto, proveedor, solicitud y pago deben validar organización y destino autorizado. Registrar, aprobar y pagar deben poder separarse para evitar autoaprobación. | Regla propuesta; catálogo actual agrupa acciones en pagos.gestionar y no implementa esa separación. |
 | R10 | Evidencias y archivos deben validar organización y objeto padre autorizado en carga, lectura y descarga. Un enlace o conocer un ID no reemplaza autorización. Evidencia de necesidad debe poder existir sin proyecto ficticio. | Pendiente; el esquema actual de evidencias requiere proyecto. |
 | R11 | Reportes/auditoría deben filtrar organización y datos permitidos. El historial es de solo lectura para usuarios operativos. Exportar no debe ampliar lo visible. | Registro de auditoría existe; consulta/exportación y alcance futuro pendientes. |
@@ -94,6 +95,9 @@ Todas las celdas ✓ requieren las reglas de la última columna. Los permisos de
 | HU-07/#11: guardar listas, observaciones y potencial | comunidades.gestionar; revisión completa | ✓ | ✓ | — | — | — | R2, R5, R6 |
 | #27 entrega 1: consultar necesidades por área | comunidades.ver | ✓ | ✓ | — | ✓ | ✓ | R2, R4 |
 | #27 entrega 1: registrar necesidad y prioridad inicial justificada | comunidades.gestionar; estado IDENTIFICADA asignado por servidor | ✓ | ✓ | — | — | — | R2, R4, R5 |
+| HU-12: consultar actividades y avances de proyectos propios | proyectos.ver | ✓ | ✓ | ✓ | ✓ | ✓ | R2, R8 |
+| HU-12: planificar/reprogramar actividades | proyectos.gestionar | ✓ | ✓ | — | — | — | R2, R8 |
+| HU-12: registrar avance de ejecución por actividad | actividades.avance.gestionar; porcentaje 0–100; responsable tomado de sesión | ✓ | ✓ | — | ✓ | — | R2, R5, R8 |
 | #11 compatibilidad: consultar diagnóstico integral anterior | comunidades.ver | ✓ | ✓ | — | ✓ | ✓ | R2 |
 | #11 compatibilidad: crear/actualizar diagnóstico integral anterior | comunidades.gestionar | ✓ | ✓ | — | — | — | R2, R5 |
 
@@ -115,9 +119,6 @@ S conserva exactamente un permiso ya sembrado; P expresa una propuesta que debe 
 | HU-11: consultar programas/proyectos | proyectos.ver | S | S | S | S | S | R8 |
 | HU-11: registrar/editar/asignar comunidad a programa/proyecto | proyectos.gestionar | S | S | — | — | — | R8 |
 | HU-11: aprobar/cerrar proyecto | Separar aprobación/cierre del permiso genérico | P | P | — | — | — | R8; no resuelve automáticamente necesidades |
-| HU-12: consultar actividades y avances | proyectos.ver como base | S | S | S | S | S | R8 |
-| HU-12: planificar/reprogramar actividades | proyectos.gestionar como base | S | S | — | — | — | R8 |
-| HU-12: registrar ejecución y avance de actividad | Permiso de captura de avance pendiente | P | P | — | P | — | R8 |
 | HU-13: consultar donaciones/recursos y asignaciones | Permiso específico pendiente | P | P | P | — | — | R9 |
 | HU-13: registrar donante/donación/recurso recibido | Permiso específico pendiente | P | — | P | — | — | R9 |
 | HU-13: asignar recursos a proyecto | Permiso y separación autorización/registro pendientes | P | P | P | — | — | R8, R9 |

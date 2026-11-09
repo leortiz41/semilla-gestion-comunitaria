@@ -22,10 +22,11 @@ const estados: Record<string, string> = {
   CANCELADO: 'Cancelado',
 };
 
-function PaginaProyectos({ token, puedeVer, puedeGestionar }: {
+function PaginaProyectos({ token, puedeVer, puedeGestionar, puedeRegistrarAvance }: {
   token: string;
   puedeVer: boolean;
   puedeGestionar: boolean;
+  puedeRegistrarAvance: boolean;
 }) {
   const [datos, setDatos] = useState<Awaited<ReturnType<typeof obtenerProyectosAdministrativos>> | null>(null);
   const [formulario, setFormulario] = useState<ProyectoAdministrativo | 'nuevo' | null>(null);
@@ -187,7 +188,12 @@ function PaginaProyectos({ token, puedeVer, puedeGestionar }: {
                   {proyectoAbierto === item.id ? 'Ocultar actividades' : 'Ver actividades'}
                 </button>
                 {proyectoAbierto === item.id && (
-                  <ActividadesProyecto token={token} proyectoId={item.id} puedeGestionar={puedeGestionar} />
+                  <ActividadesProyecto
+                    token={token}
+                    proyectoId={item.id}
+                    puedeGestionar={puedeGestionar}
+                    puedeRegistrarAvance={puedeRegistrarAvance}
+                  />
                 )}
               </article>
             ))}
