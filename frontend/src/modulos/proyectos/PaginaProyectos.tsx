@@ -69,7 +69,7 @@ function PaginaProyectos({
   }, [token, puedeVer, puedeRevisarAvance, verPendientes, recarga]);
 
   async function decidirAvance(item: AvancePendienteRevision, accion: 'validar' | 'devolver') {
-    if (guardando || item.esPropio || !puedeRevisarAvance) return;
+    if (guardando || !puedeRevisarAvance) return;
     const motivo = motivos[item.id]?.trim();
     if (accion === 'devolver' && !motivo) {
       setError('Escribí el motivo de devolución antes de continuar.');
@@ -147,7 +147,7 @@ function PaginaProyectos({
           {verPendientes && (
             <>
               <h2>Avances enviados a revisión</h2>
-              <p>Solo podés aprobar o devolver avances de otros usuarios. Los resultados cuentan al validarse.</p>
+              <p>Los coordinadores y administradores pueden revisar avances propios o de otros usuarios. Las autorrevisiones quedan identificadas en Auditoría.</p>
               {cargandoPendientes && <p role="status">Cargando pendientes…</p>}
               {!cargandoPendientes && !pendientes.length && <p>No hay avances pendientes.</p>}
               <div className="roles-panel">
@@ -156,12 +156,13 @@ function PaginaProyectos({
                     <h3>{item.actividad}</h3>
                     <p><strong>Proyecto:</strong> {item.proyecto} · {item.comunidad}</p>
                     <p><strong>Fecha:</strong> {item.fecha} · <strong>Responsable:</strong> {item.responsable}</p>
+                    {item.esPropio && <p><strong>Autorrevisión:</strong> este avance fue registrado por tu cuenta y la decisión quedará auditada.</p>}
                     <p><strong>Avance:</strong> {item.cantidadReportada === null
                       ? `${item.porcentajeAvance ?? 0}%`
                       : `${item.cantidadReportada} ${item.unidadMedida ?? ''}`}</p>
                     <p>{item.descripcion}</p>
                     {item.observaciones && <p><strong>Observaciones:</strong> {item.observaciones}</p>}
-                    {item.esPropio ? <p>No podés revisar tu propio avance.</p> : (
+                    {(
                       <div>
                         <label>Motivo de devolución
                           <textarea maxLength={3000} value={motivos[item.id] ?? ''}
