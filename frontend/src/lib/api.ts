@@ -538,6 +538,29 @@ export function obtenerProyectosAdministrativos(token: string) {
   }>('/proyectos', { headers: { Authorization: `Bearer ${token}` } });
 }
 
+export interface AvancePendienteRevision {
+  id: string;
+  actividadId: string;
+  proyectoId: string;
+  actividad: string;
+  proyecto: string;
+  comunidad: string;
+  fecha: string;
+  descripcion: string;
+  observaciones: string | null;
+  cantidadReportada: number | null;
+  porcentajeAvance: number | null;
+  unidadMedida: string | null;
+  responsable: string;
+  esPropio: boolean;
+}
+
+export function obtenerAvancesPendientesRevision(token: string) {
+  return request<{ pendientes: AvancePendienteRevision[] }>('/proyectos/revision/pendientes', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
 export function guardarProyectoAdministrativo(token: string, datos: DatosProyecto, id?: string) {
   return request<{ id: string }>(id ? `/proyectos/${id}` : '/proyectos', {
     method: id ? 'PUT' : 'POST',
