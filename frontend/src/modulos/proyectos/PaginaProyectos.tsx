@@ -7,6 +7,7 @@ import '../../estilos/modulos/paginaModuloBase.css';
 import '../../estilos/modulos/roles.css';
 import '../donantes/donantes.css';
 import ActividadesProyecto from './ActividadesProyecto';
+import './centroRevision.css';
 
 const categorias: Record<AreaVisionDesarrollo, string> = {
   EVANGELISMO: 'Evangelismo',
@@ -45,6 +46,19 @@ function PaginaProyectos({
   const [pendientes, setPendientes] = useState<AvancePendienteRevision[]>([]);
   const [cargandoPendientes, setCargandoPendientes] = useState(false);
   const [motivos, setMotivos] = useState<Record<string, string>>({});
+  const [busquedaRevision, setBusquedaRevision] = useState('');
+  const [filtroRevision, setFiltroRevision] = useState('todos');
+  const [avanceSeleccionadoId, setAvanceSeleccionadoId] = useState<string | null>(null);
+  const [mostrarDevolucion, setMostrarDevolucion] = useState(false);
+  const [confirmarRevision, setConfirmarRevision] = useState<'validar' | 'devolver' | null>(null);
+  const pendientesFiltrados = pendientes.filter((item) => {
+    const texto = `${item.actividad} ${item.proyecto} ${item.comunidad} ${item.responsable}`.toLowerCase();
+    return texto.includes(busquedaRevision.toLowerCase().trim()) &&
+      (filtroRevision === 'todos' || (filtroRevision === 'propios' ? item.esPropio : !item.esPropio));
+  });
+  const avanceSeleccionado = pendientesFiltrados.find((item) => item.id === avanceSeleccionadoId) ??
+    pendientesFiltrados[0];
+
   const proyecto = formulario === 'nuevo' ? null : formulario;
 
   useEffect(() => {
@@ -83,6 +97,8 @@ function PaginaProyectos({
         item.id, accion, accion === 'devolver' ? motivo : undefined);
       setMensaje(accion === 'validar' ? 'Avance validado.' : 'Avance devuelto.');
       setPendientes((actual) => actual.filter((avance) => avance.id !== item.id));
+      setConfirmarRevision(null);
+      setMostrarDevolucion(false);
       setRecarga((actual) => actual + 1);
     } catch (fallo) {
       setError(fallo instanceof Error ? fallo.message : 'No fue posible revisar el avance.');
@@ -139,47 +155,130 @@ function PaginaProyectos({
         }}>Volver a cargar</button>
       )}
       {puedeVer && puedeRevisarAvance && (
-        <section className="roles-panel__tarjeta" aria-label="Bandeja de avances pendientes">
-          <button type="button" className="brigadas-accion" aria-expanded={verPendientes}
-            onClick={() => setVerPendientes((valor) => !valor)}>
-            {verPendientes ? 'Ocultar revisiones' : 'Avances pendientes de revisión'}
-          </button>
+        <section className="revision-centro" aria-label="Centro de revisión de avances">
+          <div className="revision-centro__cabecera">
+            <div>
+              <span className="revision-centro__eyebrow">Seguimiento y control</span>
+              <h2>Centro de revisión</h2>
+            </div>
+            <div className="revision-centro__acciones">
+              <span className="revision-centro__contador">{verPendientes ? pendientes.length : '—'} pendientes</span>
+              <button className="revision-centro__toggle" type="button"
+                aria-expanded={verPendientes} onClick={() => setVerPendientes((anterior) => !anterior)}>
+                {verPendientes ? 'Ocultar revisión' : 'Abrir revisiones'}
+              </button>
+            </div>
+          </div>
+          <p className="revision-centro__intro">
+            Verificá los reportes de campo. Las autorrevisiones de coordinadores y administradores quedan registradas en Auditoría.
+          </p>
           {verPendientes && (
             <>
-              <h2>Avances enviados a revisión</h2>
-              <p>Los coordinadores y administradores pueden revisar avances propios o de otros usuarios. Las autorrevisiones quedan identificadas en Auditoría.</p>
-              {cargandoPendientes && <p role="status">Cargando pendientes…</p>}
-              {!cargandoPendientes && !pendientes.length && <p>No hay avances pendientes.</p>}
-              <div className="roles-panel">
-                {pendientes.map((item) => (
-                  <article key={item.id} className="roles-panel__tarjeta">
-                    <h3>{item.actividad}</h3>
-                    <p><strong>Proyecto:</strong> {item.proyecto} · {item.comunidad}</p>
-                    <p><strong>Fecha:</strong> {item.fecha} · <strong>Responsable:</strong> {item.responsable}</p>
-                    {item.esPropio && <p><strong>Autorrevisión:</strong> este avance fue registrado por tu cuenta y la decisión quedará auditada.</p>}
-                    <p><strong>Avance:</strong> {item.cantidadReportada === null
-                      ? `${item.porcentajeAvance ?? 0}%`
-                      : `${item.cantidadReportada} ${item.unidadMedida ?? ''}`}</p>
-                    <p>{item.descripcion}</p>
-                    {item.observaciones && <p><strong>Observaciones:</strong> {item.observaciones}</p>}
-                    {(
-                      <div>
-                        <label>Motivo de devolución
-                          <textarea maxLength={3000} value={motivos[item.id] ?? ''}
+              <div className="revision-centro__filtros">
+                <label>Buscar avance
+                  <input type="search" value={busquedaRevision} onChange={(evento) => setBusquedaRevision(evento.target.value)}
+                    placeholder="Actividad, comunidad o responsable" />
+                </label>
+                <label>Mostrar
+                  <select value={filtroRevision} onChange={(evento) => setFiltroRevision(evento.target.value)}>
+                    <option value="todos">Todos los pendientes</option>
+                    <option value="propios">Mis avances</option>
+                    <option value="otros">Avances de otros</option>
+                  </select>
+                </label>
+                <button className="revision-centro__neutral" type="button" disabled={cargandoPendientes}
+                  onClick={() => setRecarga((actual) => actual + 1)}>Actualizar lista</button>
+              </div>
+              {cargandoPendientes && <p role="status">Cargando avances pendientes…</p>}
+              {!cargandoPendientes && pendientes.length === 0 && <p role="status">No hay avances pendientes de revisión.</p>}
+              {!cargandoPendientes && pendientes.length > 0 && pendientesFiltrados.length === 0 &&
+                <p>No hay resultados para los filtros seleccionados.</p>}
+              {pendientesFiltrados.length > 0 && (
+                <div className="revision-centro__contenido">
+                  <div className="revision-centro__lista" aria-label="Listado de avances">
+                    {pendientesFiltrados.map((item) => (
+                      <button type="button" key={item.id} className="revision-centro__item"
+                        aria-pressed={avanceSeleccionado?.id === item.id}
+                        onClick={() => { setAvanceSeleccionadoId(item.id); setMostrarDevolucion(false); setConfirmarRevision(null); }}>
+                        <span className="revision-centro__item-top">
+                          <strong>{item.actividad}</strong>
+                          <span className="revision-centro__marca">En revisión</span>
+                        </span>
+                        <small>{item.proyecto} · {item.comunidad}</small>
+                        <span>{item.cantidadReportada === null ? `${item.porcentajeAvance ?? 0}%`
+                          : `${item.cantidadReportada} ${item.unidadMedida ?? ''}`}</span>
+                        <small>{item.fecha}{item.esPropio ? ' · Autorrevisión' : ''}</small>
+                      </button>
+                    ))}
+                  </div>
+                  {avanceSeleccionado && (
+                    <article className="revision-centro__detalle" aria-label="Detalle del avance seleccionado">
+                      <span className="revision-centro__eyebrow">Detalle del avance</span>
+                      <h3>{avanceSeleccionado.actividad}</h3>
+                      <p className="revision-centro__muted">{avanceSeleccionado.proyecto} · {avanceSeleccionado.comunidad}</p>
+                      {avanceSeleccionado.esPropio &&
+                        <p className="revision-centro__nota"><strong>Autorrevisión:</strong> registraste este avance.
+                          Tu validación quedará identificada en la bitácora de auditoría.</p>}
+                      <dl className="revision-centro__meta">
+                        <div><dt>Avance reportado</dt><dd>{avanceSeleccionado.cantidadReportada === null
+                          ? `${avanceSeleccionado.porcentajeAvance ?? 0}%`
+                          : `${avanceSeleccionado.cantidadReportada} ${avanceSeleccionado.unidadMedida ?? ''}`}</dd></div>
+                        <div><dt>Fecha de ejecución</dt><dd>{avanceSeleccionado.fecha}</dd></div>
+                        <div><dt>Responsable</dt><dd>{avanceSeleccionado.responsable}</dd></div>
+                        <div><dt>Estado</dt><dd>Enviado a revisión</dd></div>
+                      </dl>
+                      <h4>Trabajo realizado</h4>
+                      <p>{avanceSeleccionado.descripcion}</p>
+                      {avanceSeleccionado.observaciones && <>
+                        <h4>Observaciones de campo</h4>
+                        <p>{avanceSeleccionado.observaciones}</p>
+                      </>}
+                      {mostrarDevolucion && (
+                        <label className="revision-centro__devolucion">Motivo de devolución (obligatorio)
+                          <textarea maxLength={3000} required value={motivos[avanceSeleccionado.id] ?? ''}
+                            placeholder="Explicá qué debe corregirse antes de reenviar el avance…"
                             onChange={(evento) => setMotivos((actual) => ({
-                              ...actual, [item.id]: evento.target.value,
+                              ...actual, [avanceSeleccionado.id]: evento.target.value,
                             }))} />
                         </label>
-                        <button type="button" disabled={guardando}
-                          onClick={() => void decidirAvance(item, 'validar')}>Validar</button>{' '}
-                        <button type="button" className="brigadas-accion"
-                          disabled={guardando || !motivos[item.id]?.trim()}
-                          onClick={() => void decidirAvance(item, 'devolver')}>Devolver</button>
-                      </div>
-                    )}
-                  </article>
-                ))}
-              </div>
+                      )}
+                      {confirmarRevision && (
+                        <div className="revision-centro__nota" role="group" aria-label="Confirmar decisión">
+                          <strong>Confirmar {confirmarRevision === 'validar' ? 'validación' : 'devolución'}</strong>
+                          <p>{confirmarRevision === 'validar'
+                            ? 'Este avance contará en los resultados oficiales del proyecto.'
+                            : 'El avance regresará al responsable para su corrección.'}</p>
+                          <div className="revision-centro__acciones">
+                            <button type="button" className="revision-centro__neutral"
+                              onClick={() => setConfirmarRevision(null)}>Cancelar</button>
+                            <button type="button" className="revision-centro__validar" disabled={guardando}
+                              onClick={() => void decidirAvance(avanceSeleccionado, confirmarRevision)}>
+                              {guardando ? 'Procesando…' : 'Confirmar decisión'}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                      {!confirmarRevision && (
+                        <div className="revision-centro__acciones">
+                          {mostrarDevolucion && <button type="button" className="revision-centro__neutral"
+                            onClick={() => setMostrarDevolucion(false)}>Cancelar</button>}
+                          <button type="button" className="revision-centro__devolver" disabled={guardando}
+                            onClick={() => {
+                              if (!mostrarDevolucion) setMostrarDevolucion(true);
+                              else if (motivos[avanceSeleccionado.id]?.trim()) setConfirmarRevision('devolver');
+                            }}>
+                            {mostrarDevolucion ? 'Continuar devolución' : 'Devolver avance'}
+                          </button>
+                          <button type="button" className="revision-centro__validar" disabled={guardando}
+                            onClick={() => { setMostrarDevolucion(false); setConfirmarRevision('validar'); }}>
+                            Validar avance
+                          </button>
+                        </div>
+                      )}
+                    </article>
+                  )}
+                </div>
+              )}
             </>
           )}
         </section>
