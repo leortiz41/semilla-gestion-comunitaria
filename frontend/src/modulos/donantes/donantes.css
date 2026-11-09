@@ -1019,3 +1019,12 @@
     min-height: 2.75rem;
   }
 }
+
+/* Mensajes de validación cercanos al formulario de planificación. */
+.actividad-plan-form__error{
+  margin:.35rem 0 1rem;padding:.8rem .9rem;border:1px solid #e1b9a7;
+  border-radius:.7rem;background:#fff4ee;color:#8a4030;font-size:.88rem;font-weight:650;
+}
+.actividad-plan-form__campo-error{color:#9a4035;font-size:.76rem;line-height:1.4;font-weight:600}
+.actividad-plan-form input[aria-invalid="true"]{border-color:#ba6757;background:#fff9f6}
+.actividad-plan-form input:focus-visible{outline:2px solid #56845b;outline-offset:2px}
