@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import {
-  guardarProyectoAdministrativo, obtenerProyectosAdministrativos, type ProyectoAdministrativo, type AreaVisionDesarrollo,
+  guardarProyectoAdministrativo, obtenerProyectosAdministrativos, obtenerAvancesPendientesRevision, revisarAvanceActividadProyecto,
+  type AvancePendienteRevision, type ProyectoAdministrativo, type AreaVisionDesarrollo,
 } from '../../lib/api';
 import '../../estilos/modulos/paginaModuloBase.css';
 import '../../estilos/modulos/roles.css';
@@ -40,6 +41,10 @@ function PaginaProyectos({
   const [mensaje, setMensaje] = useState('');
   const [recarga, setRecarga] = useState(0);
   const [proyectoAbierto, setProyectoAbierto] = useState<string | null>(null);
+  const [verPendientes, setVerPendientes] = useState(false);
+  const [pendientes, setPendientes] = useState<AvancePendienteRevision[]>([]);
+  const [cargandoPendientes, setCargandoPendientes] = useState(false);
+  const [motivos, setMotivos] = useState<Record<string, string>>({});
   const proyecto = formulario === 'nuevo' ? null : formulario;
 
   useEffect(() => {
@@ -51,6 +56,40 @@ function PaginaProyectos({
     );
     return () => { vigente = false; };
   }, [token, puedeVer, recarga]);
+
+  useEffect(() => {
+    if (!verPendientes || !puedeRevisarAvance || !puedeVer) return;
+    let vigente = true;
+    setCargandoPendientes(true);
+    obtenerAvancesPendientesRevision(token).then(
+      ({ pendientes: lista }) => { if (vigente) { setPendientes(lista); setError(''); } },
+      (fallo: Error) => { if (vigente) setError(fallo.message); },
+    ).finally(() => { if (vigente) setCargandoPendientes(false); });
+    return () => { vigente = false; };
+  }, [token, puedeVer, puedeRevisarAvance, verPendientes, recarga]);
+
+  async function decidirAvance(item: AvancePendienteRevision, accion: 'validar' | 'devolver') {
+    if (guardando || item.esPropio || !puedeRevisarAvance) return;
+    const motivo = motivos[item.id]?.trim();
+    if (accion === 'devolver' && !motivo) {
+      setError('Escribí el motivo de devolución antes de continuar.');
+      return;
+    }
+    setGuardando(true);
+    setError('');
+    setMensaje('');
+    try {
+      await revisarAvanceActividadProyecto(token, item.proyectoId, item.actividadId,
+        item.id, accion, accion === 'devolver' ? motivo : undefined);
+      setMensaje(accion === 'validar' ? 'Avance validado.' : 'Avance devuelto.');
+      setPendientes((actual) => actual.filter((avance) => avance.id !== item.id));
+      setRecarga((actual) => actual + 1);
+    } catch (fallo) {
+      setError(fallo instanceof Error ? fallo.message : 'No fue posible revisar el avance.');
+    } finally {
+      setGuardando(false);
+    }
+  }
 
   async function guardar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
@@ -98,6 +137,51 @@ function PaginaProyectos({
           setError('');
           setRecarga((actual) => actual + 1);
         }}>Volver a cargar</button>
+      )}
+      {puedeVer && puedeRevisarAvance && (
+        <section className="roles-panel__tarjeta" aria-label="Bandeja de avances pendientes">
+          <button type="button" className="brigadas-accion" aria-expanded={verPendientes}
+            onClick={() => setVerPendientes((valor) => !valor)}>
+            {verPendientes ? 'Ocultar revisiones' : 'Avances pendientes de revisión'}
+          </button>
+          {verPendientes && (
+            <>
+              <h2>Avances enviados a revisión</h2>
+              <p>Solo podés aprobar o devolver avances de otros usuarios. Los resultados cuentan al validarse.</p>
+              {cargandoPendientes && <p role="status">Cargando pendientes…</p>}
+              {!cargandoPendientes && !pendientes.length && <p>No hay avances pendientes.</p>}
+              <div className="roles-panel">
+                {pendientes.map((item) => (
+                  <article key={item.id} className="roles-panel__tarjeta">
+                    <h3>{item.actividad}</h3>
+                    <p><strong>Proyecto:</strong> {item.proyecto} · {item.comunidad}</p>
+                    <p><strong>Fecha:</strong> {item.fecha} · <strong>Responsable:</strong> {item.responsable}</p>
+                    <p><strong>Avance:</strong> {item.cantidadReportada === null
+                      ? `${item.porcentajeAvance ?? 0}%`
+                      : `${item.cantidadReportada} ${item.unidadMedida ?? ''}`}</p>
+                    <p>{item.descripcion}</p>
+                    {item.observaciones && <p><strong>Observaciones:</strong> {item.observaciones}</p>}
+                    {item.esPropio ? <p>No podés revisar tu propio avance.</p> : (
+                      <div>
+                        <label>Motivo de devolución
+                          <textarea maxLength={3000} value={motivos[item.id] ?? ''}
+                            onChange={(evento) => setMotivos((actual) => ({
+                              ...actual, [item.id]: evento.target.value,
+                            }))} />
+                        </label>
+                        <button type="button" disabled={guardando}
+                          onClick={() => void decidirAvance(item, 'validar')}>Validar</button>{' '}
+                        <button type="button" className="brigadas-accion"
+                          disabled={guardando || !motivos[item.id]?.trim()}
+                          onClick={() => void decidirAvance(item, 'devolver')}>Devolver</button>
+                      </div>
+                    )}
+                  </article>
+                ))}
+              </div>
+            </>
+          )}
+        </section>
       )}
       {puedeVer && datos && (
         <>
