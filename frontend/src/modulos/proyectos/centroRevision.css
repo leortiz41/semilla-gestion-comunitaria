@@ -32,3 +32,7 @@
 .revision-centro button:disabled{opacity:.55;cursor:not-allowed}
 .revision-centro :focus-visible{outline:3px solid #e7a85e;outline-offset:2px}
 @media(max-width:760px){.revision-centro{padding:1rem}.revision-centro__contenido{grid-template-columns:1fr}.revision-centro__lista{max-height:300px}.revision-centro__meta{grid-template-columns:1fr}.revision-centro__acciones>button{flex:1}}
+
+.revision-centro__titulo-detalle{display:flex;align-items:center;flex-wrap:wrap;gap:.55rem}
+.revision-centro__titulo-detalle h3{margin:.55rem 0}
+.revision-centro__autorrevision{display:inline-flex;align-items:center;padding:.22rem .6rem;border-radius:999px;background:#edf3e9;color:#46664a;border:1px solid #d2e1cf;font-size:.72rem;font-weight:750}
