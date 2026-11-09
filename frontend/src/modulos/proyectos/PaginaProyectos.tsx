@@ -214,11 +214,16 @@ function PaginaProyectos({
                   {avanceSeleccionado && (
                     <article className="revision-centro__detalle" aria-label="Detalle del avance seleccionado">
                       <span className="revision-centro__eyebrow">Detalle del avance</span>
-                      <h3>{avanceSeleccionado.actividad}</h3>
+                      <div className="revision-centro__titulo-detalle">
+                        <h3>{avanceSeleccionado.actividad}</h3>
+                        {avanceSeleccionado.esPropio && (
+                          <span className="revision-centro__autorrevision"
+                            title="Esta revisión quedará identificada en la bitácora de auditoría">
+                            Autorrevisión
+                          </span>
+                        )}
+                      </div>
                       <p className="revision-centro__muted">{avanceSeleccionado.proyecto} · {avanceSeleccionado.comunidad}</p>
-                      {avanceSeleccionado.esPropio &&
-                        <p className="revision-centro__nota"><strong>Autorrevisión:</strong> registraste este avance.
-                          Tu validación quedará identificada en la bitácora de auditoría.</p>}
                       <dl className="revision-centro__meta">
                         <div><dt>Avance reportado</dt><dd>{avanceSeleccionado.cantidadReportada === null
                           ? `${avanceSeleccionado.porcentajeAvance ?? 0}%`
