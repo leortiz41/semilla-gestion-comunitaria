@@ -400,7 +400,8 @@ test('HU-12: conserva avances legados y audita estados, permisos, resultados e a
       const propio = await respuesta.json() as { id: string };
       assert.equal((await enviar(actividad, propio.id, token)).status, 204);
       if (rol === 'COORDINADOR') {
-        assert.equal((await revisar(actividad, propio.id, 'validar', tokenRevisor)).status, 204);
+        assert.equal((await revisar(actividad, propio.id, 'validar', tokenRevisor)).status, 409);
+        assert.equal((await revisar(actividad, propio.id, 'validar', token)).status, 204);
       } else {
         assert.equal((await revisar(actividad, propio.id, 'devolver', token, 'Corregir visita.')).status, 204);
         assert.equal((await enviar(actividad, propio.id, token)).status, 204);
@@ -411,11 +412,9 @@ test('HU-12: conserva avances legados y audita estados, permisos, resultados e a
          FROM bitacora_auditoria WHERE entidad_id = $1 AND accion = 'AUTOVALIDAR_AVANCE'`,
         [propio.id],
       );
-      if (rol === 'ADMINISTRADOR') {
-        assert.equal(auditoria.rows.length, 1);
-        assert.equal(auditoria.rows[0].usuario_id, revisor);
-        assert.equal(auditoria.rows[0].autorrevision, true);
-      }
+      assert.equal(auditoria.rows.length, 1);
+      assert.equal(auditoria.rows[0].usuario_id, revisor);
+      assert.equal(auditoria.rows[0].autorrevision, true);
     }
 
     const countLegacy = await db.query<{ total: string }>(
