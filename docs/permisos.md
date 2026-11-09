@@ -1,6 +1,6 @@
 # Matriz de permisos — Semilla
 
-Fecha de revisión: 8 de noviembre de 2026. Base: rama `develop`, commit `b52ed03`; esta entrega agrega la migración 019 para avances por actividad.
+Fecha de revisión: 8 de noviembre de 2026. Base: rama `develop`; migraciones 019–020 para planificación, ejecución y revisión de avances por actividad.
 
 ## Alcance y fuente de verdad
 
@@ -13,7 +13,7 @@ Fuentes revisadas:
 - [001: roles y catálogo de permisos](../database/sql/001_esquema_inicial.sql) y [002: asignaciones a roles](../database/sql/002_configurar_roles_permisos.sql).
 - [Middleware de autenticación y autorización](../backend/src/middleware/auth.middleware.ts), [servicio de autenticación](../backend/src/services/auth.service.ts) y [montaje de rutas](../backend/src/server.ts).
 - Rutas de [comunidades](../backend/src/routes/comunidades.routes.ts), [zonas](../backend/src/routes/zonas.routes.ts), [dashboard](../backend/src/routes/dashboard.routes.ts), [capacidades](../backend/src/routes/capacidades.routes.ts), [necesidades](../backend/src/routes/necesidades.routes.ts) y [proyectos](../backend/src/routes/proyectos.routes.ts), junto con sus servicios.
-- Migraciones 003–019, [modelo de datos](modelo-datos.md) y [diseño de necesidades](arquitectura/necesidades-comunitarias.md).
+- Migraciones 003–020, [modelo de datos](modelo-datos.md) y [diseño de necesidades](arquitectura/necesidades-comunitarias.md).
 
 ## Roles y lectura de las matrices
 
@@ -31,7 +31,7 @@ Los roles se pueden acumular: el servicio reúne los permisos de los roles activ
 
 ## Catálogo RBAC versionado
 
-Esta tabla representa las asignaciones versionadas de las migraciones 002 y 019.
+Esta tabla representa las asignaciones versionadas de las migraciones 002 y 019–020.
 
 | Permiso | A | C | F | T | L |
 |---|---|---|---|---|---|
@@ -44,6 +44,8 @@ Esta tabla representa las asignaciones versionadas de las migraciones 002 y 019.
 | proyectos.ver | ✓ | ✓ | ✓ | ✓ | ✓ |
 | proyectos.gestionar | ✓ | ✓ | — | — | — |
 | actividades.avance.gestionar | ✓ | ✓ | — | ✓ | — |
+| actividades.avance.revisar | ✓ | ✓ | — | — | — |
+| actividades.avance.corregir | ✓ | — | — | — | — |
 | pagos.ver | ✓ | ✓ | ✓ | — | ✓ |
 | pagos.gestionar | ✓ | — | ✓ | — | — |
 | evidencias.gestionar | ✓ | ✓ | — | ✓ | — |
@@ -97,7 +99,9 @@ Todas las celdas ✓ requieren las reglas de la última columna. Los permisos de
 | #27 entrega 1: registrar necesidad y prioridad inicial justificada | comunidades.gestionar; estado IDENTIFICADA asignado por servidor | ✓ | ✓ | — | — | — | R2, R4, R5 |
 | HU-12: consultar actividades y avances de proyectos propios | proyectos.ver | ✓ | ✓ | ✓ | ✓ | ✓ | R2, R8 |
 | HU-12: planificar/reprogramar actividades | proyectos.gestionar | ✓ | ✓ | — | — | — | R2, R8 |
-| HU-12: registrar avance de ejecución por actividad | actividades.avance.gestionar; porcentaje 0–100; responsable tomado de sesión | ✓ | ✓ | — | ✓ | — | R2, R5, R8 |
+| HU-12: registrar borrador y enviar avance de ejecución por actividad | actividades.avance.gestionar; responsable tomado de sesión | ✓ | ✓ | — | ✓ | — | R2, R5, R8 |
+| HU-12: validar o devolver avances enviados | actividades.avance.revisar; no permite auto-revisión | ✓ | ✓ | — | — | — | R2, R8 |
+| HU-12: corregir explícitamente un resultado validado | actividades.avance.corregir; exige motivo y nueva validación | ✓ | — | — | — | — | R2, R8 |
 | #11 compatibilidad: consultar diagnóstico integral anterior | comunidades.ver | ✓ | ✓ | — | ✓ | ✓ | R2 |
 | #11 compatibilidad: crear/actualizar diagnóstico integral anterior | comunidades.gestionar | ✓ | ✓ | — | — | — | R2, R5 |
 

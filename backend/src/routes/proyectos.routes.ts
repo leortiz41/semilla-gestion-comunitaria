@@ -5,7 +5,12 @@ import { esUuid } from '../domain/expediente.js';
 import { esFecha } from '../domain/fecha.js';
 import { validarAvanceActividad } from '../domain/avances-actividad.js';
 import { authenticateAccessToken, requirePermission } from '../middleware/auth.middleware.js';
-import { listarActividadesProyecto, registrarAvanceActividad } from '../services/avances-actividad.service.js';
+import {
+  editarAvanceActividad,
+  listarActividadesProyecto,
+  registrarAvanceActividad,
+  transicionarAvanceActividad,
+} from '../services/avances-actividad.service.js';
 
 export const proyectosRouter = Router();
 const estados = ['PLANIFICADO', 'EN_EJECUCION', 'PAUSADO', 'FINALIZADO', 'CANCELADO'];
@@ -87,6 +92,22 @@ const guardarProyecto: RequestHandler = async (req, res) => {
     const cliente = await databasePool.connect();
     try {
       await cliente.query('BEGIN');
+      if (id && presupuesto !== undefined) {
+        const asignacion = await cliente.query(
+          `SELECT p.presupuesto_asignado::text AS presupuesto_actual,
+             COALESCE((SELECT SUM(a.presupuesto_estimado) FROM actividades_programadas a
+               WHERE a.proyecto_id = p.id), 0)::text AS presupuesto_actividades
+           FROM proyectos p JOIN comunidades c ON c.id = p.comunidad_id
+           WHERE p.id = $1 AND c.organizacion_id = $2
+           FOR UPDATE OF p`,
+          [id, req.auth!.organizacionId],
+        );
+        if (asignacion.rows.length && Number(presupuesto) < Number(asignacion.rows[0].presupuesto_actividades)) {
+          await cliente.query('ROLLBACK');
+          res.status(400).json({ message: 'El presupuesto del proyecto no puede ser menor que las asignaciones estimadas de sus actividades.' });
+          return;
+        }
+      }
       const resultado = id
       ? await cliente.query(
         `UPDATE proyectos p SET nombre = $3, tipo = $4, estado = $5,
@@ -157,17 +178,45 @@ export function crearRouterActividades(pool: typeof databasePool = databasePool)
     }
     try {
       if (!pool) throw new Error('Base de datos no disponible');
-      const actividades = await listarActividadesProyecto(
+      const resultado = await listarActividadesProyecto(
         pool, proyectoId, req.auth!.organizacionId,
       );
-      if (!actividades) {
+      if (!resultado) {
         res.status(404).json({ message: 'No se encontró el proyecto.' });
         return;
       }
-      res.json({ actividades });
+      res.json(resultado);
     } catch (error) {
       console.error('Error consultando actividades:', error);
       res.status(500).json({ message: 'No fue posible consultar las actividades.' });
+    }
+  });
+
+  router.get('/:proyectoId/responsables', requirePermission('proyectos.gestionar'), async (req, res) => {
+    const { proyectoId } = req.params;
+    if (!esUuid(proyectoId)) {
+      res.status(400).json({ message: 'Seleccioná un proyecto válido.' });
+      return;
+    }
+    try {
+      if (!pool) throw new Error('Base de datos no disponible');
+      const { rows } = await pool.query(
+        `SELECT u.id, u.email AS nombre
+         FROM usuarios u
+         JOIN comunidades c ON c.organizacion_id = u.organizacion_id
+         JOIN proyectos p ON p.comunidad_id = c.id
+         WHERE p.id = $1 AND c.organizacion_id = $2 AND u.activo
+           AND NOT EXISTS (
+             SELECT 1 FROM usuarios_roles ur JOIN roles r ON r.id = ur.rol_id
+             WHERE ur.usuario_id = u.id AND r.nombre = 'DONANTE'
+           )
+         ORDER BY u.email, u.id`,
+        [proyectoId, req.auth!.organizacionId],
+      );
+      res.json({ responsables: rows });
+    } catch (error) {
+      console.error('Error consultando responsables de actividad:', error);
+      res.status(500).json({ message: 'No fue posible consultar los responsables.' });
     }
   });
 
@@ -183,6 +232,23 @@ export function crearRouterActividades(pool: typeof databasePool = databasePool)
       }
       try {
         if (!pool) throw new Error('Base de datos no disponible');
+        const contexto = await pool.query(
+          `SELECT a.meta_cantidad
+           FROM actividades_programadas a
+           JOIN proyectos p ON p.id = a.proyecto_id
+           JOIN comunidades c ON c.id = p.comunidad_id
+           WHERE p.id = $1 AND a.id = $2 AND c.organizacion_id = $3`,
+          [proyectoId, actividadId, req.auth!.organizacionId],
+        );
+        if (!contexto.rows.length) {
+          res.status(404).json({ message: 'No se encontró la actividad del proyecto en la organización activa.' });
+          return;
+        }
+        const cuantificable = contexto.rows[0].meta_cantidad !== null;
+        if (cuantificable !== (datos.cantidadReportada !== null)) {
+          res.status(400).json({ message: 'El avance debe reportar una cantidad para esta meta o una estimación justificada.' });
+          return;
+        }
         const avance = await registrarAvanceActividad(
           pool,
           proyectoId,
@@ -192,13 +258,130 @@ export function crearRouterActividades(pool: typeof databasePool = databasePool)
           datos,
         );
         if (!avance) {
-          res.status(404).json({ message: 'No se encontró la actividad del proyecto en la organización activa.' });
+          res.status(409).json({ message: 'La clave de envío ya fue utilizada; actualizá el historial antes de reintentar.' });
           return;
         }
         res.status(201).json(avance);
       } catch (error) {
         console.error('Error registrando avance de actividad:', error);
         res.status(500).json({ message: 'No fue posible registrar el avance de la actividad.' });
+      }
+    },
+  );
+
+  router.put(
+    '/:proyectoId/actividades/:actividadId/avances/:avanceId',
+    requirePermission('actividades.avance.gestionar'),
+    async (req, res) => {
+      const { proyectoId, actividadId, avanceId } = req.params;
+      const datos = validarAvanceActividad(req.body);
+      if (!esUuid(proyectoId) || !esUuid(actividadId) || !esUuid(avanceId) || !datos) {
+        res.status(400).json({ message: 'Revisá los datos del avance antes de guardarlo.' });
+        return;
+      }
+      try {
+        if (!pool) throw new Error('Base de datos no disponible');
+        const actualizado = await editarAvanceActividad(
+          pool, proyectoId, actividadId, avanceId, req.auth!.organizacionId,
+          req.auth!.sub, datos,
+        );
+        if (!actualizado) {
+          res.status(409).json({ message: 'Solo podés editar un borrador o un avance devuelto de tu organización.' });
+          return;
+        }
+        res.sendStatus(204);
+      } catch (error) {
+        console.error('Error editando borrador de avance:', error);
+        res.status(500).json({ message: 'No fue posible guardar los cambios del avance.' });
+      }
+    },
+  );
+
+  router.post(
+    '/:proyectoId/actividades/:actividadId/avances/:avanceId/enviar',
+    requirePermission('actividades.avance.gestionar'),
+    async (req, res) => {
+      const { proyectoId, actividadId, avanceId } = req.params;
+      if (!esUuid(proyectoId) || !esUuid(actividadId) || !esUuid(avanceId)) {
+        res.status(400).json({ message: 'Seleccioná un avance válido.' });
+        return;
+      }
+      try {
+        if (!pool) throw new Error('Base de datos no disponible');
+        const enviado = await transicionarAvanceActividad(
+          pool, proyectoId, actividadId, avanceId, req.auth!.organizacionId,
+          req.auth!.sub, 'ENVIAR',
+        );
+        if (!enviado) {
+          res.status(409).json({ message: 'El avance no está disponible para enviar en su estado actual.' });
+          return;
+        }
+        res.sendStatus(204);
+      } catch (error) {
+        console.error('Error enviando avance a revisión:', error);
+        res.status(500).json({ message: 'No fue posible enviar el avance a revisión.' });
+      }
+    },
+  );
+
+  for (const accion of ['validar', 'devolver'] as const) {
+    router.post(
+      `/:proyectoId/actividades/:actividadId/avances/:avanceId/${accion}`,
+      requirePermission('actividades.avance.revisar'),
+      async (req, res) => {
+        const { proyectoId, actividadId, avanceId } = req.params;
+        const motivo = req.body?.motivo;
+        if (!esUuid(proyectoId) || !esUuid(actividadId) || !esUuid(avanceId) ||
+            (accion === 'devolver' && (typeof motivo !== 'string' || !motivo.trim() || motivo.trim().length > 3000))) {
+          res.status(400).json({ message: 'Revisá el avance y el motivo de devolución.' });
+          return;
+        }
+        try {
+          if (!pool) throw new Error('Base de datos no disponible');
+          const actualizado = await transicionarAvanceActividad(
+            pool, proyectoId, actividadId, avanceId, req.auth!.organizacionId,
+            req.auth!.sub, accion === 'validar' ? 'VALIDAR' : 'DEVOLVER',
+            accion === 'devolver' ? motivo.trim() : undefined,
+          );
+          if (!actualizado) {
+            res.status(409).json({ message: 'El avance no está disponible para esta revisión o no podés validarlo si lo registraste.' });
+            return;
+          }
+          res.sendStatus(204);
+        } catch (error) {
+          console.error(`Error al ${accion} avance:`, error);
+          res.status(500).json({ message: `No fue posible ${accion} el avance.` });
+        }
+      },
+    );
+  }
+
+  router.post(
+    '/:proyectoId/actividades/:actividadId/avances/:avanceId/corregir',
+    requirePermission('actividades.avance.corregir'),
+    async (req, res) => {
+      const { proyectoId, actividadId, avanceId } = req.params;
+      const datos = validarAvanceActividad(req.body);
+      const motivo = req.body?.motivoCorreccion;
+      if (!esUuid(proyectoId) || !esUuid(actividadId) || !esUuid(avanceId) || !datos ||
+          typeof motivo !== 'string' || motivo.trim().length < 3 || motivo.trim().length > 3000) {
+        res.status(400).json({ message: 'La corrección debe incluir datos válidos y un motivo.' });
+        return;
+      }
+      try {
+        if (!pool) throw new Error('Base de datos no disponible');
+        const corregido = await editarAvanceActividad(
+          pool, proyectoId, actividadId, avanceId, req.auth!.organizacionId,
+          req.auth!.sub, datos, true, motivo.trim(),
+        );
+        if (!corregido) {
+          res.status(409).json({ message: 'Solo se puede corregir explícitamente un avance validado del proyecto.' });
+          return;
+        }
+        res.sendStatus(204);
+      } catch (error) {
+        console.error('Error corrigiendo avance validado:', error);
+        res.status(500).json({ message: 'No fue posible corregir el avance validado.' });
       }
     },
   );
@@ -211,36 +394,96 @@ proyectosRouter.use(crearRouterActividades());
 const guardarActividad: RequestHandler = async (req, res) => {
   const { proyectoId, actividadId } = req.params;
   const { estado, fechaInicio, fechaFin } = req.body ?? {};
+  const responsableAsignadoId = req.body?.responsableAsignadoId || null;
+  const metaCantidad = req.body?.metaCantidad === '' ? null : req.body?.metaCantidad ?? null;
+  const unidadMedida = typeof req.body?.unidadMedida === 'string' ? req.body.unidadMedida.trim() : '';
+  const presupuestoEstimado = req.body?.presupuestoEstimado === '' ? null : req.body?.presupuestoEstimado ?? null;
+  const pesoResultado = req.body?.pesoResultado === '' ? null : req.body?.pesoResultado ?? null;
   const nombre = typeof req.body?.nombre === 'string' ? req.body.nombre.trim() : '';
   const descripcion = req.body?.descripcion ?? '';
+  const metaValida = metaCantidad === null || (typeof metaCantidad === 'number' &&
+    Number.isFinite(metaCantidad) && metaCantidad > 0 &&
+    /^\d{1,11}(?:\.\d{1,3})?$/.test(String(metaCantidad)));
+  const presupuestoValido = presupuestoEstimado === null || (typeof presupuestoEstimado === 'number' &&
+    Number.isFinite(presupuestoEstimado) && presupuestoEstimado >= 0 &&
+    /^\d{1,12}(?:\.\d{1,2})?$/.test(String(presupuestoEstimado)));
+  const pesoValido = pesoResultado === null || (typeof pesoResultado === 'number' &&
+    Number.isFinite(pesoResultado) && pesoResultado >= 0 && pesoResultado <= 100 &&
+    /^\d{1,3}(?:\.\d{1,2})?$/.test(String(pesoResultado)));
   if (!esUuid(proyectoId) || (actividadId !== undefined && !esUuid(actividadId)) ||
       !nombre || nombre.length > 180 || typeof descripcion !== 'string' || descripcion.length > 3000 ||
+      (responsableAsignadoId !== null && !esUuid(responsableAsignadoId)) ||
+      !metaValida || (metaCantidad === null) !== !unidadMedida ||
+      unidadMedida.length > 80 || !presupuestoValido || !pesoValido ||
       !estadosActividad.includes(estado) ||
       (fechaInicio != null && !esFecha(fechaInicio)) ||
       (fechaFin != null && (!esFecha(fechaFin) || (fechaInicio != null && fechaFin < fechaInicio)))) {
-    res.status(400).json({ message: 'Revisá el nombre, el estado y las fechas de la actividad.' });
+    res.status(400).json({ message: 'Revisá el nombre, las metas, la unidad, los recursos, el responsable, el estado y las fechas de la actividad.' });
     return;
   }
   try {
     if (!databasePool) throw new Error('Base de datos no disponible');
     const valores = [proyectoId, req.auth!.organizacionId, nombre, descripcion.trim() || null,
-      estado, fechaInicio ?? null, fechaFin ?? null];
+      estado, fechaInicio ?? null, fechaFin ?? null, actividadId ?? null,
+      presupuestoEstimado, responsableAsignadoId, metaCantidad, unidadMedida || null, pesoResultado];
     const { rows } = actividadId
       ? await databasePool.query(
-        `UPDATE actividades_programadas a SET nombre = $3, descripcion = $4, estado = $5,
-           fecha_inicio = $6, fecha_fin = $7, actualizado_en = NOW()
-         FROM proyectos p JOIN comunidades c ON c.id = p.comunidad_id
-         WHERE p.id = $1 AND c.organizacion_id = $2 AND a.proyecto_id = p.id AND a.id = $8
-         RETURNING a.id`, [...valores, actividadId],
+        `WITH proyecto AS MATERIALIZED (
+           SELECT p.id, p.presupuesto_asignado, c.organizacion_id
+           FROM proyectos p JOIN comunidades c ON c.id = p.comunidad_id
+           WHERE p.id = $1 AND c.organizacion_id = $2
+           FOR UPDATE OF p
+         ), otros AS (
+           SELECT COALESCE(SUM(a.presupuesto_estimado), 0) AS total
+           FROM actividades_programadas a JOIN proyecto p ON p.id = a.proyecto_id
+           WHERE a.id IS DISTINCT FROM $8::uuid
+         )
+         UPDATE actividades_programadas a SET nombre = $3, descripcion = $4, estado = $5,
+           fecha_inicio = $6, fecha_fin = $7, responsable_asignado_usuario_id = $10,
+           meta_cantidad = $11, unidad_medida = $12, presupuesto_estimado = $9,
+           peso_resultado = $13, actualizado_en = NOW()
+         FROM proyecto p CROSS JOIN otros o
+         WHERE a.proyecto_id = p.id AND a.id = $8
+           AND COALESCE($9::numeric, 0) + o.total <= p.presupuesto_asignado
+           AND ($10::uuid IS NULL OR EXISTS (
+             SELECT 1 FROM usuarios u WHERE u.id = $10 AND u.organizacion_id = p.organizacion_id AND u.activo
+           ))
+         RETURNING a.id`, valores,
       )
       : await databasePool.query(
-        `INSERT INTO actividades_programadas (proyecto_id, nombre, descripcion, estado, fecha_inicio, fecha_fin)
-         SELECT p.id, $3, $4, $5, $6, $7
-         FROM proyectos p JOIN comunidades c ON c.id = p.comunidad_id
-         WHERE p.id = $1 AND c.organizacion_id = $2 RETURNING id`, valores,
+        `WITH proyecto AS MATERIALIZED (
+           SELECT p.id, p.presupuesto_asignado, c.organizacion_id
+           FROM proyectos p JOIN comunidades c ON c.id = p.comunidad_id
+           WHERE p.id = $1 AND c.organizacion_id = $2
+           FOR UPDATE OF p
+         ), otros AS (
+           SELECT COALESCE(SUM(a.presupuesto_estimado), 0) AS total
+           FROM actividades_programadas a JOIN proyecto p ON p.id = a.proyecto_id
+         )
+         INSERT INTO actividades_programadas (
+           proyecto_id, nombre, descripcion, estado, fecha_inicio, fecha_fin,
+           responsable_asignado_usuario_id, meta_cantidad, unidad_medida,
+           presupuesto_estimado, peso_resultado
+         )
+         SELECT p.id, $3, $4, $5, $6, $7, $10, $11, $12, $9, $13
+         FROM proyecto p CROSS JOIN otros o
+         WHERE COALESCE($9::numeric, 0) + o.total <= p.presupuesto_asignado
+           AND ($10::uuid IS NULL OR EXISTS (
+             SELECT 1 FROM usuarios u WHERE u.id = $10 AND u.organizacion_id = p.organizacion_id AND u.activo
+           ))
+         RETURNING id`, valores,
       );
     if (!rows.length) {
-      res.status(404).json({ message: 'No se encontró el proyecto o la actividad.' });
+      const disponible = await databasePool.query(
+        `SELECT 1 FROM proyectos p JOIN comunidades c ON c.id = p.comunidad_id
+         WHERE p.id = $1 AND c.organizacion_id = $2`,
+        [proyectoId, req.auth!.organizacionId],
+      );
+      if (!disponible.rows.length) {
+        res.status(404).json({ message: 'No se encontró el proyecto o la actividad.' });
+        return;
+      }
+      res.status(400).json({ message: 'El responsable debe estar activo en la organización y las asignaciones estimadas no pueden superar el presupuesto del proyecto.' });
       return;
     }
     res.status(actividadId ? 200 : 201).json(rows[0]);

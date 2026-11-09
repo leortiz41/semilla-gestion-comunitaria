@@ -553,25 +553,80 @@ export interface ActividadProyecto {
   estado: string;
   fechaInicio: string | null;
   fechaFin: string | null;
+  responsableAsignadoId: string | null;
+  responsableAsignado: string | null;
+  metaCantidad: number | null;
+  unidadMedida: string | null;
+  presupuestoEstimado: number | null;
+  pesoResultado: number | null;
+  cantidadValidada: number;
+  porcentajeResultado: number;
+  ultimaEjecucionValidada: string | null;
   avances: AvanceActividadProyecto[];
+}
+
+export interface DatosActividadProyecto {
+  nombre: string;
+  descripcion: string;
+  estado: string;
+  fechaInicio: string | null;
+  fechaFin: string | null;
+  responsableAsignadoId: string | null;
+  metaCantidad: number | null;
+  unidadMedida: string | null;
+  presupuestoEstimado: number | null;
+  pesoResultado: number | null;
 }
 
 export interface AvanceActividadProyecto {
   id: string;
-  porcentajeAvance: number;
+  porcentajeAvance: number | null;
+  cantidadReportada: number | null;
   fecha: string;
   descripcion: string;
-  responsable: string;
+  observaciones: string | null;
+  estadoRevision: 'BORRADOR' | 'ENVIADO' | 'VALIDADO' | 'DEVUELTO';
+  responsable: string | null;
+  revisor: string | null;
+  revisadoEn: string | null;
+  motivoDevolucion: string | null;
+  historial: {
+    accion: string;
+    actor: string | null;
+    fecha: string;
+    antes: Record<string, unknown> | null;
+    despues: Record<string, unknown> | null;
+  }[];
+}
+
+export interface DatosAvanceActividadProyecto {
+  porcentajeAvance: number | null;
+  cantidadReportada: number | null;
+  fecha: string;
+  descripcion: string;
+  observaciones: string | null;
+  claveIdempotencia: string;
+}
+
+export function obtenerResponsablesProyecto(token: string, proyectoId: string) {
+  return request<{ responsables: { id: string; nombre: string }[] }>(
+    `/proyectos/${proyectoId}/responsables`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
 }
 
 export function obtenerActividadesProyecto(token: string, proyectoId: string) {
-  return request<{ actividades: ActividadProyecto[] }>(`/proyectos/${proyectoId}/actividades`, {
+  return request<{
+    actividades: ActividadProyecto[];
+    porcentajeProyecto: number | null;
+    pesoConfigurado: number;
+  }>(`/proyectos/${proyectoId}/actividades`, {
     headers: { Authorization: `Bearer ${token}` },
   });
 }
 
 export function guardarActividadProyecto(token: string, proyectoId: string,
-  datos: Omit<ActividadProyecto, 'id' | 'avances'>, actividadId?: string) {
+  datos: DatosActividadProyecto, actividadId?: string) {
   const ruta = `/proyectos/${proyectoId}/actividades${actividadId ? '/' + actividadId : ''}`;
   return request<{ id: string }>(ruta, {
     method: actividadId ? 'PUT' : 'POST',
@@ -581,10 +636,44 @@ export function guardarActividadProyecto(token: string, proyectoId: string,
 }
 
 export function registrarAvanceActividadProyecto(token: string, proyectoId: string, actividadId: string,
-  datos: Omit<AvanceActividadProyecto, 'id' | 'responsable'>) {
+  datos: DatosAvanceActividadProyecto) {
   return request<AvanceActividadProyecto>(`/proyectos/${proyectoId}/actividades/${actividadId}/avances`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify(datos),
+  });
+}
+
+export function editarAvanceActividadProyecto(token: string, proyectoId: string, actividadId: string,
+  avanceId: string, datos: DatosAvanceActividadProyecto) {
+  return request<void>(`/proyectos/${proyectoId}/actividades/${actividadId}/avances/${avanceId}`, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(datos),
+  });
+}
+
+export function enviarAvanceActividadProyecto(token: string, proyectoId: string, actividadId: string, avanceId: string) {
+  return request<void>(`/proyectos/${proyectoId}/actividades/${actividadId}/avances/${avanceId}/enviar`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function revisarAvanceActividadProyecto(token: string, proyectoId: string, actividadId: string,
+  avanceId: string, accion: 'validar' | 'devolver', motivo?: string) {
+  return request<void>(`/proyectos/${proyectoId}/actividades/${actividadId}/avances/${avanceId}/${accion}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: accion === 'devolver' ? JSON.stringify({ motivo }) : undefined,
+  });
+}
+
+export function corregirAvanceValidadoProyecto(token: string, proyectoId: string, actividadId: string,
+  avanceId: string, datos: DatosAvanceActividadProyecto, motivoCorreccion: string) {
+  return request<void>(`/proyectos/${proyectoId}/actividades/${actividadId}/avances/${avanceId}/corregir`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ ...datos, motivoCorreccion }),
   });
 }

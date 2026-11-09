@@ -205,9 +205,12 @@ function App() {
           : usuario && accessToken ? (
             <PaginaProyectos
               token={accessToken}
+              usuarioEmail={usuario.email}
               puedeVer={usuario.permisos.includes('proyectos.ver')}
               puedeGestionar={usuario.permisos.includes('proyectos.gestionar')}
               puedeRegistrarAvance={usuario.permisos.includes('actividades.avance.gestionar')}
+              puedeRevisarAvance={usuario.permisos.includes('actividades.avance.revisar')}
+              puedeCorregirAvance={usuario.permisos.includes('actividades.avance.corregir')}
             />
           ) : null;
       case 'evidencias':

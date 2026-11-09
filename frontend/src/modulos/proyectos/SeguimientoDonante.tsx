@@ -46,14 +46,16 @@ export default function SeguimientoDonante({
             {vista === 'proyectos' ? (
               <>
                 <p>{estados[proyecto.estado] ?? proyecto.estado}</p>
-                {proyecto.porcentajeAvance === null ? <p>Avance pendiente de registrar.</p> : (
+                {proyecto.porcentajeAvance === null ? <p>Avance global pendiente de ponderación de actividades.</p> : (
                   <>
                     <label>
-                      Avance registrado · {proyecto.porcentajeAvance} %
+                      Avance global validado · {proyecto.porcentajeAvance} %
                       <br />
                       <progress value={proyecto.porcentajeAvance} max={100} />
                     </label>
-                    <p>Último avance: <time dateTime={proyecto.fechaAvance ?? undefined}>{proyecto.fechaAvance}</time></p>
+                    {proyecto.fechaAvance && (
+                      <p>Última ejecución validada: <time dateTime={proyecto.fechaAvance}>{proyecto.fechaAvance}</time></p>
+                    )}
                   </>
                 )}
               </>

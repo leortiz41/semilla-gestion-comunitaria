@@ -22,11 +22,16 @@ const estados: Record<string, string> = {
   CANCELADO: 'Cancelado',
 };
 
-function PaginaProyectos({ token, puedeVer, puedeGestionar, puedeRegistrarAvance }: {
+function PaginaProyectos({
+  token, usuarioEmail, puedeVer, puedeGestionar, puedeRegistrarAvance, puedeRevisarAvance, puedeCorregirAvance,
+}: {
   token: string;
+  usuarioEmail: string;
   puedeVer: boolean;
   puedeGestionar: boolean;
   puedeRegistrarAvance: boolean;
+  puedeRevisarAvance: boolean;
+  puedeCorregirAvance: boolean;
 }) {
   const [datos, setDatos] = useState<Awaited<ReturnType<typeof obtenerProyectosAdministrativos>> | null>(null);
   const [formulario, setFormulario] = useState<ProyectoAdministrativo | 'nuevo' | null>(null);
@@ -191,8 +196,13 @@ function PaginaProyectos({ token, puedeVer, puedeGestionar, puedeRegistrarAvance
                   <ActividadesProyecto
                     token={token}
                     proyectoId={item.id}
+                    usuarioEmail={usuarioEmail}
+                    presupuestoProyecto={Number(item.presupuesto)}
+                    moneda={datos.moneda}
                     puedeGestionar={puedeGestionar}
                     puedeRegistrarAvance={puedeRegistrarAvance}
+                    puedeRevisarAvance={puedeRevisarAvance}
+                    puedeCorregirAvance={puedeCorregirAvance}
                   />
                 )}
               </article>

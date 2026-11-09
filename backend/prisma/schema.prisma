@@ -41,19 +41,25 @@ model roles {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model actividades_programadas {
-  id                  String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  equipo_misionero_id String?            @db.Uuid
-  proyecto_id         String?            @db.Uuid
-  nombre              String             @db.VarChar(180)
-  descripcion         String?
-  fecha_inicio        DateTime?          @db.Date
-  fecha_fin           DateTime?          @db.Date
-  estado              String             @default("PLANIFICADA") @db.VarChar(20)
-  creado_en           DateTime           @default(now()) @db.Timestamptz(6)
-  actualizado_en      DateTime           @default(now()) @db.Timestamptz(6)
-  equipos_misioneros  equipos_misioneros? @relation(fields: [equipo_misionero_id], references: [id], onDelete: Cascade)
-  proyectos           proyectos?         @relation(fields: [proyecto_id], references: [id])
-  avances_proyecto    avances_proyecto[]
+  id                             String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  equipo_misionero_id            String?            @db.Uuid
+  proyecto_id                    String?            @db.Uuid
+  responsable_asignado_usuario_id String?           @db.Uuid
+  nombre                         String             @db.VarChar(180)
+  descripcion                    String?
+  fecha_inicio                   DateTime?          @db.Date
+  fecha_fin                      DateTime?          @db.Date
+  meta_cantidad                  Decimal?           @db.Decimal(14, 3)
+  unidad_medida                  String?            @db.VarChar(80)
+  presupuesto_estimado           Decimal?           @db.Decimal(14, 2)
+  peso_resultado                 Decimal?           @db.Decimal(5, 2)
+  estado                         String             @default("PLANIFICADA") @db.VarChar(20)
+  creado_en                      DateTime           @default(now()) @db.Timestamptz(6)
+  actualizado_en                 DateTime           @default(now()) @db.Timestamptz(6)
+  equipos_misioneros             equipos_misioneros? @relation(fields: [equipo_misionero_id], references: [id], onDelete: Cascade)
+  proyectos                      proyectos?         @relation(fields: [proyecto_id], references: [id])
+  responsable_asignado           usuarios?          @relation("ResponsableActividad", fields: [responsable_asignado_usuario_id], references: [id], onDelete: SetNull)
+  avances_proyecto               avances_proyecto[]
 
   @@unique([id, proyecto_id], map: "uq_actividades_id_proyecto")
   @@index([equipo_misionero_id], map: "idx_actividades_equipo_id")
@@ -67,15 +73,23 @@ model avances_proyecto {
   actividad_id           String?              @db.Uuid
   responsable_usuario_id String?              @db.Uuid
   personal_contratado_id String?              @db.Uuid
-  porcentaje_avance      Decimal              @db.Decimal(5, 2)
+  clave_idempotencia     String?              @unique(map: "uq_avances_clave_idempotencia") @db.Uuid
+  porcentaje_avance      Decimal?             @db.Decimal(5, 2)
+  cantidad_reportada     Decimal?             @db.Decimal(14, 3)
   fecha_avance           DateTime             @default(dbgenerated("CURRENT_DATE")) @db.Date
   comentarios            String?
+  observaciones          String?
+  estado_revision        String               @default("BORRADOR") @db.VarChar(20)
+  revisor_usuario_id     String?              @db.Uuid
+  revisado_en            DateTime?            @db.Timestamptz(6)
+  motivo_devolucion      String?
   creado_en              DateTime             @default(now()) @db.Timestamptz(6)
   actualizado_en         DateTime             @default(now()) @db.Timestamptz(6)
-  actividades_programadas actividades_programadas? @relation(fields: [actividad_id], references: [id], onDelete: Restrict)
+  actividades_programadas actividades_programadas? @relation(fields: [actividad_id, proyecto_id], references: [id, proyecto_id], onDelete: Restrict)
   personal_contratado    personal_contratado? @relation(fields: [personal_contratado_id], references: [id])
   proyectos              proyectos            @relation(fields: [proyecto_id], references: [id], onDelete: Cascade)
-  responsable            usuarios?            @relation(fields: [responsable_usuario_id], references: [id], onDelete: Restrict)
+  responsable            usuarios?            @relation("AutorAvance", fields: [responsable_usuario_id], references: [id], onDelete: Restrict)
+  revisor                usuarios?            @relation("RevisorAvance", fields: [revisor_usuario_id], references: [id], onDelete: Restrict)
   evidencias             evidencias[]
   solicitudes_pago       solicitudes_pago[]
 
@@ -83,6 +97,7 @@ model avances_proyecto {
   @@index([personal_contratado_id], map: "idx_avances_personal_id")
   @@index([proyecto_id], map: "idx_avances_proyecto_id")
   @@index([responsable_usuario_id], map: "idx_avances_responsable_usuario_id")
+  @@index([estado_revision, actividad_id], map: "idx_avances_estado_actividad")
 }
 
 model bitacora_auditoria {
@@ -524,7 +539,9 @@ model usuarios {
   claves_idempotencia         claves_idempotencia[]
   dispositivos_sincronizacion dispositivos_sincronizacion[]
   evidencias                  evidencias[]
-  avances_proyecto            avances_proyecto[]
+  avances_proyecto            avances_proyecto[] @relation("AutorAvance")
+  avances_revisados           avances_proyecto[] @relation("RevisorAvance")
+  actividades_asignadas       actividades_programadas[] @relation("ResponsableActividad")
   tokens_refresco             tokens_refresco[]
   empleados                   empleados?                    @relation(fields: [empleado_id], references: [id])
   organizaciones              organizaciones                @relation(fields: [organizacion_id], references: [id], onDelete: Restrict)

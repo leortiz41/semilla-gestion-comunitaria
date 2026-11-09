@@ -1,4 +1,5 @@
 import { createServer } from 'node:http';
+import { randomUUID } from 'node:crypto';
 import type { AddressInfo } from 'node:net';
 import { readFile } from 'node:fs/promises';
 import express from 'express';
@@ -11,7 +12,7 @@ import { crearRouterActividades } from '../src/routes/proyectos.routes.js';
 import { authenticateAccessToken, requirePermission } from '../src/middleware/auth.middleware.js';
 import { createAccessToken } from '../src/security/token.js';
 
-const migraciones = [
+const migracionesPrevias = [
   '001_esquema_inicial',
   '002_configurar_roles_permisos',
   '003_multi_organizacion_base',
@@ -30,46 +31,65 @@ const migraciones = [
   '016_estado_donantes_y_brigadas',
   '017_proyectos_donantes_brigadas',
   '018_actividades_sin_equipo_misionero',
-  '019_avances_por_actividad',
 ];
 
-test('validarAvanceActividad acepta valores de 0 a 100 y rechaza datos inválidos', () => {
-  const valido = {
+async function aplicarMigracion(db: PGlite, nombre: string) {
+  const sql = (await readFile(
+    new URL(`../../database/sql/${nombre}.sql`, import.meta.url),
+    'utf8',
+  )).replaceAll('CREATE EXTENSION IF NOT EXISTS pgcrypto;', '');
+  await db.exec(sql);
+}
+
+test('validarAvanceActividad valida avances cuantitativos y estimaciones justificadas', () => {
+  const estimacion = {
     porcentajeAvance: 37.5,
+    cantidadReportada: null,
     fecha: '2026-11-08',
     descripcion: 'Se completó la primera etapa.',
+    observaciones: 'Se midió el avance con base en los hitos terminados.',
+    claveIdempotencia: '819db581-22d5-4e1b-9eb3-080257694c56',
   };
-  assert.deepEqual(validarAvanceActividad(valido), valido);
-  assert.deepEqual(validarAvanceActividad({ ...valido, porcentajeAvance: 0 })?.porcentajeAvance, 0);
-  assert.deepEqual(validarAvanceActividad({ ...valido, porcentajeAvance: 100 })?.porcentajeAvance, 100);
+  assert.deepEqual(validarAvanceActividad(estimacion), estimacion);
+  assert.deepEqual(validarAvanceActividad({
+    ...estimacion,
+    porcentajeAvance: null,
+    cantidadReportada: 4.25,
+    observaciones: null,
+  }), {
+    ...estimacion,
+    porcentajeAvance: null,
+    cantidadReportada: 4.25,
+    observaciones: null,
+  });
+  assert.equal(validarAvanceActividad({ ...estimacion, porcentajeAvance: 0 })?.porcentajeAvance, 0);
+  assert.equal(validarAvanceActividad({ ...estimacion, porcentajeAvance: 100 })?.porcentajeAvance, 100);
 
   for (const cambios of [
     { porcentajeAvance: -0.01 },
     { porcentajeAvance: 100.01 },
     { porcentajeAvance: 12.345 },
     { porcentajeAvance: '50' },
+    { cantidadReportada: -1 },
+    { cantidadReportada: 1.2345, porcentajeAvance: null },
     { fecha: '2026-02-30' },
     { descripcion: '   ' },
-    { descripcion: 'x'.repeat(3001) },
+    { observaciones: '   ' },
+    { claveIdempotencia: 'no-es-un-uuid' },
   ]) {
-    assert.equal(validarAvanceActividad({ ...valido, ...cambios }), null);
+    assert.equal(validarAvanceActividad({ ...estimacion, ...cambios }), null);
   }
   assert.equal(validarAvanceActividad(null), null);
 });
 
-test('HU-12: registra y consulta avances con permiso y aislamiento de organización/proyecto', async () => {
+test('HU-12: conserva avances legados y audita estados, permisos, resultados e aislamiento', async () => {
+  const jwtSecretAnterior = process.env.JWT_SECRET;
   process.env.JWT_SECRET = 'pruebas-de-integracion-semilla-seguras-2026';
   const db = new PGlite();
   const server = createServer();
 
   try {
-    for (const migracion of migraciones) {
-      const sql = (await readFile(
-        new URL(`../../database/sql/${migracion}.sql`, import.meta.url),
-        'utf8',
-      )).replaceAll('CREATE EXTENSION IF NOT EXISTS pgcrypto;', '');
-      await db.exec(sql);
-    }
+    for (const migracion of migracionesPrevias) await aplicarMigracion(db, migracion);
 
     const org = (await db.query<{ id: string }>(
       "SELECT id FROM organizaciones WHERE slug = 'ministerio-sal-y-luz'",
@@ -79,6 +99,10 @@ test('HU-12: registra y consulta avances con permiso y aislamiento de organizaci
     )).rows[0].id;
     const usuario = (await db.query<{ id: string }>(
       "INSERT INTO usuarios (email, hash_contrasena, organizacion_id) VALUES ('campo@semilla.test', 'hash', $1) RETURNING id",
+      [org],
+    )).rows[0].id;
+    const revisor = (await db.query<{ id: string }>(
+      "INSERT INTO usuarios (email, hash_contrasena, organizacion_id) VALUES ('coordina@semilla.test', 'hash', $1) RETURNING id",
       [org],
     )).rows[0].id;
     const usuarioOtraOrg = (await db.query<{ id: string }>(
@@ -119,21 +143,30 @@ test('HU-12: registra y consulta avances con permiso y aislamiento de organizaci
       [proyectoOtraOrg],
     )).rows[0].id;
 
-    await assert.rejects(db.query(
-      `INSERT INTO avances_proyecto (proyecto_id, actividad_id, responsable_usuario_id, porcentaje_avance, comentarios)
-       VALUES ($1, $2, $3, 10, 'Debe respetar el proyecto de la actividad.')`,
-      [proyecto, actividadOtroProyecto, usuario],
-    ));
-    await assert.rejects(db.query(
-      `INSERT INTO avances_proyecto (proyecto_id, actividad_id, responsable_usuario_id, porcentaje_avance, comentarios)
-       VALUES ($1, $2, $3, 10, '   ')`,
+    await aplicarMigracion(db, '019_avances_por_actividad');
+    const avanceLegado = (await db.query<{ id: string }>(
+      `INSERT INTO avances_proyecto (
+         proyecto_id, actividad_id, responsable_usuario_id, porcentaje_avance, fecha_avance, comentarios
+       ) VALUES ($1, $2, $3, 15, '2026-11-07', 'Avance registrado con HU-12 original.')
+       RETURNING id`,
       [proyecto, actividad, usuario],
-    ));
-    await assert.rejects(db.query(
-      `INSERT INTO avances_proyecto (proyecto_id, actividad_id, responsable_usuario_id, porcentaje_avance, comentarios)
-       VALUES ($1, $2, $3, 101, 'Porcentaje fuera de rango.')`,
-      [proyecto, actividad, usuario],
-    ));
+    )).rows[0].id;
+    await aplicarMigracion(db, '020_planificacion_ejecucion_resultados');
+
+    const legadoMigrado = (await db.query<{ estado_revision: string }>(
+      'SELECT estado_revision FROM avances_proyecto WHERE id = $1',
+      [avanceLegado],
+    )).rows[0];
+    assert.equal(legadoMigrado.estado_revision, 'ENVIADO');
+    const actividadCuantificable = (await db.query<{ id: string }>(
+      `INSERT INTO actividades_programadas (proyecto_id, nombre, meta_cantidad, unidad_medida)
+       VALUES ($1, 'Hogares atendidos', 10, 'hogares') RETURNING id`,
+      [proyecto],
+    )).rows[0].id;
+    await db.query(
+      'UPDATE actividades_programadas SET peso_resultado = 50 WHERE proyecto_id = $1',
+      [proyecto],
+    );
 
     const rolesConPermiso = (await db.query<{ nombre: string }>(
       `SELECT r.nombre FROM roles r
@@ -143,6 +176,14 @@ test('HU-12: registra y consulta avances con permiso y aislamiento de organizaci
        ORDER BY r.nombre`,
     )).rows.map((fila) => fila.nombre);
     assert.deepEqual(rolesConPermiso, ['ADMINISTRADOR', 'CAMPO', 'COORDINADOR']);
+    const rolesRevisores = (await db.query<{ nombre: string }>(
+      `SELECT r.nombre FROM roles r
+       JOIN roles_permisos rp ON rp.rol_id = r.id
+       JOIN permisos p ON p.id = rp.permiso_id
+       WHERE p.codigo = 'actividades.avance.revisar'
+       ORDER BY r.nombre`,
+    )).rows.map((fila) => fila.nombre);
+    assert.deepEqual(rolesRevisores, ['ADMINISTRADOR', 'COORDINADOR']);
 
     const query = async (sql: string, parametros?: unknown[]) => {
       const resultado = await db.query(sql, parametros);
@@ -162,106 +203,210 @@ test('HU-12: registra y consulta avances con permiso y aislamiento de organizaci
       server.once('error', reject);
       server.listen(0, resolve);
     });
+
     const address = server.address() as AddressInfo;
     const baseUrl = `http://127.0.0.1:${address.port}/proyectos`;
+    const correos = new Map([
+      [usuario, 'campo@semilla.test'],
+      [revisor, 'coordina@semilla.test'],
+      [usuarioOtraOrg, 'otra@semilla.test'],
+    ]);
     const crearToken = (usuarioId: string, organizacionId: string, permisos: string[]) =>
       createAccessToken({
         usuarioId,
-        email: usuarioId === usuario ? 'campo@semilla.test' : 'otra@semilla.test',
+        email: correos.get(usuarioId) ?? 'otro@semilla.test',
         organizacionId,
-        roles: ['CAMPO'],
+        roles: [],
         permisos,
         debeCambiarContrasena: false,
       });
-    const tokenCampo = crearToken(usuario, org, ['proyectos.ver', 'actividades.avance.gestionar']);
+    const permisosCampo = ['proyectos.ver', 'actividades.avance.gestionar'];
+    const tokenCampo = crearToken(usuario, org, permisosCampo);
+    const tokenCampoRevisor = crearToken(usuario, org, [...permisosCampo, 'actividades.avance.revisar']);
     const tokenSoloConsulta = crearToken(usuario, org, ['proyectos.ver']);
-
-    const sinPermiso = await fetch(`${baseUrl}/${proyecto}/actividades/${actividad}/avances`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${tokenSoloConsulta}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ porcentajeAvance: 50, fecha: '2026-11-08', descripcion: 'Trabajo ejecutado.' }),
+    const tokenRevisor = crearToken(revisor, org, ['proyectos.ver', 'actividades.avance.revisar']);
+    const tokenCorrector = crearToken(usuario, org, ['proyectos.ver', 'actividades.avance.corregir']);
+    const headers = (token: string, conJson = false) => ({
+      Authorization: `Bearer ${token}`,
+      ...(conJson ? { 'Content-Type': 'application/json' } : {}),
     });
+    const rutaActividad = (actividadId: string) => `${baseUrl}/${proyecto}/actividades/${actividadId}`;
+    const consultar = (token = tokenCampo) => fetch(`${baseUrl}/${proyecto}/actividades`, {
+      headers: headers(token),
+    });
+    const datosEstimacion = (porcentajeAvance: number, claveIdempotencia = randomUUID()) => ({
+      porcentajeAvance,
+      cantidadReportada: null,
+      fecha: '2026-11-08',
+      descripcion: `Trabajo de campo: ${porcentajeAvance}%.`,
+      observaciones: 'Estimación acumulada conforme a los hitos observados.',
+      claveIdempotencia,
+    });
+    const crearAvance = async (actividadId: string, token: string, datos: object) =>
+      fetch(`${rutaActividad(actividadId)}/avances`, {
+        method: 'POST',
+        headers: headers(token, true),
+        body: JSON.stringify(datos),
+      });
+    const enviar = (actividadId: string, avanceId: string, token = tokenCampo) =>
+      fetch(`${rutaActividad(actividadId)}/avances/${avanceId}/enviar`, {
+        method: 'POST',
+        headers: headers(token),
+      });
+    const revisar = (actividadId: string, avanceId: string, accion: 'validar' | 'devolver',
+      token: string, motivo?: string) =>
+      fetch(`${rutaActividad(actividadId)}/avances/${avanceId}/${accion}`, {
+        method: 'POST',
+        headers: headers(token, accion === 'devolver'),
+        ...(accion === 'devolver' ? { body: JSON.stringify({ motivo }) } : {}),
+      });
+
+    const sinPermiso = await crearAvance(actividad, tokenSoloConsulta, datosEstimacion(5));
     assert.equal(sinPermiso.status, 403);
 
-    const consultaInicial = await fetch(`${baseUrl}/${proyecto}/actividades`, {
-      headers: { Authorization: `Bearer ${tokenSoloConsulta}` },
-    });
+    const consultaInicial = await consultar();
     assert.equal(consultaInicial.status, 200);
     const inicial = await consultaInicial.json() as {
-      actividades: { id: string; avances: unknown[] }[];
+      actividades: { id: string; porcentajeResultado: number; avances: { id: string; estadoRevision: string }[] }[];
+      porcentajeProyecto: number | null;
+      pesoConfigurado: number;
     };
-    assert.deepEqual(inicial.actividades[0].avances, []);
+    const actividadInicial = inicial.actividades.find((item) => item.id === actividad);
+    assert.ok(actividadInicial);
+    assert.deepEqual(actividadInicial.avances.map((avance) => ({
+      id: avance.id,
+      estadoRevision: avance.estadoRevision,
+    })), [{ id: avanceLegado, estadoRevision: 'ENVIADO' }]);
+    assert.equal(actividadInicial.porcentajeResultado, 0);
+    assert.equal(inicial.porcentajeProyecto, 0);
+    assert.equal(inicial.pesoConfigurado, 100);
+
     const consultaOtraOrg = await fetch(`${baseUrl}/${proyectoOtraOrg}/actividades`, {
-      headers: { Authorization: `Bearer ${tokenSoloConsulta}` },
+      headers: headers(tokenCampo),
     });
     assert.equal(consultaOtraOrg.status, 404);
+    const invalidos = await Promise.all([
+      crearAvance(actividad, tokenCampo, datosEstimacion(101)),
+      crearAvance(actividadCuantificable, tokenCampo, datosEstimacion(10)),
+    ]);
+    assert.deepEqual(invalidos.map((respuesta) => respuesta.status), [400, 400]);
 
-    const invalido = await fetch(`${baseUrl}/${proyecto}/actividades/${actividad}/avances`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${tokenCampo}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ porcentajeAvance: 101, fecha: '2026-11-08', descripcion: 'No válido.' }),
-    });
-    assert.equal(invalido.status, 400);
-
-    const registrado = await fetch(`${baseUrl}/${proyecto}/actividades/${actividad}/avances`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${tokenCampo}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        porcentajeAvance: 37.5,
-        fecha: '2026-11-08',
-        descripcion: '  Se completó el taller inicial.  ',
-        responsableUsuarioId: usuarioOtraOrg,
-      }),
+    const clavePrimerAvance = randomUUID();
+    const registrado = await crearAvance(actividad, tokenCampo, {
+      ...datosEstimacion(40, clavePrimerAvance),
+      responsableUsuarioId: usuarioOtraOrg,
     });
     assert.equal(registrado.status, 201);
-    const respuestaRegistrada = await registrado.json() as {
-      id: string;
-      porcentajeAvance: number;
-      fecha: string;
-      descripcion: string;
-      responsable: string;
+    const primerAvance = await registrado.json() as {
+      id: string; porcentajeAvance: number; estadoRevision: string; responsable: string;
     };
-    assert.ok(respuestaRegistrada.id);
-    assert.deepEqual({ ...respuestaRegistrada, id: 'id' }, {
-      id: 'id',
-      porcentajeAvance: 37.5,
-      fecha: '2026-11-08',
-      descripcion: 'Se completó el taller inicial.',
-      responsable: 'campo@semilla.test',
-    });
+    assert.equal(primerAvance.porcentajeAvance, 40);
+    assert.equal(primerAvance.estadoRevision, 'BORRADOR');
+    assert.equal(primerAvance.responsable, 'campo@semilla.test');
 
-    const consultaFinal = await fetch(`${baseUrl}/${proyecto}/actividades`, {
-      headers: { Authorization: `Bearer ${tokenSoloConsulta}` },
+    const duplicado = await crearAvance(actividad, tokenCampo, {
+      ...datosEstimacion(40, clavePrimerAvance),
     });
-    const final = await consultaFinal.json() as {
+    assert.equal(duplicado.status, 409);
+
+    assert.equal((await enviar(actividad, primerAvance.id)).status, 204);
+    assert.equal((await revisar(actividad, primerAvance.id, 'validar', tokenCampoRevisor)).status, 409);
+    assert.equal((await revisar(actividad, primerAvance.id, 'devolver', tokenRevisor, 'Aclarar los hitos logrados.')).status, 204);
+
+    const devuelto = await consultar();
+    const datosDevuelto = await devuelto.json() as {
+      actividades: { id: string; avances: { id: string; estadoRevision: string; motivoDevolucion: string | null }[] }[];
+    };
+    const avanceDevuelto = datosDevuelto.actividades.find((item) => item.id === actividad)
+      ?.avances.find((avance) => avance.id === primerAvance.id);
+    assert.equal(avanceDevuelto?.estadoRevision, 'DEVUELTO');
+    assert.equal(avanceDevuelto?.motivoDevolucion, 'Aclarar los hitos logrados.');
+
+    const editado = await fetch(`${rutaActividad(actividad)}/avances/${primerAvance.id}`, {
+      method: 'PUT',
+      headers: headers(tokenCampo, true),
+      body: JSON.stringify(datosEstimacion(60)),
+    });
+    assert.equal(editado.status, 204);
+    assert.equal((await enviar(actividad, primerAvance.id)).status, 204);
+    assert.equal((await revisar(actividad, primerAvance.id, 'validar', tokenRevisor)).status, 204);
+
+    const segundoAvanceResponse = await crearAvance(actividad, tokenCampo, datosEstimacion(80));
+    assert.equal(segundoAvanceResponse.status, 201);
+    const segundoAvance = await segundoAvanceResponse.json() as { id: string };
+    assert.equal((await enviar(actividad, segundoAvance.id)).status, 204);
+    assert.equal((await revisar(actividad, segundoAvance.id, 'validar', tokenRevisor)).status, 204);
+
+    const crearCantidad = async (cantidadReportada: number) => {
+      const respuesta = await crearAvance(actividadCuantificable, tokenCampo, {
+        porcentajeAvance: null,
+        cantidadReportada,
+        fecha: '2026-11-08',
+        descripcion: `Se atendieron ${cantidadReportada} hogares.`,
+        observaciones: null,
+        claveIdempotencia: randomUUID(),
+      });
+      assert.equal(respuesta.status, 201);
+      const avance = await respuesta.json() as { id: string };
+      assert.equal((await enviar(actividadCuantificable, avance.id)).status, 204);
+      assert.equal((await revisar(actividadCuantificable, avance.id, 'validar', tokenRevisor)).status, 204);
+    };
+    await crearCantidad(4);
+    await crearCantidad(3);
+
+    const consultaPersistida = await consultar();
+    const persistida = await consultaPersistida.json() as {
       actividades: {
         id: string;
-        avances: { porcentajeAvance: number; fecha: string; descripcion: string; responsable: string }[];
+        porcentajeResultado: number;
+        cantidadValidada: number;
+        avances: { id: string; estadoRevision: string; historial: { accion: string }[] }[];
       }[];
+      porcentajeProyecto: number;
     };
-    assert.equal(final.actividades[0].avances.length, 1);
-    assert.deepEqual(final.actividades[0].avances[0], {
-      id: respuestaRegistrada.id,
-      porcentajeAvance: 37.5,
-      fecha: '2026-11-08',
-      descripcion: 'Se completó el taller inicial.',
-      responsable: 'campo@semilla.test',
-    });
+    const resultadoManual = persistida.actividades.find((item) => item.id === actividad);
+    const resultadoCuantificable = persistida.actividades.find((item) => item.id === actividadCuantificable);
+    assert.equal(resultadoManual?.porcentajeResultado, 80);
+    assert.equal(resultadoCuantificable?.cantidadValidada, 7);
+    assert.equal(resultadoCuantificable?.porcentajeResultado, 70);
+    assert.equal(persistida.porcentajeProyecto, 75);
+    assert.ok((resultadoManual?.avances.find((avance) => avance.id === segundoAvance.id)?.historial.length ?? 0) >= 2);
 
-    for (const [proyectoSolicitado, actividadSolicitada, token] of [
-      [proyecto, actividadOtroProyecto, tokenCampo],
-      [proyectoOtraOrg, actividadOtraOrg, tokenCampo],
-      [proyecto, actividad, crearToken(usuarioOtraOrg, org, ['proyectos.ver', 'actividades.avance.gestionar'])],
-    ]) {
-      const noAutorizado = await fetch(
-        `${baseUrl}/${proyectoSolicitado}/actividades/${actividadSolicitada}/avances`,
-        {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ porcentajeAvance: 50, fecha: '2026-11-08', descripcion: 'Debe rechazarse.' }),
-        },
+    const correccion = await fetch(`${rutaActividad(actividad)}/avances/${segundoAvance.id}/corregir`, {
+      method: 'POST',
+      headers: headers(tokenCorrector, true),
+      body: JSON.stringify({ ...datosEstimacion(90), motivoCorreccion: 'Se corrigió la estimación según nueva medición.' }),
+    });
+    assert.equal(correccion.status, 204);
+    assert.equal((await revisar(actividad, segundoAvance.id, 'validar', tokenRevisor)).status, 204);
+    const consultaCorregida = await consultar();
+    const corregida = await consultaCorregida.json() as {
+      actividades: { id: string; porcentajeResultado: number; avances: { id: string; historial: { accion: string }[] }[] }[];
+      porcentajeProyecto: number;
+    };
+    const resultadoCorregido = corregida.actividades.find((item) => item.id === actividad);
+    assert.equal(resultadoCorregido?.porcentajeResultado, 90);
+    assert.equal(corregida.porcentajeProyecto, 80);
+    assert.ok(resultadoCorregido?.avances.find((avance) => avance.id === segundoAvance.id)
+      ?.historial.some((evento) => evento.accion === 'CORREGIR_AVANCE_VALIDADO'));
+
+    const countLegacy = await db.query<{ total: string }>(
+      `SELECT count(*)::text AS total FROM bitacora_auditoria
+       WHERE nombre_entidad = 'avances_proyecto' AND entidad_id = $1`,
+      [avanceLegado],
+    );
+    assert.equal(countLegacy.rows[0].total, '1');
+    for (const [proyectoSolicitado, actividadSolicitada, token, estadosEsperados] of [
+      [proyecto, actividadOtroProyecto, tokenCampo, [404]],
+      [proyectoOtraOrg, actividadOtraOrg, tokenCampo, [404]],
+      [proyecto, actividad, crearToken(usuarioOtraOrg, org, permisosCampo), [409, 404]],
+    ] as const) {
+      const noAutorizado = await crearAvance(
+        actividadSolicitada,
+        token,
+        datosEstimacion(50),
       );
-      assert.equal(noAutorizado.status, 404);
+      assert.ok(estadosEsperados.includes(noAutorizado.status), `estado inesperado para ${proyectoSolicitado}: ${noAutorizado.status}`);
     }
   } finally {
     if (server.listening) {
@@ -270,5 +415,7 @@ test('HU-12: registra y consulta avances con permiso y aislamiento de organizaci
       });
     }
     await db.close();
+    if (jwtSecretAnterior === undefined) delete process.env.JWT_SECRET;
+    else process.env.JWT_SECRET = jwtSecretAnterior;
   }
 });

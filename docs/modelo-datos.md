@@ -93,6 +93,11 @@ Los campos, tipos y relaciones siguientes se extrajeron del `schema.prisma` vers
 | `fecha_inicio` | `DateTime` / `Date` | Sí | — |
 | `fecha_fin` | `DateTime` / `Date` | Sí | — |
 | `estado` | `String` / `VarChar(20)` | No | `@default("PLANIFICADA")` |
+| `responsable_asignado_usuario_id` | `String` / `Uuid` | Sí | Responsable operativo; usuario activo de la organización del proyecto |
+| `meta_cantidad` | `Decimal` / `Decimal(14, 3)` | Sí | Si está definida, requiere unidad no vacía y valor mayor que cero |
+| `unidad_medida` | `String` / `VarChar(80)` | Sí | Se define junto con `meta_cantidad` |
+| `presupuesto_estimado` | `Decimal` / `Decimal(14, 2)` | Sí | No negativo; suma de asignaciones no supera el presupuesto del proyecto |
+| `peso_resultado` | `Decimal` / `Decimal(5, 2)` | Sí | Peso explícito entre 0 y 100, independiente del presupuesto |
 | `creado_en` | `DateTime` / `Timestamptz(6)` | No | `@default(now())` |
 | `actualizado_en` | `DateTime` / `Timestamptz(6)` | No | `@default(now())` |
 
@@ -117,7 +122,14 @@ Claves e índices declarados:
 | `actividad_id` | `String` / `Uuid` | Sí | —; avances nuevos se asocian a una actividad del mismo proyecto |
 | `responsable_usuario_id` | `String` / `Uuid` | Sí | —; obligatorio cuando `actividad_id` no es nulo |
 | `personal_contratado_id` | `String` / `Uuid` | Sí | — |
-| `porcentaje_avance` | `Decimal` / `Decimal(5, 2)` | No | `CHECK` entre 0 y 100 |
+| `porcentaje_avance` | `Decimal` / `Decimal(5, 2)` | Sí | Estimación acumulada entre 0 y 100, exclusiva de actividades no cuantificables |
+| `clave_idempotencia` | `String` / `Uuid` | Sí | Clave única para reintentos de registro |
+| `cantidad_reportada` | `Decimal` / `Decimal(14, 3)` | Sí | Cantidad incremental positiva; exclusiva de avances porcentuales |
+| `observaciones` | `String` / `text` | Sí | Obligatoria para justificar estimaciones porcentuales |
+| `estado_revision` | `String` / `VarChar(20)` | No | `BORRADOR`, `ENVIADO`, `VALIDADO` o `DEVUELTO`; nuevos avances inician como borrador |
+| `revisor_usuario_id` | `String` / `Uuid` | Sí | Responsable de validar o devolver; distinto del autor |
+| `revisado_en` | `DateTime` / `Timestamptz(6)` | Sí | Fecha de revisión |
+| `motivo_devolucion` | `String` / `text` | Sí | Obligatorio para avances devueltos |
 | `fecha_avance` | `DateTime` / `Date` | No | `@default(dbgenerated("CURRENT_DATE"))` |
 | `comentarios` | `String` / `text` | Sí | — |
 | `creado_en` | `DateTime` / `Timestamptz(6)` | No | `@default(now())` |
@@ -129,8 +141,11 @@ Relaciones salientes:
 - `proyectos` → `proyectos`: `@relation(fields: [proyecto_id], references: [id], onDelete: Cascade)`.
 - `actividades_programadas` → `actividades_programadas`: `@relation(fields: [actividad_id], references: [id], onDelete: Restrict)`. La migración 019 agrega además la FK compuesta `(actividad_id, proyecto_id)` para impedir asociar un avance a una actividad de otro proyecto.
 - `responsable` → `usuarios`: `@relation(fields: [responsable_usuario_id], references: [id], onDelete: Restrict)`.
+- `revisor_usuario_id` → `usuarios`: relación opcional del revisor.
 
-Para avances asociados a actividad, `comentarios` contiene la descripción de lo ejecutado y no puede quedar vacía. El rango de `porcentaje_avance` se conserva entre 0 y 100.
+Para avances asociados a actividad, `comentarios` contiene la descripción de lo ejecutado y no puede quedar vacía. Cada avance reporta exactamente una cantidad o una estimación porcentual. Los avances legados de la HU-12 original se conservan como `ENVIADO` por la migración 020 y no afectan los resultados hasta ser validados.
+
+Los resultados físicos se calculan solo con avances `VALIDADO`: las cantidades incrementales se suman y se limitan a la meta; para actividades no cuantificables se usa la última estimación validada, sin sumar porcentajes. El resultado global pondera las actividades con `peso_resultado` y permanece pendiente si falta asignar peso a alguna actividad. Una actividad cancelada conserva su peso con resultado cero. Editar un resultado validado requiere corrección explícita, motivo y nueva revisión; la bitácora conserva valores anteriores y nuevos.
 
 Claves e índices declarados:
 
