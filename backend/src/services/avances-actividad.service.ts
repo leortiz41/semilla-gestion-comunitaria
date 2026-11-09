@@ -231,6 +231,7 @@ export async function transicionarAvanceActividad(
   usuarioId: string,
   accion: AccionRevisionAvance,
   motivo?: string,
+  permitirAutoRevision = false,
 ): Promise<boolean> {
   const { rowCount } = await pool.query(
     `WITH contexto AS MATERIALIZED (
@@ -247,7 +248,7 @@ export async function transicionarAvanceActividad(
            WHEN $6 = 'ENVIAR' THEN av.estado_revision IN ('BORRADOR', 'DEVUELTO')
              AND av.responsable_usuario_id = $5
            WHEN $6 IN ('VALIDAR', 'DEVOLVER') THEN av.estado_revision = 'ENVIADO'
-             AND av.responsable_usuario_id <> $5
+             AND (av.responsable_usuario_id <> $5 OR $8::boolean)
            ELSE FALSE
          END
        FOR UPDATE OF av
@@ -269,8 +270,13 @@ export async function transicionarAvanceActividad(
        usuario_id, accion, nombre_entidad, entidad_id, valores_anteriores, valores_nuevos
      )
      SELECT $5,
-       CASE $6 WHEN 'ENVIAR' THEN 'ENVIAR_AVANCE'
-         WHEN 'VALIDAR' THEN 'VALIDAR_AVANCE' ELSE 'DEVOLVER_AVANCE' END,
+       CASE
+         WHEN $6 = 'ENVIAR' THEN 'ENVIAR_AVANCE'
+         WHEN c.responsable_usuario_id = $5 AND $6 = 'VALIDAR' THEN 'AUTOVALIDAR_AVANCE'
+         WHEN c.responsable_usuario_id = $5 AND $6 = 'DEVOLVER' THEN 'AUTODEVOLVER_AVANCE'
+         WHEN $6 = 'VALIDAR' THEN 'VALIDAR_AVANCE'
+         ELSE 'DEVOLVER_AVANCE'
+       END,
        'avances_proyecto', n.id,
        jsonb_build_object('estado_revision', c.estado_anterior,
          'porcentaje_avance', c.porcentaje_avance, 'cantidad_reportada', c.cantidad_reportada,
@@ -278,9 +284,10 @@ export async function transicionarAvanceActividad(
          'observaciones', c.observaciones),
        jsonb_build_object('estado_revision', n.estado_revision,
          'revisor_usuario_id', n.revisor_usuario_id, 'revisado_en', n.revisado_en,
-         'motivo_devolucion', n.motivo_devolucion)
+         'motivo_devolucion', n.motivo_devolucion,
+         'autorrevision', $6 <> 'ENVIAR' AND c.responsable_usuario_id = $5)
      FROM actualizado n JOIN contexto c ON c.id = n.id`,
-    [proyectoId, actividadId, avanceId, organizacionId, usuarioId, accion, motivo ?? null],
+    [proyectoId, actividadId, avanceId, organizacionId, usuarioId, accion, motivo ?? null, permitirAutoRevision],
   );
   return rowCount === 1;
 }
