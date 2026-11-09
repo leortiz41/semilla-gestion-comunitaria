@@ -103,146 +103,43 @@ export default function DetalleProyecto({
     const campos = new FormData(formulario);
     const valor = (campo: string) => String(campos.get(campo) ?? '').trim();
     const errores: Record<string, string> = {};
-    // Aceptar coma o punto decimal y enviar números JSON válidos.
-    const leerNumero = (campo: string, decimales: number, minimo: number, maximo?: number): number | null => {
-      const texto = valor(campo);
-      if (!texto) return null;
-      const normalizado = texto.replace(',', '.');
-      const patron = new RegExp(`^\\d+(?:\\.\\d{1,${decimales}})?import { useEffect, useState, type FormEvent } from 'react';
-import {
-  corregirAvanceValidadoProyecto,
-  editarAvanceActividadProyecto,
-  enviarAvanceActividadProyecto,
-  guardarActividadProyecto,
-  obtenerActividadesProyecto,
-  obtenerResponsablesProyecto,
-  registrarAvanceActividadProyecto,
-  revisarAvanceActividadProyecto,
-  type ActividadProyecto,
-  type AvanceActividadProyecto,
-  type DatosAvanceActividadProyecto,
-} from '../../lib/api';
-
-const estadosActividad: Record<string, string> = {
-  PLANIFICADA: 'Planificada',
-  EN_PROCESO: 'En proceso',
-  COMPLETADA: 'Completada',
-  CANCELADA: 'Cancelada',
-};
-
-const estadosRevision: Record<AvanceActividadProyecto['estadoRevision'], string> = {
-  BORRADOR: 'Borrador',
-  ENVIADO: 'En revisión',
-  VALIDADO: 'Validado',
-  DEVUELTO: 'Devuelto',
-};
-
-const fechaLocalHoy = () => {
-  const hoy = new Date();
-  return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
-};
-
-const nuevaClaveIdempotencia = () => globalThis.crypto.randomUUID();
-
-export default function DetalleProyecto({
-  token,
-  proyectoId,
-  usuarioEmail,
-  presupuestoProyecto,
-  moneda,
-  puedeGestionar,
-  puedeRegistrarAvance,
-  puedeRevisarAvance,
-  puedeCorregirAvance,
-}: {
-  token: string;
-  proyectoId: string;
-  usuarioEmail: string;
-  presupuestoProyecto: number;
-  moneda: string;
-  puedeGestionar: boolean;
-  puedeRegistrarAvance: boolean;
-  puedeRevisarAvance: boolean;
-  puedeCorregirAvance: boolean;
-}) {
-  const [actividades, setActividades] = useState<ActividadProyecto[] | null>(null);
-  const [porcentajeProyecto, setPorcentajeProyecto] = useState<number | null>(null);
-  const [pesoConfigurado, setPesoConfigurado] = useState(0);
-  const [responsables, setResponsables] = useState<{ id: string; nombre: string }[]>([]);
-  const [vista, setVista] = useState<'planificacion' | 'ejecucion' | 'resultados'>('planificacion');
-  const [formularioActividad, setFormularioActividad] = useState<ActividadProyecto | 'nueva' | null>(null);
-  const [avanceFormulario, setAvanceFormulario] = useState<{ actividad: ActividadProyecto; avance?: AvanceActividadProyecto; corregir?: boolean } | null>(null);
-  const [devolucion, setDevolucion] = useState<{ actividad: ActividadProyecto; avance: AvanceActividadProyecto } | null>(null);
-  const [claveIdempotencia, setClaveIdempotencia] = useState(nuevaClaveIdempotencia);
-  const [error, setError] = useState('');
-  const [mensaje, setMensaje] = useState('');
-  const [guardando, setGuardando] = useState(false);
-  const [errorPlanificacion, setErrorPlanificacion] = useState('');
-  const [erroresCamposPlan, setErroresCamposPlan] = useState<Record<string, string>>({});
-  const [recarga, setRecarga] = useState(0);
-
-  useEffect(() => {
-    let vigente = true;
-    obtenerActividadesProyecto(token, proyectoId).then(
-      (datos) => {
-        if (!vigente) return;
-        setActividades(datos.actividades);
-        setPorcentajeProyecto(datos.porcentajeProyecto);
-        setPesoConfigurado(datos.pesoConfigurado);
-      },
-      (fallo: Error) => { if (vigente) setError(fallo.message); },
-    );
-    if (puedeGestionar) {
-      obtenerResponsablesProyecto(token, proyectoId).then(
-        (datos) => { if (vigente) setResponsables(datos.responsables); },
-        (fallo: Error) => { if (vigente) setError(fallo.message); },
-      );
-    }
-    return () => { vigente = false; };
-  }, [token, proyectoId, puedeGestionar, recarga]);
-
-  function refrescar() {
-    setActividades(null);
-    setRecarga((actual) => actual + 1);
-  }
-
-  async function guardarActividad(evento: FormEvent<HTMLFormElement>) {
-    evento.preventDefault();
-    if (guardando || !puedeGestionar) return;
-);
-      const numero = Number(normalizado);
-      if (!patron.test(normalizado) || !Number.isFinite(numero) || numero < minimo ||
-          (maximo !== undefined && numero > maximo)) {
-        errores[campo] = `Ingresá un número válido de al menos ${minimo}${maximo === undefined ? '' : ` y como máximo ${maximo}`}, con hasta ${decimales} decimales.`;
+    function numero(campo: string, decimales: number, min: number, max?: number) {
+      const raw = valor(campo);
+      if (!raw) return null;
+      const normalizado = raw.replace(',', '.');
+      const n = Number(normalizado);
+      const partes = normalizado.split('.');
+      if (!Number.isFinite(n) || n < min || (max !== undefined && n > max) ||
+          partes.length > 2 || !partes.every((p) => /^\d+$/.test(p)) ||
+          (partes[1]?.length ?? 0) > decimales) {
+        errores[campo] = 'Ingresá un valor numérico válido dentro del rango y con hasta ' + decimales + ' decimales.';
         return null;
       }
-      return numero;
-    };
+      return n;
+    }
     const nombre = valor('nombre');
-    if (!nombre) errores.nombre = 'El nombre de la actividad es obligatorio.';
-    if (nombre.length > 180) errores.nombre = 'El nombre no debe superar 180 caracteres.';
     const fechaInicio = valor('fechaInicio');
     const fechaFin = valor('fechaFin');
-    if (fechaInicio && fechaFin && fechaFin < fechaInicio) {
-      errores.fechaFin = 'La finalización no puede ser anterior al inicio previsto.';
-    }
-    const metaCantidad = leerNumero('metaCantidad', 3, 0.001, 99999999999);
+    if (!nombre) errores.nombre = 'Ingresá el nombre de la actividad.';
+    if (fechaInicio && fechaFin && fechaFin < fechaInicio)
+      errores.fechaFin = 'La fecha de finalización no puede ser anterior al inicio.';
+    const metaCantidad = numero('metaCantidad', 3, 0.001);
     const unidadMedida = valor('unidadMedida');
-    if (metaCantidad !== null && !unidadMedida) errores.unidadMedida = 'Indicá la unidad de la meta (ej. viviendas).';
+    if (metaCantidad !== null && !unidadMedida) errores.unidadMedida = 'Ingresá la unidad de medida.';
     if (metaCantidad === null && unidadMedida && !errores.metaCantidad)
-      errores.metaCantidad = 'Indicá una meta cuantificable o quitá la unidad de medida.';
-    const presupuestoEstimado = leerNumero('presupuestoEstimado', 2, 0, presupuestoProyecto);
-    const pesoResultado = leerNumero('pesoResultado', 2, 0, 100);
-    // Mensajes nativos reemplazados por avisos visibles; incluye longitud máxima y fechas.
+      errores.metaCantidad = 'Ingresá la meta o eliminá la unidad de medida.';
+    const presupuestoEstimado = numero('presupuestoEstimado', 2, 0, presupuestoProyecto);
+    const pesoResultado = numero('pesoResultado', 2, 0, 100);
     for (const elemento of Array.from(formulario.elements)) {
-      if (!(elemento instanceof HTMLInputElement || elemento instanceof HTMLSelectElement ||
-        elemento instanceof HTMLTextAreaElement)) continue;
-      if (!elemento.name || errores[elemento.name] || elemento.checkValidity()) continue;
-      errores[elemento.name] = elemento.validationMessage || 'Revisá este campo.';
+      if (!(elemento instanceof HTMLInputElement ||
+            elemento instanceof HTMLSelectElement ||
+            elemento instanceof HTMLTextAreaElement)) continue;
+      if (elemento.name && !errores[elemento.name] && !elemento.checkValidity())
+        errores[elemento.name] = elemento.validationMessage || 'Revisá este campo.';
     }
     setErroresCamposPlan(errores);
     if (Object.keys(errores).length) {
-      setErrorPlanificacion('Revisá los campos señalados. La actividad todavía no se ha guardado.');
+      setErrorPlanificacion('No se guardó la actividad. Revisá los campos señalados.');
       const primero = formulario.elements.namedItem(Object.keys(errores)[0]);
       if (primero instanceof HTMLElement) primero.focus();
       return;
@@ -266,12 +163,10 @@ export default function DetalleProyecto({
       }, formularioActividad !== 'nueva' ? formularioActividad?.id : undefined);
       setMensaje(formularioActividad === 'nueva' ? 'Actividad planificada.' : 'Plan de actividad actualizado.');
       setFormularioActividad(null);
-      setErrorPlanificacion('');
       setErroresCamposPlan({});
       refrescar();
     } catch (fallo) {
-      const mensajeError = fallo instanceof Error ? fallo.message : 'No fue posible guardar la planificación.';
-      setErrorPlanificacion(mensajeError);
+      setErrorPlanificacion(fallo instanceof Error ? fallo.message : 'No fue posible guardar la planificación.');
     } finally {
       setGuardando(false);
     }
@@ -356,14 +251,12 @@ export default function DetalleProyecto({
 
   function formularioActividadUI(actividad: ActividadProyecto | null) {
     return (
-      <form className="actividad-plan-form" onSubmit={guardarActividad} noValidate
-        onChange={() => { if (errorPlanificacion) setErrorPlanificacion(''); }}>
+      <form className="actividad-plan-form" onSubmit={guardarActividad} noValidate>
         <fieldset disabled={guardando}>
           <legend>{actividad ? 'Editar planificación' : 'Nueva actividad'}</legend>
           {errorPlanificacion && <p className="actividad-plan-form__error" role="alert">{errorPlanificacion}</p>}
           <div className="donantes-campos">
-            <label>Nombre<input name="nombre" required maxLength={180} defaultValue={actividad?.nombre}
-                aria-invalid={Boolean(erroresCamposPlan.nombre)} />
+            <label>Nombre<input name="nombre" required maxLength={180} defaultValue={actividad?.nombre} aria-invalid={Boolean(erroresCamposPlan.nombre)} />
               {erroresCamposPlan.nombre && <small className="actividad-plan-form__campo-error">{erroresCamposPlan.nombre}</small>}</label>
             <label>Responsable asignado
               <select name="responsableAsignadoId" defaultValue={actividad?.responsableAsignadoId ?? ''}>
@@ -374,28 +267,23 @@ export default function DetalleProyecto({
               </select>
             </label>
             <label>Inicio previsto<input name="fechaInicio" type="date" defaultValue={actividad?.fechaInicio ?? ''} /></label>
-            <label>Finalización prevista<input name="fechaFin" type="date" defaultValue={actividad?.fechaFin ?? ''}
-                aria-invalid={Boolean(erroresCamposPlan.fechaFin)} />
-              {erroresCamposPlan.fechaFin && <small className="actividad-plan-form__campo-error">{erroresCamposPlan.fechaFin}</small></label>
+            <label>Finalización prevista<input name="fechaFin" type="date" defaultValue={actividad?.fechaFin ?? ''} aria-invalid={Boolean(erroresCamposPlan.fechaFin)} />
+              {erroresCamposPlan.fechaFin && <small className="actividad-plan-form__campo-error">{erroresCamposPlan.fechaFin}</small>}</label>
             <label>Meta cuantificable (opcional)
-              <input name="metaCantidad" type="text" inputMode="decimal" defaultValue={actividad?.metaCantidad ?? ''}
-                aria-invalid={Boolean(erroresCamposPlan.metaCantidad)} placeholder="Ej. 3 o 3,5" />
+              <input name="metaCantidad" type="text" inputMode="decimal" defaultValue={actividad?.metaCantidad ?? ''} aria-invalid={Boolean(erroresCamposPlan.metaCantidad)} placeholder="Ej. 9,56" />
               {erroresCamposPlan.metaCantidad && <small className="actividad-plan-form__campo-error">{erroresCamposPlan.metaCantidad}</small>}
             </label>
             <label>Unidad de medida
-              <input name="unidadMedida" maxLength={80} placeholder="Ej. viviendas, talleres" defaultValue={actividad?.unidadMedida ?? ''}
-                aria-invalid={Boolean(erroresCamposPlan.unidadMedida)} />
+              <input name="unidadMedida" maxLength={80} placeholder="Ej. hogares, talleres" defaultValue={actividad?.unidadMedida ?? ''} aria-invalid={Boolean(erroresCamposPlan.unidadMedida)} />
               {erroresCamposPlan.unidadMedida && <small className="actividad-plan-form__campo-error">{erroresCamposPlan.unidadMedida}</small>}
             </label>
             <label>Asignación estimada ({moneda})
-              <input name="presupuestoEstimado" type="text" inputMode="decimal" defaultValue={actividad?.presupuestoEstimado ?? ''}
-                aria-invalid={Boolean(erroresCamposPlan.presupuestoEstimado)} placeholder="Ej. 10000,50" />
+              <input name="presupuestoEstimado" type="text" inputMode="decimal" defaultValue={actividad?.presupuestoEstimado ?? ''} aria-invalid={Boolean(erroresCamposPlan.presupuestoEstimado)} placeholder="Ej. 9,56" />
               {erroresCamposPlan.presupuestoEstimado && <small className="actividad-plan-form__campo-error">{erroresCamposPlan.presupuestoEstimado}</small>}
             </label>
             <label>Peso para el resultado del proyecto (%)
-              <input name="pesoResultado" type="text" inputMode="decimal" defaultValue={actividad?.pesoResultado ?? ''}
-                aria-invalid={Boolean(erroresCamposPlan.pesoResultado)} placeholder="Ej. 9,56" />
-              {erroresCamposPlan.pesoResultado && <small className="actividad-plan-form__campo-error">{erroresCamposPlan.pesoResultado}</small>
+              <input name="pesoResultado" type="text" inputMode="decimal" defaultValue={actividad?.pesoResultado ?? ''} aria-invalid={Boolean(erroresCamposPlan.pesoResultado)} placeholder="Ej. 9,56" />
+              {erroresCamposPlan.pesoResultado && <small className="actividad-plan-form__campo-error">{erroresCamposPlan.pesoResultado}</small>}
             </label>
             <label>Estado operativo
               <select name="estado" defaultValue={actividad?.estado ?? 'PLANIFICADA'}>
