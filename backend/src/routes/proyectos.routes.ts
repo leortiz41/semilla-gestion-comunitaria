@@ -23,6 +23,35 @@ proyectosRouter.use(authenticateAccessToken, requirePermission('proyectos.ver'),
   next();
 });
 
+// Bandeja centralizada: solo avances enviados de proyectos de la organización activa.
+proyectosRouter.get('/revision/pendientes', requirePermission('actividades.avance.revisar'), async (req, res) => {
+  try {
+    if (!databasePool) throw new Error('Base de datos no disponible');
+    const { rows } = await databasePool.query(
+      `SELECT av.id, av.actividad_id AS "actividadId", av.proyecto_id AS "proyectoId",
+         a.nombre AS actividad, p.nombre AS proyecto, c.nombre AS comunidad,
+         av.fecha_avance::text AS fecha, av.comentarios AS descripcion,
+         av.observaciones, av.cantidad_reportada::double precision AS "cantidadReportada",
+         av.porcentaje_avance::double precision AS "porcentajeAvance",
+         a.unidad_medida AS "unidadMedida", autor.email AS responsable,
+         (av.responsable_usuario_id = $2::uuid) AS "esPropio"
+       FROM avances_proyecto av
+       JOIN actividades_programadas a ON a.id = av.actividad_id AND a.proyecto_id = av.proyecto_id
+       JOIN proyectos p ON p.id = a.proyecto_id
+       JOIN comunidades c ON c.id = p.comunidad_id
+       JOIN usuarios autor ON autor.id = av.responsable_usuario_id
+       WHERE c.organizacion_id = $1 AND av.estado_revision = 'ENVIADO'
+       ORDER BY av.fecha_avance DESC, av.creado_en DESC, av.id DESC
+       LIMIT 200`,
+      [req.auth!.organizacionId, req.auth!.sub],
+    );
+    res.json({ pendientes: rows });
+  } catch (error) {
+    console.error('Error consultando avances pendientes:', error);
+    res.status(500).json({ message: 'No fue posible consultar los avances pendientes.' });
+  }
+});
+
 proyectosRouter.get('/', async (req, res) => {
   try {
     if (!databasePool) throw new Error('Base de datos no disponible');
