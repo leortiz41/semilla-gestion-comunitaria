@@ -146,3 +146,81 @@ const guardarProyecto: RequestHandler = async (req, res) => {
 
 proyectosRouter.post('/', requirePermission('proyectos.gestionar'), guardarProyecto);
 proyectosRouter.put('/:id', requirePermission('proyectos.gestionar'), guardarProyecto);
+
+const estadosActividad = ['PLANIFICADA', 'EN_PROCESO', 'COMPLETADA', 'CANCELADA'];
+
+proyectosRouter.get('/:proyectoId/actividades', async (req, res) => {
+  const { proyectoId } = req.params;
+  if (!esUuid(proyectoId)) {
+    res.status(400).json({ message: 'Seleccioná un proyecto válido.' });
+    return;
+  }
+  try {
+    if (!databasePool) throw new Error('Base de datos no disponible');
+    const { rows } = await databasePool.query(
+      `SELECT COALESCE((
+         SELECT jsonb_agg(jsonb_build_object(
+           'id', a.id, 'nombre', a.nombre, 'descripcion', a.descripcion, 'estado', a.estado,
+           'fechaInicio', a.fecha_inicio, 'fechaFin', a.fecha_fin
+         ) ORDER BY a.fecha_inicio NULLS LAST, a.nombre, a.id)
+         FROM actividades_programadas a WHERE a.proyecto_id = p.id
+       ), '[]'::jsonb) AS actividades
+       FROM proyectos p JOIN comunidades c ON c.id = p.comunidad_id
+       WHERE p.id = $1 AND c.organizacion_id = $2`,
+      [proyectoId, req.auth!.organizacionId],
+    );
+    if (!rows.length) {
+      res.status(404).json({ message: 'No se encontró el proyecto.' });
+      return;
+    }
+    res.json(rows[0]);
+  } catch (error) {
+    console.error('Error consultando actividades:', error);
+    res.status(500).json({ message: 'No fue posible consultar las actividades.' });
+  }
+});
+
+const guardarActividad: RequestHandler = async (req, res) => {
+  const { proyectoId, actividadId } = req.params;
+  const { estado, fechaInicio, fechaFin } = req.body ?? {};
+  const nombre = typeof req.body?.nombre === 'string' ? req.body.nombre.trim() : '';
+  const descripcion = req.body?.descripcion ?? '';
+  if (!esUuid(proyectoId) || (actividadId !== undefined && !esUuid(actividadId)) ||
+      !nombre || nombre.length > 180 || typeof descripcion !== 'string' || descripcion.length > 3000 ||
+      !estadosActividad.includes(estado) ||
+      (fechaInicio != null && !esFecha(fechaInicio)) ||
+      (fechaFin != null && (!esFecha(fechaFin) || (fechaInicio != null && fechaFin < fechaInicio)))) {
+    res.status(400).json({ message: 'Revisá el nombre, el estado y las fechas de la actividad.' });
+    return;
+  }
+  try {
+    if (!databasePool) throw new Error('Base de datos no disponible');
+    const valores = [proyectoId, req.auth!.organizacionId, nombre, descripcion.trim() || null,
+      estado, fechaInicio ?? null, fechaFin ?? null];
+    const { rows } = actividadId
+      ? await databasePool.query(
+        `UPDATE actividades_programadas a SET nombre = $3, descripcion = $4, estado = $5,
+           fecha_inicio = $6, fecha_fin = $7, actualizado_en = NOW()
+         FROM proyectos p JOIN comunidades c ON c.id = p.comunidad_id
+         WHERE p.id = $1 AND c.organizacion_id = $2 AND a.proyecto_id = p.id AND a.id = $8
+         RETURNING a.id`, [...valores, actividadId],
+      )
+      : await databasePool.query(
+        `INSERT INTO actividades_programadas (proyecto_id, nombre, descripcion, estado, fecha_inicio, fecha_fin)
+         SELECT p.id, $3, $4, $5, $6, $7
+         FROM proyectos p JOIN comunidades c ON c.id = p.comunidad_id
+         WHERE p.id = $1 AND c.organizacion_id = $2 RETURNING id`, valores,
+      );
+    if (!rows.length) {
+      res.status(404).json({ message: 'No se encontró el proyecto o la actividad.' });
+      return;
+    }
+    res.status(actividadId ? 200 : 201).json(rows[0]);
+  } catch (error) {
+    console.error('Error guardando actividad:', error);
+    res.status(500).json({ message: 'No fue posible guardar la actividad.' });
+  }
+};
+
+proyectosRouter.post('/:proyectoId/actividades', requirePermission('proyectos.gestionar'), guardarActividad);
+proyectosRouter.put('/:proyectoId/actividades/:actividadId', requirePermission('proyectos.gestionar'), guardarActividad);

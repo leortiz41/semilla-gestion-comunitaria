@@ -5,6 +5,7 @@ import {
 import '../../estilos/modulos/paginaModuloBase.css';
 import '../../estilos/modulos/roles.css';
 import '../donantes/donantes.css';
+import ActividadesProyecto from './ActividadesProyecto';
 
 const categorias: Record<AreaVisionDesarrollo, string> = {
   EVANGELISMO: 'Evangelismo',
@@ -32,6 +33,7 @@ function PaginaProyectos({ token, puedeVer, puedeGestionar }: {
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
   const [recarga, setRecarga] = useState(0);
+  const [proyectoAbierto, setProyectoAbierto] = useState<string | null>(null);
   const proyecto = formulario === 'nuevo' ? null : formulario;
 
   useEffect(() => {
@@ -179,6 +181,13 @@ function PaginaProyectos({ token, puedeVer, puedeGestionar }: {
                     onClick={() => { setError(''); setMensaje(''); setFormulario(item); }}>
                     Editar proyecto
                   </button>
+                )}
+                {' '}<button type="button" className="brigadas-accion" aria-expanded={proyectoAbierto === item.id}
+                  onClick={() => setProyectoAbierto((actual) => actual === item.id ? null : item.id)}>
+                  {proyectoAbierto === item.id ? 'Ocultar actividades' : 'Ver actividades'}
+                </button>
+                {proyectoAbierto === item.id && (
+                  <ActividadesProyecto token={token} proyectoId={item.id} puedeGestionar={puedeGestionar} />
                 )}
               </article>
             ))}

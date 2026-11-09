@@ -42,7 +42,7 @@ model roles {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model actividades_programadas {
   id                  String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  equipo_misionero_id String             @db.Uuid
+  equipo_misionero_id String?            @db.Uuid
   proyecto_id         String?            @db.Uuid
   nombre              String             @db.VarChar(180)
   descripcion         String?
@@ -51,7 +51,7 @@ model actividades_programadas {
   estado              String             @default("PLANIFICADA") @db.VarChar(20)
   creado_en           DateTime           @default(now()) @db.Timestamptz(6)
   actualizado_en      DateTime           @default(now()) @db.Timestamptz(6)
-  equipos_misioneros  equipos_misioneros @relation(fields: [equipo_misionero_id], references: [id], onDelete: Cascade)
+  equipos_misioneros  equipos_misioneros? @relation(fields: [equipo_misionero_id], references: [id], onDelete: Cascade)
   proyectos           proyectos?         @relation(fields: [proyecto_id], references: [id])
 
   @@index([equipo_misionero_id], map: "idx_actividades_equipo_id")

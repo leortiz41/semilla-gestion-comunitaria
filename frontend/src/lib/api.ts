@@ -545,3 +545,28 @@ export function guardarProyectoAdministrativo(token: string, datos: DatosProyect
     body: JSON.stringify(datos),
   });
 }
+
+export interface ActividadProyecto {
+  id: string;
+  nombre: string;
+  descripcion: string | null;
+  estado: string;
+  fechaInicio: string | null;
+  fechaFin: string | null;
+}
+
+export function obtenerActividadesProyecto(token: string, proyectoId: string) {
+  return request<{ actividades: ActividadProyecto[] }>(`/proyectos/${proyectoId}/actividades`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function guardarActividadProyecto(token: string, proyectoId: string,
+  datos: Omit<ActividadProyecto, 'id'>, actividadId?: string) {
+  const ruta = `/proyectos/${proyectoId}/actividades${actividadId ? '/' + actividadId : ''}`;
+  return request<{ id: string }>(ruta, {
+    method: actividadId ? 'PUT' : 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(datos),
+  });
+}
