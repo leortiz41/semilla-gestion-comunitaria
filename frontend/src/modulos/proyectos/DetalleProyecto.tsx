@@ -372,8 +372,7 @@ export default function DetalleProyecto({
                               onClick={() => void ejecutarAccion(actividad, avance, 'enviar')}>Enviar a revisión</button>
                           </>
                         )}
-                      {puedeRevisarAvance && avance.estadoRevision === 'ENVIADO' &&
-                        avance.responsable !== usuarioEmail && (
+                      {puedeRevisarAvance && avance.estadoRevision === 'ENVIADO' && (
                           <>
                             <button type="button" disabled={guardando}
                               onClick={() => void ejecutarAccion(actividad, avance, 'validar')}>Validar</button>
