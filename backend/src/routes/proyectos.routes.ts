@@ -371,9 +371,10 @@ export function crearRouterActividades(pool: typeof databasePool = databasePool)
             pool, proyectoId, actividadId, avanceId, req.auth!.organizacionId,
             req.auth!.sub, accion === 'validar' ? 'VALIDAR' : 'DEVOLVER',
             accion === 'devolver' ? motivo.trim() : undefined,
+            req.auth!.roles.some((rol) => rol === 'ADMINISTRADOR' || rol === 'COORDINADOR'),
           );
           if (!actualizado) {
-            res.status(409).json({ message: 'El avance no está disponible para esta revisión o no podés validarlo si lo registraste.' });
+            res.status(409).json({ message: 'El avance no está disponible para esta revisión o no tenés autorización para revisarlo.' });
             return;
           }
           res.sendStatus(204);
