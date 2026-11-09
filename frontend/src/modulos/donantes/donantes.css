@@ -82,9 +82,10 @@
 
 .brigadas-tarjeta {
   padding: 1rem;
-  border: 1px solid #dbe7d8;
+  border: 1px solid rgba(61, 112, 70, 0.16);
   border-radius: .8rem;
-  background: #f4f8f2;
+  background: linear-gradient(145deg, #fff, #f0f6ed);
+  box-shadow: 0 9px 22px rgba(48, 69, 48, 0.06);
   overflow-wrap: anywhere;
 }
 
@@ -142,4 +143,389 @@
 .brigadas-selector select {
   padding: .6rem;
   font: inherit;
+}
+
+.donantes-modulo > article.roles-panel__tarjeta {
+  position: relative;
+  overflow: hidden;
+  padding: 1.5rem;
+  border: 1px solid rgba(61, 112, 70, 0.16);
+  border-radius: 1.25rem;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(226, 239, 218, 0.5), transparent 34%),
+    linear-gradient(145deg, #fff, #f8fbf6);
+  box-shadow: 0 16px 38px rgba(48, 69, 48, 0.08), 0 5px 16px rgba(217, 139, 54, 0.04);
+  transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
+}
+
+.donantes-modulo > article.roles-panel__tarjeta::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 4px;
+  background: linear-gradient(90deg, #477e50 0%, #83a95e 56%, #e0a34d 100%);
+}
+
+.donantes-modulo > article.roles-panel__tarjeta:hover {
+  transform: translateY(-3px);
+  border-color: rgba(61, 112, 70, 0.24);
+  box-shadow: 0 22px 46px rgba(48, 69, 48, 0.12), 0 8px 20px rgba(217, 139, 54, 0.07);
+}
+
+.brigadas-encabezado > div:first-child {
+  min-width: 0;
+}
+
+.brigadas-encabezado > div:first-child h2 {
+  margin: 0 0 .45rem;
+  color: #2b5634;
+  font-size: 1.2rem;
+  letter-spacing: -.025em;
+}
+
+.brigadas-encabezado > div:first-child p {
+  margin: .55rem 0 0;
+  color: #6d7a6e;
+  overflow-wrap: anywhere;
+}
+
+.brigadas-encabezado > .brigadas-accion:first-of-type {
+  color: #fff;
+  border-color: transparent;
+  background: linear-gradient(135deg, #477e50, #315f3a);
+  box-shadow: 0 7px 17px rgba(53, 92, 58, 0.18);
+}
+
+.brigadas-encabezado > .brigadas-accion:first-of-type:hover:not(:disabled) {
+  background: linear-gradient(135deg, #548b5d, #356a40);
+  box-shadow: 0 10px 22px rgba(53, 92, 58, 0.24);
+}
+
+.brigadas-tarjetas {
+  gap: 1rem;
+}
+
+.brigadas-tarjeta {
+  --acento-brigada: #5b9460;
+  --brillo-brigada: rgba(91, 148, 96, 0.1);
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  align-content: start;
+  gap: .6rem;
+  min-height: 100%;
+  padding: 1.2rem 1.15rem 1.1rem 1.35rem;
+  border-color: color-mix(in srgb, var(--acento-brigada) 22%, white);
+  border-radius: 1rem;
+  background:
+    radial-gradient(circle at 100% 0%, var(--brillo-brigada), transparent 42%),
+    linear-gradient(145deg, #fff, #f7faf5);
+  box-shadow: 0 10px 24px rgba(48, 69, 48, 0.07), 0 4px 12px var(--brillo-brigada);
+  transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
+}
+
+.brigadas-tarjeta::before {
+  content: '';
+  position: absolute;
+  inset: 1rem auto 1rem 0;
+  z-index: -1;
+  width: 4px;
+  border-radius: 0 5px 5px 0;
+  background: var(--acento-brigada);
+}
+
+.brigadas-tarjeta:nth-child(3n + 2) {
+  --acento-brigada: #d98b36;
+  --brillo-brigada: rgba(217, 139, 54, 0.12);
+}
+
+.brigadas-tarjeta:nth-child(3n) {
+  --acento-brigada: #4686a5;
+  --brillo-brigada: rgba(70, 134, 165, 0.11);
+}
+
+.brigadas-tarjeta:hover {
+  transform: translateY(-4px);
+  border-color: color-mix(in srgb, var(--acento-brigada) 34%, white);
+  box-shadow: 0 17px 32px rgba(48, 69, 48, 0.11), 0 7px 18px var(--brillo-brigada);
+}
+
+.brigadas-tarjeta h4 {
+  font-size: 1.05rem;
+  letter-spacing: -.015em;
+}
+
+.brigadas-tarjeta p {
+  margin: 0;
+  color: #637267;
+  font-size: .88rem;
+  line-height: 1.5;
+}
+
+.brigadas-tarjeta .pagina-modulo__estado {
+  margin-top: 0;
+  padding: .35rem .65rem;
+  border-color: rgba(91, 148, 96, 0.16);
+  color: #376540;
+  background: #eaf4e7;
+  font-size: .72rem;
+}
+
+.brigadas-accion {
+  border-color: rgba(61, 112, 70, 0.16);
+  background: linear-gradient(135deg, #f1f7ee, #e7f1e2);
+  color: #315f3a;
+  box-shadow: 0 3px 9px rgba(53, 92, 58, 0.05);
+  transition: transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+}
+
+.brigadas-accion:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(61, 112, 70, 0.28);
+  background: #e4f0df;
+  box-shadow: 0 6px 14px rgba(53, 92, 58, 0.1);
+}
+
+.brigadas-accion:disabled {
+  cursor: not-allowed;
+  opacity: .58;
+}
+
+.brigadas-flotante {
+  padding: .85rem 1.15rem;
+  border: 1px solid rgba(255, 255, 255, 0.48);
+  border-radius: 999px;
+  background: linear-gradient(135deg, #4b8354, #2f6038);
+  box-shadow: 0 12px 28px rgba(34, 79, 43, 0.3), 0 4px 12px rgba(217, 139, 54, 0.14);
+  font-weight: 750;
+}
+
+.brigadas-flotante:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 17px 34px rgba(34, 79, 43, 0.34), 0 6px 16px rgba(217, 139, 54, 0.2);
+}
+
+.brigadas-dialogo {
+  position: fixed;
+  width: min(780px, calc(100vw - 2rem));
+  max-height: min(88dvh, 900px);
+  padding: 1.5rem;
+  border: 1px solid rgba(77, 116, 77, 0.2);
+  border-radius: 1.35rem;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(231, 242, 222, 0.62), transparent 27%),
+    linear-gradient(160deg, #fff 0%, #fcfdfb 62%, #f8fbf6 100%);
+  box-shadow: 0 30px 90px rgba(19, 43, 29, 0.3), 0 8px 24px rgba(217, 139, 54, 0.1);
+  animation: brigada-dialogo-entrada 220ms ease-out both;
+}
+
+.brigadas-dialogo::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 5px;
+  border-radius: 1.35rem 1.35rem 0 0;
+  background: linear-gradient(90deg, #477e50, #8aaa5a 58%, #e0a34d);
+}
+
+.brigadas-dialogo::backdrop {
+  background: rgba(24, 49, 35, .58);
+  backdrop-filter: blur(5px);
+  animation: brigada-fondo-entrada 180ms ease-out both;
+}
+
+.brigadas-dialogo > .brigadas-encabezado {
+  position: sticky;
+  top: -1.5rem;
+  z-index: 2;
+  padding: .65rem 0 1rem;
+  margin: -.25rem 0 1.15rem;
+  border-bottom: 1px solid rgba(61, 112, 70, 0.12);
+  background: linear-gradient(180deg, rgba(255, 255, 255, .98), rgba(255, 255, 255, .9));
+}
+
+.brigadas-dialogo > .brigadas-encabezado h2 {
+  margin: 0;
+  color: #2b5634;
+  font-size: 1.35rem;
+  letter-spacing: -.035em;
+}
+
+.brigadas-dialogo > .brigadas-encabezado button {
+  padding: .55rem .85rem;
+  border: 1px solid rgba(61, 112, 70, 0.16);
+  border-radius: .7rem;
+  color: #45634a;
+  background: #f0f6ed;
+  cursor: pointer;
+  font: inherit;
+  font-size: .86rem;
+  font-weight: 700;
+}
+
+.brigadas-dialogo .brigadas-selector {
+  margin-bottom: 1.1rem;
+  color: #526457;
+  font-size: .88rem;
+  font-weight: 700;
+}
+
+.brigadas-dialogo :is(input:not([type="checkbox"]), select, textarea) {
+  min-height: 2.8rem;
+  padding: .7rem .8rem;
+  border: 1px solid #d5e2d1;
+  border-radius: .7rem;
+  color: #283b2d;
+  background-color: rgba(255, 255, 255, .95);
+  font: inherit;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+.brigadas-dialogo textarea {
+  min-height: 5.2rem;
+  resize: vertical;
+}
+
+.brigadas-dialogo :is(input:not([type="checkbox"]), select, textarea):focus {
+  border-color: #7da881;
+  outline: 0;
+  background-color: #fff;
+  box-shadow: 0 0 0 4px rgba(91, 148, 96, .12);
+}
+
+.brigadas-dialogo input[type="checkbox"] {
+  width: 1.05rem;
+  height: 1.05rem;
+  accent-color: #477e50;
+  vertical-align: middle;
+}
+
+.brigadas-dialogo form > fieldset {
+  margin: 0;
+  padding: 1.1rem;
+  border: 1px solid rgba(61, 112, 70, 0.14);
+  border-radius: 1rem;
+  background: rgba(247, 250, 245, .78);
+}
+
+.brigadas-dialogo form > fieldset > legend,
+.brigadas-dialogo fieldset fieldset > legend {
+  padding: 0 .35rem;
+  color: #315f3a;
+  font-size: .93rem;
+  font-weight: 800;
+}
+
+.brigadas-dialogo .donantes-campos {
+  gap: .85rem;
+}
+
+.brigadas-dialogo .donantes-campos label,
+.brigadas-dialogo .brigadas-selector {
+  color: #526457;
+  font-size: .84rem;
+  font-weight: 650;
+}
+
+.brigadas-dialogo .donantes-campos label:has(textarea) {
+  grid-column: 1 / -1;
+}
+
+.brigadas-dialogo fieldset fieldset {
+  margin: 1rem 0 0;
+  padding: .95rem;
+  border: 1px solid rgba(61, 112, 70, 0.11);
+  border-radius: .85rem;
+  background: rgba(255, 255, 255, .78);
+}
+
+.brigadas-dialogo fieldset fieldset > div {
+  padding: .38rem .5rem;
+  border-radius: .55rem;
+  color: #526457;
+}
+
+.brigadas-dialogo fieldset fieldset > div:has(input[type="checkbox"]):hover {
+  background: #f0f6ed;
+}
+
+.brigadas-dialogo form > fieldset > button[type="submit"] {
+  min-height: 2.9rem;
+  margin-top: 1.15rem;
+  padding: .75rem 1.2rem;
+  border-radius: .75rem;
+  background: linear-gradient(135deg, #477e50, #315f3a);
+  box-shadow: 0 8px 20px rgba(53, 92, 58, .2);
+  font-weight: 750;
+}
+
+.brigadas-dialogo form > fieldset > button[type="submit"]:hover:not(:disabled) {
+  background: linear-gradient(135deg, #548b5d, #356a40);
+  box-shadow: 0 12px 25px rgba(53, 92, 58, .25);
+}
+
+.brigadas-dialogo :is(p[role="alert"], p[role="status"]) {
+  padding: .75rem .9rem;
+  border: 1px solid rgba(217, 139, 54, .22);
+  border-radius: .75rem;
+  color: #76521f;
+  background: #fff7e9;
+}
+
+@keyframes brigada-dialogo-entrada {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes brigada-fondo-entrada {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (max-width: 600px) {
+  .donantes-modulo > article.roles-panel__tarjeta {
+    padding: 1.2rem;
+  }
+
+  .brigadas-dialogo {
+    width: calc(100vw - 1rem);
+    max-height: 92dvh;
+    padding: 1.1rem;
+    border-radius: 1rem;
+  }
+
+  .brigadas-dialogo > .brigadas-encabezado {
+    top: -1.1rem;
+  }
+
+  .brigadas-dialogo form > fieldset {
+    padding: .8rem;
+  }
+
+  .brigadas-encabezado > .brigadas-accion {
+    flex: 1 1 auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .donantes-modulo > article.roles-panel__tarjeta,
+  .brigadas-tarjeta,
+  .brigadas-accion,
+  .brigadas-dialogo,
+  .brigadas-dialogo::backdrop {
+    animation: none;
+    transition: none;
+  }
+
+  .donantes-modulo > article.roles-panel__tarjeta:hover,
+  .brigadas-tarjeta:hover,
+  .brigadas-accion:hover:not(:disabled) {
+    transform: none;
+  }
 }

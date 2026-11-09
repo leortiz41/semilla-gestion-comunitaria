@@ -5,10 +5,11 @@
   gap: 20px;
   padding: 16px 18px;
   margin-bottom: 20px;
-  border: 1px solid rgba(53, 92, 58, 0.1);
+  border: 1px solid rgba(53, 92, 58, 0.14);
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.72);
-  box-shadow: 0 14px 36px rgba(48, 69, 48, 0.05);
+  background: linear-gradient(115deg, rgba(255, 255, 255, 0.92), rgba(248, 250, 245, 0.84));
+  box-shadow: 0 14px 36px rgba(48, 69, 48, 0.08), 0 4px 12px rgba(217, 139, 54, 0.04);
+  backdrop-filter: blur(12px);
 }
 
 .encabezado-administrativo__etiqueta {
@@ -36,15 +37,15 @@
   border: 1px solid rgba(53, 92, 58, 0.1);
   border-radius: 999px;
   color: #536254;
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.84);
   cursor: pointer;
   font-size: 0.82rem;
   font-weight: 700;
 }
 
 .encabezado-administrativo__usuario:hover:not(:disabled) {
-  border-color: rgba(53, 92, 58, 0.24);
-  background: #f6f8f4;
+  border-color: rgba(53, 92, 58, 0.3);
+  background: #f0f6ec;
 }
 
 .encabezado-administrativo__usuario:disabled {
@@ -55,10 +56,15 @@
   padding: 9px 13px;
   border: 1px solid rgba(53, 92, 58, 0.15);
   border-radius: 12px;
-  color: #355c3a;
-  background: transparent;
+  color: #315f3a;
+  background: linear-gradient(135deg, #edf5e9, #e4efdf);
   cursor: pointer;
   font-weight: 750;
+}
+
+.encabezado-administrativo__cerrar-sesion:hover:not(:disabled) {
+  border-color: rgba(53, 92, 58, 0.28);
+  box-shadow: 0 6px 16px rgba(53, 92, 58, 0.1);
 }
 
 .encabezado-administrativo__cerrar-sesion:disabled {
