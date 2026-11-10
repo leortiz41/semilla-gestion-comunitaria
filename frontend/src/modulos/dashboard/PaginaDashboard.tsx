@@ -2,11 +2,12 @@ import { useEffect, useMemo, useState } from 'react';
 import type { EChartsCoreOption } from 'echarts/core';
 import '../../estilos/modulos/dashboard/dashboard.css';
 import {
-  obtenerResumenDashboard, obtenerEstadisticasDashboard,
-  type ResumenDashboard, type EstadisticasDashboard,
+  obtenerResumenDashboard, obtenerEstadisticasDashboard, obtenerFiltrosDashboard,
+  type ResumenDashboard, type EstadisticasDashboard, type FiltrosDashboard, type SeleccionDashboard,
 } from '../../servicios/dashboard/servicioDashboard';
 import GraficaECharts from './componentes/GraficaECharts';
 import TableroGrid from './componentes/TableroGrid';
+import CatalogoWidgets, { idsWidgets } from './componentes/CatalogoWidgets';
 
 const etiquetasEstado: Record<string, string> = {
   PLANIFICADO: 'Planificación',
@@ -35,6 +36,47 @@ export default function PaginaDashboard({
   const [errorResumen, setErrorResumen] = useState('');
   const [errorEstadisticas, setErrorEstadisticas] = useState('');
   const [recarga, setRecarga] = useState(0);
+  const [opciones, setOpciones] = useState<FiltrosDashboard | null>(null);
+  const [errorFiltros, setErrorFiltros] = useState('');
+  const [filtros, setFiltros] = useState<SeleccionDashboard>({ meses: '' });
+  const [visibles, setVisibles] = useState<string[]>(() => {
+    try {
+      const guardado = JSON.parse(localStorage.getItem('semilla:dashboard:widgets:v1:' + usuarioEmail) || 'null') as unknown;
+      return Array.isArray(guardado)
+        ? idsWidgets.filter((id) => guardado.includes(id))
+        : [...idsWidgets];
+    } catch { return [...idsWidgets]; }
+  });
+
+  useEffect(() => {
+    try {
+      const guardado = JSON.parse(localStorage.getItem('semilla:dashboard:widgets:v1:' + usuarioEmail) || 'null') as unknown;
+      setVisibles(Array.isArray(guardado)
+        ? idsWidgets.filter((id) => guardado.includes(id))
+        : [...idsWidgets]);
+    } catch { setVisibles([...idsWidgets]); }
+  }, [usuarioEmail]);
+
+  function cambiarWidgets(nuevos: string[]) {
+    const normalizados = idsWidgets.filter((id) => nuevos.includes(id));
+    setVisibles(normalizados);
+    try { localStorage.setItem('semilla:dashboard:widgets:v1:' + usuarioEmail, JSON.stringify(normalizados)); }
+    catch { /* Navegador sin almacenamiento disponible */ }
+  }
+
+  useEffect(() => {
+    if (!tokenAcceso) { setOpciones(null); return; }
+    let activo = true;
+    obtenerFiltrosDashboard(tokenAcceso).then(
+      (datos) => { if (activo) { setOpciones(datos); setErrorFiltros(''); } },
+      (error: Error) => { if (activo) setErrorFiltros(error.message); },
+    );
+    return () => { activo = false; };
+  }, [tokenAcceso, recarga]);
+
+  const opcionesProyecto = opciones?.proyectos.filter((proyecto) =>
+    (!filtros.comunidadId || proyecto.comunidadId === filtros.comunidadId) &&
+    (!filtros.area || proyecto.tipo === filtros.area)) ?? [];
 
   useEffect(() => {
     if (!tokenAcceso) { setResumen(null); setEstadisticas(null); return; }
@@ -44,7 +86,7 @@ export default function PaginaDashboard({
     setErrorEstadisticas('');
     Promise.allSettled([
       obtenerResumenDashboard(tokenAcceso),
-      obtenerEstadisticasDashboard(tokenAcceso),
+      obtenerEstadisticasDashboard(tokenAcceso, filtros),
     ]).then(([comunidades, proyectos]) => {
       if (!activo) return;
       if (comunidades.status === 'fulfilled') setResumen(comunidades.value);
@@ -53,7 +95,7 @@ export default function PaginaDashboard({
       else { setEstadisticas(null); setErrorEstadisticas(proyectos.reason instanceof Error ? proyectos.reason.message : 'Error de estadísticas.'); }
     }).finally(() => { if (activo) setCargando(false); });
     return () => { activo = false; };
-  }, [tokenAcceso, recarga]);
+  }, [tokenAcceso, recarga, filtros.comunidadId, filtros.proyectoId, filtros.area, filtros.meses]);
 
   const graficoEstados = useMemo<EChartsCoreOption>(() => ({
     color: colores,
@@ -139,16 +181,65 @@ export default function PaginaDashboard({
           {cargando ? 'Actualizando…' : 'Actualizar indicadores'}
         </button>
       </header>
+      <section className="dashboard-filtros" aria-label="Filtros de estadísticas">
+        <div className="dashboard-filtros__titulo">
+          <h2>Explorar indicadores</h2>
+          <p>Filtrá los datos por comunidad, proyecto, área y período.</p>
+        </div>
+        {errorFiltros && <p role="alert" className="dashboard-error">{errorFiltros}</p>}
+        <div className="dashboard-filtros__controles">
+          <label>Comunidad
+            <select value={filtros.comunidadId ?? ''} onChange={(e) => setFiltros((actual) =>
+              ({ ...actual, comunidadId: e.target.value, proyectoId: '' }))}>
+              <option value="">Todas las comunidades</option>
+              {opciones?.comunidades.map((comunidad) =>
+                <option key={comunidad.id} value={comunidad.id}>{comunidad.nombre}</option>)}
+            </select>
+          </label>
+          <label>Área de desarrollo
+            <select value={filtros.area ?? ''} onChange={(e) => setFiltros((actual) =>
+              ({ ...actual, area: e.target.value, proyectoId: '' }))}>
+              <option value="">Todas las áreas</option>
+              {opciones?.areas.map((area) =>
+                <option key={area} value={area}>{etiquetasArea[area] ?? area}</option>)}
+            </select>
+          </label>
+          <label>Proyecto
+            <select value={filtros.proyectoId ?? ''} onChange={(e) =>
+              setFiltros((actual) => ({ ...actual, proyectoId: e.target.value }))}>
+              <option value="">Todos los proyectos</option>
+              {opcionesProyecto.map((proyecto) =>
+                <option key={proyecto.id} value={proyecto.id}>{proyecto.nombre}</option>)}
+            </select>
+          </label>
+          <label>Período
+            <select value={filtros.meses ?? ''} onChange={(e) =>
+              setFiltros((actual) => ({ ...actual, meses: e.target.value as SeleccionDashboard['meses'] }))}>
+              <option value="">Todo el historial</option>
+              <option value="3">Últimos 3 meses</option>
+              <option value="6">Últimos 6 meses</option>
+              <option value="12">Últimos 12 meses</option>
+            </select>
+          </label>
+          <button type="button" onClick={() => setFiltros({ meses: '' })}>Limpiar filtros</button>
+        </div>
+        <small>El período usa la fecha de registro de proyectos, la fecha de los avances y la carga de evidencias.
+          Sin filtro de período, la gráfica mensual muestra los últimos 12 meses; los totales abarcan todo el historial.</small>
+      </section>
       {errorResumen && <p role="alert" className="dashboard-error">Comunidades: {errorResumen}</p>}
       {errorEstadisticas && <p role="alert" className="dashboard-error">Proyectos: {errorEstadisticas}</p>}
       <div className="dashboard-comunidades">
+        <p className="dashboard-comunidades__nota">Comunidades: resumen general de la organización, sin filtros de proyecto o período.</p>
         <div><span>Comunidades registradas</span><strong>{resumen?.comunidadesRegistradas ?? '—'}</strong></div>
         <div><span>Comunidades activas</span><strong>{resumen?.comunidadesActivas ?? '—'}</strong></div>
         <div><span>Proyectos finalizados</span><strong>{estadisticas?.proyectosFinalizados ?? '—'}</strong></div>
         <div><span>Total de proyectos</span><strong>{estadisticas?.proyectosTotales ?? '—'}</strong></div>
       </div>
       {cargando && !estadisticas && <p role="status">Consultando indicadores institucionales…</p>}
-      {estadisticas && <TableroGrid usuario={usuarioEmail} contenido={contenido} />}
+      {estadisticas && <>
+        <CatalogoWidgets visibles={visibles} alCambiar={cambiarWidgets} />
+        <TableroGrid key={visibles.join('-')} usuario={usuarioEmail} contenido={contenido} visibles={visibles} />
+      </>}
       {!estadisticas && !cargando && !errorEstadisticas &&
         <p className="dashboard-vacio">Iniciá sesión para consultar los indicadores.</p>}
       <p className="dashboard-nota">
