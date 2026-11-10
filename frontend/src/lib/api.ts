@@ -539,6 +539,24 @@ export function obtenerProyectosAdministrativos(token: string) {
 }
 
 
+export interface AvanceConFotografias {
+  avanceId: string;
+  actividadId: string;
+  proyectoId: string;
+  proyecto: string;
+  actividad: string;
+  comunidad: string;
+  fecha: string;
+  estadoRevision: 'BORRADOR' | 'ENVIADO' | 'VALIDADO' | 'DEVUELTO';
+  cantidadEvidencias: number;
+}
+
+export function obtenerIndiceFotografias(token: string) {
+  return request<{ avances: AvanceConFotografias[] }>('/proyectos/evidencias/indice', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
 export interface EvidenciaFotografica {
   id: string;
   titulo: string | null;
