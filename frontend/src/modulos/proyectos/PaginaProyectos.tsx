@@ -9,6 +9,7 @@ import '../donantes/donantes.css';
 import ActividadesProyecto from './ActividadesProyecto';
 import FotografiasAvance from './FotografiasAvance';
 import '../../estilos/modulos/proyectos/centroRevision.css';
+import '../../estilos/modulos/proyectos/proyectos.css';
 
 const categorias: Record<AreaVisionDesarrollo, string> = {
   EVANGELISMO: 'Evangelismo',
@@ -362,9 +363,9 @@ function PaginaProyectos({
             </form>
           )}
           {!datos.proyectos.length && <p>Todavía no hay proyectos registrados.</p>}
-          <div className="roles-panel">
+          <div className="roles-panel proyectos-lista">
             {datos.proyectos.map((item) => (
-              <article className="roles-panel__tarjeta" key={item.id}>
+              <article className={`roles-panel__tarjeta proyectos-tarjeta${proyectoAbierto === item.id ? ' proyectos-tarjeta--abierta' : ''}`} key={item.id}>
                 <h2>{item.nombre}</h2>
                 <span className="pagina-modulo__estado">{estados[item.estado] ?? item.estado}</span>
                 <p>{item.comunidad} · {categorias[item.tipo as AreaVisionDesarrollo] ?? item.tipo}</p>
