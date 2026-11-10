@@ -48,3 +48,22 @@ Tras instalar, confirmar que `frontend/package-lock.json` incluye `@xyflow/react
 ## Dependencias bloqueadas
 
 El archivo `frontend/package-lock.json` ya se regeneró y se versionó en `develop`, incluyendo `@xyflow/react`, ECharts y GridStack. La automatización temporal usada para generarlo fue retirada. En nuevos equipos es recomendable usar `npm ci`.
+
+## Incremento 1B: exploración interactiva y legibilidad
+
+- **Explorar por niveles:** el mapa inicia con comunidad, proyecto y actividades para evitar una vista demasiado reducida. Pulsar una actividad alterna sus avances; pulsar un avance alterna sus fotografías.
+- **Ver mapa completo:** expande toda la trazabilidad para análisis general. «Explorar por niveles» restaura la vista jerárquica.
+- **Buscar nodo:** resalta coincidencias textuales entre los nodos visibles y atenúa el resto. Para buscar en avances/fotos primero hay que expandir el nivel o usar «Ver mapa completo».
+- **Centrar mapa:** reajusta zoom y posición con React Flow. Controles nativos y minimapa disponibles en escritorio.
+- **Panel contextual:** al cargar se selecciona el proyecto, y al elegir actividad se enumeran sus avances; en avances aparece una galería de las fotografías de R2.
+- Las fotografías y sus vínculos son **solo de lectura**; no se habilitan cambios en datos relacionales al interactuar con el grafo.
+- Los estilos se mantienen en `frontend/src/estilos/modulos/mapa-impacto/mapaImpacto.css`, sin CSS dentro de `modulos`.
+
+### Pruebas complementarias
+
+1. Abrir Aula para Kinder: comprobar que los nodos principales son legibles sin reducir el mapa hasta mostrar cada fotografía.
+2. Pulsar una actividad y un avance, comprobar despliegue; volver a pulsar para contraer.
+3. Pulsar «Ver mapa completo», seleccionar una fotografía y abrirla desde el panel lateral.
+4. Buscar texto de un nodo y comprobar atenuación de los restantes; limpiar búsqueda.
+5. Usar «Centrar mapa», zoom y minimapa. Probar anchos menores a 630 px.
+6. Comprobar en Proyectos y Evidencias que no se alteraron registros ni permisos.
