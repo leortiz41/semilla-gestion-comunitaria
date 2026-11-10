@@ -34,7 +34,10 @@ export default function PaginaMapaImpacto({ token }: { token: string }) {
     let activo = true;
     setCargando(true); setError(''); setDatos(null); setSeleccion(null);
     obtenerMapaProyecto(token, proyectoId).then((respuesta) => {
-      if (activo) setDatos(respuesta);
+      if (activo) {
+        setDatos(respuesta);
+        setSeleccion({ tipo: 'proyecto', id: respuesta.proyecto.id });
+      }
     }).catch((fallo: Error) => { if (activo) setError(fallo.message); })
       .finally(() => { if (activo) setCargando(false); });
     return () => { activo = false; };
@@ -109,7 +112,8 @@ export default function PaginaMapaImpacto({ token }: { token: string }) {
             <span><strong>{datos.proyecto.comunidad}</strong> comunidad</span>
           </div>
           <div className="mapa-impacto__espacio">
-            <MapaReactFlow datos={datos} seleccionar={(tipo, id) => setSeleccion({ tipo, id })} />
+            <MapaReactFlow datos={datos} seleccion={seleccion}
+              seleccionar={(tipo, id) => setSeleccion({ tipo, id })} />
             <aside className="mapa-impacto__detalle" aria-live="polite">
               <div className="mapa-impacto__detalle-titulo">
                 <h2>Detalle del elemento</h2>
@@ -125,9 +129,24 @@ export default function PaginaMapaImpacto({ token }: { token: string }) {
                     <img src={item.foto} alt={item.titulo} />
                     Abrir fotografía
                   </a>}
-                  {seleccion?.tipo === 'avance' && <p>
-                    Fotografías de este avance: {datos.evidencias.filter((f) => f.avanceId === seleccion.id).length}
-                  </p>}
+                  {seleccion?.tipo === 'avance' && <>
+                    <p>Fotografías de este avance: {datos.evidencias.filter((f) => f.avanceId === seleccion.id).length}</p>
+                    <div className="mapa-impacto__galeria">
+                      {datos.evidencias.filter((f) => f.avanceId === seleccion.id).map((foto) =>
+                        foto.url ? <a key={foto.id} href={foto.url} target="_blank" rel="noopener noreferrer"
+                          title={foto.titulo || 'Abrir fotografía'}>
+                          <img src={foto.url} alt={foto.titulo || 'Fotografía del avance'} loading="lazy" />
+                        </a> : <span key={foto.id}>Imagen temporalmente no disponible</span>)}
+                    </div>
+                  </>}
+                  {seleccion?.tipo === 'actividad' && <div className="mapa-impacto__atajos">
+                    <p>Avances asociados:</p>
+                    {datos.avances.filter((v) => v.actividadId === seleccion.id).map((avance) =>
+                      <button key={avance.id} type="button"
+                        onClick={() => setSeleccion({ tipo: 'avance', id: avance.id })}>
+                        {avance.fecha} · {avance.estado}
+                      </button>)}
+                  </div>}
                 </>
               ) : <p>Seleccioná un nodo para consultar su información y, cuando corresponda, abrir sus fotografías.</p>}
             </aside>
