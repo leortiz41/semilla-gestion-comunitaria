@@ -14,14 +14,16 @@ const posicionesIniciales: Posicion[] = [
 ];
 
 export default function TableroGrid({
-  usuario, contenido,
+  usuario, contenido, visibles,
 }: {
   usuario: string;
   contenido: Record<string, { titulo: string; contenido: ReactNode }>;
+  visibles: string[];
 }) {
   const contenedor = useRef<HTMLDivElement>(null);
   const cuadricula = useRef<GridStack | null>(null);
   const llave = 'semilla:dashboard:layout:v1:' + usuario;
+  const activos = posicionesIniciales.filter((p) => visibles.includes(p.id));
 
   useEffect(() => {
     const elemento = contenedor.current;
@@ -41,7 +43,7 @@ export default function TableroGrid({
       const guardado = localStorage.getItem(llave);
       if (guardado) {
         const posiciones = JSON.parse(guardado) as Posicion[];
-        if (Array.isArray(posiciones) && posiciones.length === posicionesIniciales.length &&
+        if (Array.isArray(posiciones) &&
             posiciones.every((p) => posicionesIniciales.some((v) => v.id === p.id) &&
               Number.isInteger(p.x) && p.x >= 0 && p.x < 12 &&
               Number.isInteger(p.y) && p.y >= 0 && p.y < 100 &&
@@ -65,7 +67,14 @@ export default function TableroGrid({
       const posiciones = (grid.save(false) as GridStackWidget[]).filter((w) => w.id).map(
         (w) => ({ id: w.id!, x: w.x ?? 0, y: w.y ?? 0, w: w.w ?? 3, h: w.h ?? 2 }),
       );
-      try { localStorage.setItem(llave, JSON.stringify(posiciones)); } catch { /* Almacenamiento no disponible */ }
+      try {
+        const anterior = JSON.parse(localStorage.getItem(llave) || '[]') as Posicion[];
+        const ocultos = Array.isArray(anterior)
+          ? anterior.filter((p) => posicionesIniciales.some((base) => base.id === p.id) &&
+            !posiciones.some((actual) => actual.id === p.id))
+          : [];
+        localStorage.setItem(llave, JSON.stringify([...ocultos, ...posiciones]));
+      } catch { /* Almacenamiento no disponible */ }
     };
     grid.on('dragstop', guardar);
     grid.on('resizestop', guardar);
@@ -79,13 +88,14 @@ export default function TableroGrid({
     observador.observe(elemento);
     adaptar();
     return () => {
+      guardar();
       observador.disconnect();
       grid.off('dragstop');
       grid.off('resizestop');
       grid.destroy(false);
       cuadricula.current = null;
     };
-  }, [llave]);
+  }, [llave, visibles.join('|')]);
 
   function restablecer() {
     const grid = cuadricula.current;
@@ -106,8 +116,9 @@ export default function TableroGrid({
         <p>En computadora podés arrastrar los títulos y ajustar los paneles. La disposición se guarda en este navegador.</p>
         <button type="button" onClick={restablecer}>Restablecer distribución</button>
       </div>
+      {activos.length === 0 && <p className="dashboard-vacio">No hay paneles activos. Agregá widgets desde el catálogo.</p>}
       <div ref={contenedor} className="grid-stack dashboard-grid">
-        {posicionesIniciales.map((p) => (
+        {activos.map((p) => (
           <div key={p.id} className="grid-stack-item"
             {...{ 'gs-id': p.id, 'gs-x': p.x, 'gs-y': p.y, 'gs-w': p.w, 'gs-h': p.h }}>
             <div className="grid-stack-item-content dashboard-widget">
