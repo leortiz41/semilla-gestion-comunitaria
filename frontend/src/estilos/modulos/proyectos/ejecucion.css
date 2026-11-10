@@ -10,3 +10,7 @@
 .proyecto-detalle__lista--ejecucion .fotos-avance{margin:.8rem 0}
 .proyecto-detalle__lista--ejecucion .actividad-avance-form{width:100%;box-sizing:border-box}
 @media(max-width:650px){.proyecto-detalle__lista--ejecucion .actividad-avance{padding:.75rem}.proyecto-detalle__lista--ejecucion .actividad-avance__acciones>button{flex:1 1 100%}}
+
+.actividad-avance__indicadores{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin:.25rem 0}
+.actividad-avance__indicadores .actividad-avance__estado{margin-top:0}
+.actividad-avance__fotos{display:inline-flex;align-items:center;padding:.25rem .6rem;border:1px solid #cddfc9;border-radius:999px;background:#f0f7ed;color:#366743;font-size:.73rem;font-weight:750}
