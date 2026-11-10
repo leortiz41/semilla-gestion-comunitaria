@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { EChartsCoreOption } from 'echarts/core';
 import '../../estilos/modulos/dashboard/dashboard.css';
 import {
   obtenerResumenDashboard, obtenerEstadisticasDashboard, obtenerFiltrosDashboard,
+  obtenerPreferenciasDashboard, guardarPreferenciasDashboard,
+  type PreferenciasDashboard, type PosicionWidget,
   type ResumenDashboard, type EstadisticasDashboard, type FiltrosDashboard, type SeleccionDashboard,
 } from '../../servicios/dashboard/servicioDashboard';
 import GraficaECharts from './componentes/GraficaECharts';
@@ -39,6 +41,11 @@ export default function PaginaDashboard({
   const [opciones, setOpciones] = useState<FiltrosDashboard | null>(null);
   const [errorFiltros, setErrorFiltros] = useState('');
   const [filtros, setFiltros] = useState<SeleccionDashboard>({ meses: '' });
+  const [preferenciasListas, setPreferenciasListas] = useState(false);
+  const [errorPreferencias, setErrorPreferencias] = useState('');
+  const [posicionesGuardadas, setPosicionesGuardadas] = useState<PosicionWidget[] | undefined>();
+  const estadoPreferencias = useRef<PreferenciasDashboard>({ visibles: [], posiciones: [] });
+  const colaGuardado = useRef<Promise<void>>(Promise.resolve());
   const [visibles, setVisibles] = useState<string[]>(() => {
     try {
       const guardado = JSON.parse(localStorage.getItem('semilla:dashboard:widgets:v1:' + usuarioEmail) || 'null') as unknown;
@@ -48,20 +55,72 @@ export default function PaginaDashboard({
     } catch { return [...idsWidgets]; }
   });
 
+  function guardarConfiguracion(cambios: Partial<PreferenciasDashboard>) {
+    const nueva = { ...estadoPreferencias.current, ...cambios };
+    estadoPreferencias.current = nueva;
+    if (!tokenAcceso) return;
+    // Serialización: cambios rápidos no deben llegar desordenados a Neon.
+    colaGuardado.current = colaGuardado.current.catch(() => undefined).then(async () => {
+      await guardarPreferenciasDashboard(tokenAcceso, nueva);
+      setErrorPreferencias('');
+    }).catch(() => {
+      setErrorPreferencias('No se pudo sincronizar tu distribución en Neon. Se conserva una copia en este navegador.');
+    });
+  }
+
   useEffect(() => {
-    try {
-      const guardado = JSON.parse(localStorage.getItem('semilla:dashboard:widgets:v1:' + usuarioEmail) || 'null') as unknown;
-      setVisibles(Array.isArray(guardado)
-        ? idsWidgets.filter((id) => guardado.includes(id))
-        : [...idsWidgets]);
-    } catch { setVisibles([...idsWidgets]); }
-  }, [usuarioEmail]);
+    let activo = true;
+    setPreferenciasListas(false);
+    setErrorPreferencias('');
+    const locales = () => {
+      let widgets = [...idsWidgets];
+      let posiciones: PosicionWidget[] = [];
+      try {
+        const valor = JSON.parse(localStorage.getItem('semilla:dashboard:widgets:v1:' + usuarioEmail) || 'null') as unknown;
+        if (Array.isArray(valor)) widgets = idsWidgets.filter((id) => valor.includes(id));
+        const estructura = JSON.parse(localStorage.getItem('semilla:dashboard:layout:v1:' + usuarioEmail) || '[]') as unknown;
+        if (Array.isArray(estructura)) posiciones = estructura as PosicionWidget[];
+      } catch { /* Usar valores iniciales */ }
+      return { visibles: widgets, posiciones };
+    };
+    if (!tokenAcceso) {
+      const cfg = locales();
+      estadoPreferencias.current = cfg;
+      setVisibles(cfg.visibles);
+      setPosicionesGuardadas(cfg.posiciones);
+      setPreferenciasListas(true);
+      return;
+    }
+    obtenerPreferenciasDashboard(tokenAcceso).then((guardada) => {
+      if (!activo) return;
+      const cfg = guardada && Array.isArray(guardada.visibles) && Array.isArray(guardada.posiciones)
+        ? { visibles: idsWidgets.filter((id) => guardada.visibles.includes(id)), posiciones: guardada.posiciones }
+        : locales();
+      estadoPreferencias.current = cfg;
+      setVisibles(cfg.visibles);
+      setPosicionesGuardadas(cfg.posiciones);
+    }).catch(() => {
+      if (!activo) return;
+      const cfg = locales();
+      estadoPreferencias.current = cfg;
+      setVisibles(cfg.visibles);
+      setPosicionesGuardadas(cfg.posiciones);
+      setErrorPreferencias('No se pudieron cargar las preferencias de Neon; se utiliza la configuración local.');
+    }).finally(() => { if (activo) setPreferenciasListas(true); });
+    return () => { activo = false; };
+  }, [tokenAcceso, usuarioEmail]);
 
   function cambiarWidgets(nuevos: string[]) {
     const normalizados = idsWidgets.filter((id) => nuevos.includes(id));
     setVisibles(normalizados);
     try { localStorage.setItem('semilla:dashboard:widgets:v1:' + usuarioEmail, JSON.stringify(normalizados)); }
     catch { /* Navegador sin almacenamiento disponible */ }
+    guardarConfiguracion({ visibles: normalizados });
+  }
+
+  function actualizarPosiciones(posiciones: PosicionWidget[]) {
+    setPosicionesGuardadas(posiciones);
+    guardarConfiguracion({ posiciones });
   }
 
   useEffect(() => {
@@ -228,6 +287,7 @@ export default function PaginaDashboard({
       </section>
       {errorResumen && <p role="alert" className="dashboard-error">Comunidades: {errorResumen}</p>}
       {errorEstadisticas && <p role="alert" className="dashboard-error">Proyectos: {errorEstadisticas}</p>}
+      {errorPreferencias && <p role="alert" className="dashboard-error">{errorPreferencias}</p>}
       <div className="dashboard-comunidades">
         <p className="dashboard-comunidades__nota">Comunidades: resumen general de la organización, sin filtros de proyecto o período.</p>
         <div><span>Comunidades registradas</span><strong>{resumen?.comunidadesRegistradas ?? '—'}</strong></div>
@@ -236,9 +296,11 @@ export default function PaginaDashboard({
         <div><span>Total de proyectos</span><strong>{estadisticas?.proyectosTotales ?? '—'}</strong></div>
       </div>
       {cargando && !estadisticas && <p role="status">Consultando indicadores institucionales…</p>}
-      {estadisticas && <>
+      {estadisticas && preferenciasListas && <>
         <CatalogoWidgets visibles={visibles} alCambiar={cambiarWidgets} />
-        <TableroGrid key={visibles.join('-')} usuario={usuarioEmail} contenido={contenido} visibles={visibles} />
+        <TableroGrid key={visibles.join('-')} usuario={usuarioEmail} contenido={contenido}
+          visibles={visibles} posicionesGuardadas={posicionesGuardadas}
+          alGuardarPosiciones={actualizarPosiciones} />
       </>}
       {!estadisticas && !cargando && !errorEstadisticas &&
         <p className="dashboard-vacio">Iniciá sesión para consultar los indicadores.</p>}
