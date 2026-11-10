@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import FotografiasAvance from './FotografiasAvance';
+import '../../estilos/modulos/proyectos/ejecucion.css';
 import {
   corregirAvanceValidadoProyecto,
   editarAvanceActividadProyecto,
