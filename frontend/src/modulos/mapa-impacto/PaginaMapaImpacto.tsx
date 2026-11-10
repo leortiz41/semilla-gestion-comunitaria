@@ -8,7 +8,7 @@ import '../../estilos/modulos/mapa-impacto/mapaImpacto.css';
 
 type Seleccion = { tipo: string; id: string } | null;
 
-export default function PaginaMapaImpacto({ token }: { token: string }) {
+export default function PaginaMapaImpacto({ token, usuarioId }: { token: string; usuarioId: string }) {
   const [proyectos, setProyectos] = useState<ProyectoMapa[]>([]);
   const [proyectoId, setProyectoId] = useState('');
   const [datos, setDatos] = useState<DetalleImpacto | null>(null);
@@ -96,7 +96,7 @@ export default function PaginaMapaImpacto({ token }: { token: string }) {
             </option>)}
           </select>
         </label>
-        <span className="mapa-impacto__modo">Modo exploración · Solo lectura</span>
+        <span className="mapa-impacto__modo">Diseño libre · Datos protegidos</span>
       </div>
 
       {error && <p role="alert" className="mapa-impacto__error">{error}</p>}
@@ -112,7 +112,7 @@ export default function PaginaMapaImpacto({ token }: { token: string }) {
             <span><strong>{datos.proyecto.comunidad}</strong> comunidad</span>
           </div>
           <div className="mapa-impacto__espacio">
-            <MapaReactFlow datos={datos} seleccion={seleccion}
+            <MapaReactFlow datos={datos} usuarioId={usuarioId} seleccion={seleccion}
               seleccionar={(tipo, id) => setSeleccion({ tipo, id })} />
             <aside className="mapa-impacto__detalle" aria-live="polite">
               <div className="mapa-impacto__detalle-titulo">
@@ -153,7 +153,7 @@ export default function PaginaMapaImpacto({ token }: { token: string }) {
           </div>
         </>
       )}
-      <p className="mapa-impacto__nota">Este mapa solo representa registros existentes. Desplazar nodos no modifica sus relaciones.
+      <p className="mapa-impacto__nota">Podés organizar los nodos a tu gusto: su posición se guarda para este usuario y proyecto en este navegador. Las conexiones y los registros reales no cambian.
         La visualización para donantes tendrá permisos y datos específicos en una fase posterior.</p>
     </section>
   );
