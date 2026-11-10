@@ -10,3 +10,6 @@
 .fotos-avance__imagen{min-width:0;display:grid;gap:.25rem;text-decoration:none;color:#456147;font-size:.74rem;overflow:hidden}
 .fotos-avance__imagen img{width:100%;height:95px;object-fit:cover;border:1px solid #cfdece;border-radius:.5rem;background:#edf3eb}
 .fotos-avance__imagen small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.fotos-avance__progreso{margin:0;padding:.65rem .8rem;border:1px solid #c5d8e9;border-radius:.6rem;background:#eef5fb;color:#315e7d;font-size:.82rem}
+.fotos-avance__exito{margin:0;padding:.65rem .8rem;border:1px solid #bedfc5;border-radius:.6rem;background:#ecf7ee;color:#285b37;font-size:.82rem;font-weight:650}
