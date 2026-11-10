@@ -9,7 +9,7 @@ export const mapaImpactoRouter = Router();
 // Primera etapa: exploración institucional, nunca editor de datos.
 // El portal DONANTE tendrá una ruta independiente con visibilidad restringida.
 mapaImpactoRouter.use(authenticateAccessToken, requirePermission('proyectos.ver'), (req, res, next) => {
-  if (req.auth?.roles.includes('DONANTE')) {
+  if (req.auth?.roles.some((rol) => rol === 'DONANTE' || rol === 'CONSULTA')) {
     res.status(403).json({ message: 'El mapa institucional no está disponible para el portal de donantes.' });
     return;
   }
