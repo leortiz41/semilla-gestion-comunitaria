@@ -13,3 +13,26 @@
 
 .fotos-avance__progreso{margin:0;padding:.65rem .8rem;border:1px solid #c5d8e9;border-radius:.6rem;background:#eef5fb;color:#315e7d;font-size:.82rem}
 .fotos-avance__exito{margin:0;padding:.65rem .8rem;border:1px solid #bedfc5;border-radius:.6rem;background:#ecf7ee;color:#285b37;font-size:.82rem;font-weight:650}
+
+/* HU-15: selección explícita, vista previa y galería de revisión */
+.fotos-avance{width:100%;box-sizing:border-box;min-width:0}
+.fotos-avance__encabezado>div{display:grid;gap:.15rem}
+.fotos-avance__contador{font-size:.73rem;color:#637d69}
+.fotos-avance__seleccion{display:grid;gap:.75rem;padding:.8rem;background:#fff;border:1px dashed #a8c8ac;border-radius:.75rem}
+.fotos-avance__seleccion>strong{font-size:.83rem;color:#315f3a}
+.fotos-avance__galeria{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:.7rem}
+.fotos-avance__imagen img{height:125px;display:block}
+.fotos-avance__pendiente{padding:.35rem;background:#fff;border:1px solid #dce6d8;border-radius:.65rem}
+.fotos-avance__pendiente button{background:transparent;border:1px solid #d4c9bd;color:#79523e;border-radius:.4rem;padding:.4rem;cursor:pointer}
+.fotos-avance__botones{display:flex;gap:.6rem;flex-wrap:wrap}
+.fotos-avance__confirmar{border:none;background:#316e42;color:white;border-radius:.65rem;padding:.65rem 1rem;font-weight:750;cursor:pointer}
+.fotos-avance__cancelar{border:1px solid #cad8c9;background:white;color:#36583b;border-radius:.65rem;padding:.65rem 1rem;cursor:pointer}
+.fotos-avance__foto-guardada{border:1px solid #d4e1d1;background:white;padding:.35rem;border-radius:.65rem;text-align:left;cursor:zoom-in;font:inherit}
+.fotos-avance__foto-guardada:hover{border-color:#6a9a73}
+.fotos-avance__visor{position:fixed;inset:0;z-index:1200;background:#142019de;display:grid;place-items:center;padding:1rem}
+.fotos-avance__visor-contenido{max-width:min(900px,95vw);max-height:95vh;background:#fff;padding:.75rem;border-radius:.8rem;display:grid;gap:.55rem;overflow:auto}
+.fotos-avance__visor-contenido img{max-width:100%;max-height:75vh;object-fit:contain;justify-self:center}
+.fotos-avance__visor-contenido p{margin:0;color:#31553a;font-size:.85rem;overflow-wrap:anywhere}
+.fotos-avance__cerrar{justify-self:end;border:1px solid #cbdacc;border-radius:.45rem;background:#f6faf4;color:#375d40;padding:.45rem .7rem;cursor:pointer}
+.fotos-avance__visor :focus-visible,.fotos-avance button:focus-visible{outline:3px solid #dcad6c;outline-offset:2px}
+@media(max-width:600px){.fotos-avance__galeria{grid-template-columns:repeat(2,minmax(0,1fr))}.fotos-avance__botones button{flex:1 1 100%}}
