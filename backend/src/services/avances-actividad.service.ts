@@ -113,6 +113,11 @@ export async function listarActividadesProyecto(
              'revisor', revisor.email,
              'revisadoEn', av.revisado_en,
              'motivoDevolucion', av.motivo_devolucion,
+             'cantidadEvidencias', (
+               SELECT COUNT(*)::int FROM evidencias ev
+               WHERE ev.avance_proyecto_id = av.id AND ev.proyecto_id = p.id
+                 AND ev.tipo_mime IN ('image/jpeg', 'image/png', 'image/webp')
+             ),
              'historial', COALESCE((
                SELECT jsonb_agg(jsonb_build_object(
                  'accion', b.accion,
