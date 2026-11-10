@@ -34,3 +34,30 @@ export async function obtenerResumenDashboard(
 
   return (await respuesta.json()) as ResumenDashboard;
 }
+
+export interface EstadisticasDashboard {
+  proyectosTotales: number;
+  proyectosActivos: number;
+  proyectosFinalizados: number;
+  presupuestoAsignado: number;
+  evidenciasRegistradas: number;
+  avancesValidados: number;
+  proyectosPorEstado: { estado: string; cantidad: number }[];
+  avancesPorMes: { mes: string; validados: number; enviados: number }[];
+  proyectosPorArea: { area: string; cantidad: number }[];
+}
+
+export async function obtenerEstadisticasDashboard(tokenAcceso: string): Promise<EstadisticasDashboard> {
+  const respuesta = await fetch(`${URL_API}/dashboard/estadisticas`, {
+    headers: { Authorization: `Bearer ${tokenAcceso}` },
+  });
+  if (!respuesta.ok) {
+    let mensaje = 'No se pudieron consultar las estadísticas.';
+    try {
+      const cuerpo = await respuesta.json() as RespuestaErrorApi;
+      mensaje = cuerpo.message || mensaje;
+    } catch { /* Respuesta sin JSON */ }
+    throw new Error(mensaje);
+  }
+  return respuesta.json() as Promise<EstadisticasDashboard>;
+}
