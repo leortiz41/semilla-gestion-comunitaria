@@ -1,29 +1,41 @@
-/* Proyectos: abrir actividades a ancho completo sin deformar las tarjetas cerradas. */
-.proyectos-lista{min-width:0;align-items:start}
-.proyectos-lista>.proyectos-tarjeta{min-width:0;box-sizing:border-box}
-.proyectos-lista>.proyectos-tarjeta--abierta{
-  grid-column:1/-1;
-  width:100%;
-  min-width:0;
-  box-sizing:border-box;
-  padding:clamp(1rem,2.5vw,1.65rem);
-  border-color:#a9c9aa;
-  box-shadow:0 14px 32px rgba(45,82,49,.1);
-}
-.proyectos-lista>.proyectos-tarjeta--abierta>.proyecto-detalle{
-  width:100%;
-  min-width:0;
-  margin-top:1.25rem;
-}
-.proyectos-lista>.proyectos-tarjeta--abierta .proyecto-detalle__panel{min-width:0}
-.proyectos-lista>.proyectos-tarjeta--abierta .proyecto-detalle__lista{min-width:0}
-.proyectos-lista>.proyectos-tarjeta--abierta .actividad-avances{min-width:0}
-.proyectos-lista>.proyectos-tarjeta--abierta .actividad-avance{min-width:0}
-@media(min-width:900px){
-  .proyectos-lista>.proyectos-tarjeta--abierta .proyecto-detalle__lista--ejecucion{
-    grid-template-columns:minmax(0,1fr);
-  }
-}
+/* HU-12/15: cartera compacta y espacio de trabajo sin tarjetas anidadas. */
+.proyectos-explorador{display:grid;gap:1rem;margin-top:1rem;min-width:0}
+.proyectos-explorador__encabezado{display:flex;justify-content:space-between;align-items:end;gap:1rem;flex-wrap:wrap}
+.proyectos-explorador__encabezado h2{margin:.3rem 0;color:#315d38;font-size:1.25rem}
+.proyectos-explorador__encabezado p{margin:0;color:#718072;font-size:.85rem}
+.proyectos-explorador__filtros label{display:grid;gap:.4rem;font-size:.78rem;font-weight:700;color:#596c5b}
+.proyectos-explorador__filtros input{width:min(100%,300px);box-sizing:border-box;border:1px solid #cbdac8;border-radius:.7rem;padding:.75rem;background:#fff;font:inherit;color:#2e4b35}
+.proyectos-explorador__pestanas{display:flex;gap:.4rem;padding:.35rem;background:#eff5ed;border:1px solid #d7e6d4;border-radius:.85rem;overflow-x:auto}
+.proyectos-explorador__pestanas button{flex:1 0 auto;border:0;border-radius:.6rem;padding:.65rem 1rem;background:transparent;color:#506953;font:inherit;font-size:.85rem;font-weight:700;cursor:pointer}
+.proyectos-explorador__pestanas button[aria-pressed=true]{background:#fff;color:#285c36;box-shadow:0 2px 8px #355f4215}
+.proyectos-explorador__vacio{padding:1rem;border:1px dashed #cfdfcd;border-radius:.8rem;color:#58715d}
+.proyectos-lista{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr));gap:1rem;align-items:stretch;min-width:0}
+.proyectos-lista>.proyectos-tarjeta{display:flex;flex-direction:column;gap:.75rem;box-sizing:border-box;min-width:0;padding:1.15rem;background:#fff;border:1px solid #d9e6d6;border-radius:1rem;box-shadow:0 9px 25px #3045300a}
+.proyectos-tarjeta__cabecera{display:flex;flex-wrap:wrap;align-items:start;justify-content:space-between;gap:.45rem}
+.proyectos-tarjeta__cabecera h3{margin:0;color:#315c39;font-size:1.05rem;line-height:1.35;overflow-wrap:anywhere}
+.proyectos-tarjeta__comunidad{margin:0;font-size:.82rem;color:#657768;overflow-wrap:anywhere}
+.proyectos-tarjeta__datos{display:grid;gap:.45rem;margin:0}
+.proyectos-tarjeta__datos div{min-width:0}
+.proyectos-tarjeta__datos dt{font-size:.73rem;color:#768677}
+.proyectos-tarjeta__datos dd{margin:.15rem 0 0;font-weight:650;color:#3b5440;font-size:.85rem;overflow-wrap:anywhere}
+.proyectos-tarjeta__acciones{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:auto}
+.proyectos-tarjeta__acciones>button{flex:1 1 auto;font:inherit;font-size:.82rem;border-radius:.65rem;padding:.65rem;cursor:pointer}
+.proyectos-tarjeta__abrir{border:1px solid #bfd6c0;background:#eaf4e8;color:#285d38;font-weight:750!important}
+.proyectos-tarjeta__abrir[aria-pressed=true]{background:#326d42;color:white}
+.proyectos-espacio{display:grid;gap:.75rem;min-width:0;margin-top:1.35rem;padding:clamp(.85rem,2vw,1.5rem);border:1px solid #cddfcd;background:#fff;border-radius:1.1rem;box-shadow:0 14px 36px #334f3210}
+.proyectos-espacio__cabecera{display:flex;align-items:start;justify-content:space-between;flex-wrap:wrap;gap:1rem;border-bottom:1px solid #e1eae0;padding-bottom:1rem}
+.proyectos-espacio__cabecera h2{margin:.25rem 0;color:#2b5634;font-size:clamp(1.2rem,2vw,1.65rem)}
+.proyectos-espacio__cabecera p{margin:0;color:#708171;font-size:.85rem}
+.proyectos-espacio__cerrar{padding:.65rem .9rem;border:1px solid #cddfcd;background:#f4f8f2;border-radius:.65rem;color:#315a3a;font:inherit;cursor:pointer}
+.proyectos-espacio>.proyecto-detalle{margin-top:0}
+.proyectos-espacio .proyecto-detalle__panel{padding:clamp(.6rem,2vw,1.15rem);border:0;background:transparent}
+.proyectos-espacio .proyecto-detalle__lista--ejecucion{grid-template-columns:minmax(0,1fr)}
+.proyectos-espacio .actividad-detalle{box-shadow:none;border:1px solid #dae6d8;background:#fcfefb}
+.proyectos-espacio .actividad-avance{border-color:#e1eae0}
 @media(max-width:640px){
-  .proyectos-lista>.proyectos-tarjeta--abierta{padding:1rem}
+  .proyectos-explorador__filtros,.proyectos-explorador__filtros input{width:100%}
+  .proyectos-explorador__pestanas button{font-size:.77rem;padding:.65rem .55rem}
+  .proyectos-lista{grid-template-columns:1fr}
+  .proyectos-espacio{padding:.7rem}
+  .proyectos-espacio__cerrar{width:100%}
 }
