@@ -44,3 +44,7 @@ Tras instalar, confirmar que `frontend/package-lock.json` incluye `@xyflow/react
 - Etapa 2: incorporaciones de donantes y contribuciones de proyectos **solo con vínculos confirmados en la base**.
 - Etapa 3: vista de impacto para portal de donantes con autorización por proyecto/registro y visibilidad documental explícita.
 - Etapa 4: filtros, agrupación, búsqueda en el grafo y persistencia de preferencias del mapa por usuario.
+
+## Dependencias bloqueadas
+
+El flujo automatizado de `develop` actualiza `frontend/package-lock.json` para fijar versiones de `@xyflow/react`, ECharts y GridStack. En nuevos equipos conviene usar `npm ci` una vez sincronizado el archivo lock.
