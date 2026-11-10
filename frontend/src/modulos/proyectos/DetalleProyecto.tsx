@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import FotografiasAvance from './FotografiasAvance';
 import {
   corregirAvanceValidadoProyecto,
   editarAvanceActividadProyecto,
@@ -507,6 +508,9 @@ export default function DetalleProyecto({
                         ))}
                       </ol>
                     </details>
+                    <FotografiasAvance token={token} proyectoId={proyectoId} actividadId={actividad.id}
+                      avanceId={avance.id} permitirCarga={puedeRegistrarAvance && avance.responsable === usuarioEmail &&
+                        ['BORRADOR', 'DEVUELTO'].includes(avance.estadoRevision)} />
                     <div className="actividad-avance__acciones">
                       {puedeRegistrarAvance && avance.responsable === usuarioEmail &&
                         ['BORRADOR', 'DEVUELTO'].includes(avance.estadoRevision) && (
