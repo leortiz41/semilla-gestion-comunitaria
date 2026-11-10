@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { obtenerFotosAvance, subirFotoAvance, type EvidenciaFotografica } from '../../lib/api';
 import '../../estilos/modulos/proyectos/fotografiasAvance.css';
 
@@ -18,6 +18,7 @@ export default function FotografiasAvance({
   const [progreso, setProgreso] = useState('');
   const [ampliada, setAmpliada] = useState<EvidenciaFotografica | null>(null);
   const [version, setVersion] = useState(0);
+  const vistasTemporales = useRef<string[]>([]);
 
   useEffect(() => {
     let vigente = true;
@@ -30,8 +31,9 @@ export default function FotografiasAvance({
   }, [token, proyectoId, actividadId, avanceId, version]);
 
   useEffect(() => {
-    return () => { pendientes.forEach((foto) => URL.revokeObjectURL(foto.vista)); };
-  }, [pendientes]);
+    const vistas = vistasTemporales.current;
+    return () => { vistas.forEach((vista) => URL.revokeObjectURL(vista)); };
+  }, []);
 
   function seleccionar(archivos: FileList | null) {
     if (!archivos?.length || subiendo) return;
@@ -51,7 +53,9 @@ export default function FotografiasAvance({
         nueva.forEach((foto) => URL.revokeObjectURL(foto.vista));
         return;
       }
-      nueva.push({ id: crypto.randomUUID(), archivo, vista: URL.createObjectURL(archivo) });
+      const vista = URL.createObjectURL(archivo);
+      vistasTemporales.current.push(vista);
+      nueva.push({ id: crypto.randomUUID(), archivo, vista });
     }
     setError('');
     setMensajeCarga('');
