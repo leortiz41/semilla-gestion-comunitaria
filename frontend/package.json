@@ -15,7 +15,8 @@
     "react": "latest",
     "react-dom": "latest",
     "echarts": "^6.0.0",
-    "gridstack": "^14.1.0"
+    "gridstack": "^14.1.0",
+    "@xyflow/react": "^12.9.0"
   },
   "devDependencies": {
     "@types/react": "latest",
