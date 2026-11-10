@@ -38,3 +38,26 @@ IMPORTANTE: `frontend/package.json` incluye `echarts` y `gridstack`. Después de
 - Widgets configurables por roles y filtros de fecha/área/comunidad.
 - Separar ejecución presupuestaria real de presupuesto asignado tras validar fuentes contables.
 - React Flow para trazabilidad visual de proyectos, donantes, avances y evidencias autorizadas.
+
+## Incremento 2: filtros y catálogo de widgets (noviembre de 2026)
+
+- `GET /api/dashboard/filtros` entrega las comunidades, los proyectos con su comunidad y las áreas de la **organización autenticada**.
+- `GET /api/dashboard/estadisticas?comunidadId=...&proyectoId=...&area=...&meses=3|6|12` aplica filtros combinados en backend con consultas parametrizadas.
+- Un período de 3/6/12 meses se calcula **desde el primer día del mes de inicio** (incluyendo el mes actual):
+  - Proyectos y presupuesto asignado: fecha de **registro** del proyecto.
+  - Fotografías: fecha en que se **cargaron**.
+  - Avances validados: fecha de **avance**, no fecha de aprobación.
+  - Serie mensual: siempre muestra los meses vacíos. Cuando el período es «Todo el historial», la serie muestra 12 meses, pero las tarjetas totalizan todo el historial.
+- Las tarjetas de **comunidades registradas/activas** son totales institucionales y **no** obedecen a filtros de proyecto, área ni período. La interfaz lo indica explícitamente.
+- El catálogo permite mostrar/ocultar siete widgets sin borrar los datos y guarda la elección en `localStorage` por correo; las posiciones siguen guardadas en `semilla:dashboard:layout:v1:`.
+- Las métricas siguen aisladas por organización y no hay acceso institucional desde el rol DONANTE.
+
+### Pruebas manuales adicionales
+
+1. Filtrar por comunidad y proyecto de la misma comunidad; verificar la cantidad de evidencias.
+2. Cambiar comunidad y comprobar que el proyecto anterior se limpia automáticamente.
+3. Usar 3 meses y «Todo el historial»; comprobar que cada tarjeta utiliza las fechas descritas arriba.
+4. Ocultar y restaurar widgets; comprobar que se preserva la ubicación al volver a activarlos.
+5. Recargar sesión/navegador y comprobar persistencia de la selección local.
+6. Confirmar que una organización distinta no puede seleccionar ni consultar proyectos de otra organización.
+7. Verificar la visualización en un teléfono; sin arrastre de widgets.
