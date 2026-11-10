@@ -568,14 +568,26 @@ export async function subirFotoAvance(
     method: 'POST', headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify({ tipoMime: foto.type }),
   });
-  const carga = await fetch(preparacion.url, {
-    method: 'PUT', headers: { 'Content-Type': preparacion.tipoMime }, body: foto,
-  });
-  if (!carga.ok) throw new Error('No se pudo cargar la fotografía a R2. Revisá la política CORS y tu conexión.');
-  return request<{ id: string }>(ruta + '/confirmar', {
-    method: 'POST', headers: { Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ clave: preparacion.clave, tipoMime: foto.type, titulo: foto.name }),
-  });
+  let carga: Response;
+  try {
+    carga = await fetch(preparacion.url, {
+      method: 'PUT', headers: { 'Content-Type': preparacion.tipoMime }, body: foto,
+    });
+  } catch {
+    throw new Error('No se pudo conectar con R2. Verificá CORS para el origen local, conexión y firma temporal.');
+  }
+  if (!carga.ok) {
+    throw new Error(`R2 rechazó la fotografía (HTTP ${carga.status}). Verificá las credenciales, el bucket y la firma de carga.`);
+  }
+  try {
+    return await request<{ id: string }>(ruta + '/confirmar', {
+      method: 'POST', headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ clave: preparacion.clave, tipoMime: foto.type, titulo: foto.name }),
+    });
+  } catch (fallo) {
+    throw new Error('La foto se envió a R2, pero no pudo confirmarse en Neon: ' +
+      (fallo instanceof Error ? fallo.message : 'Error desconocido.'));
+  }
 }
 
 export interface AvancePendienteRevision {
