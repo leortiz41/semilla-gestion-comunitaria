@@ -259,7 +259,7 @@ function App() {
         );
       case 'dashboard':
       default:
-        return <PaginaDashboard tokenAcceso={accessToken} />;
+        return <PaginaDashboard tokenAcceso={accessToken} usuarioEmail={usuario?.email ?? 'sesion'} />;
     }
   }
 
