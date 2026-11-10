@@ -490,7 +490,12 @@ export default function DetalleProyecto({
                         : `${avance.porcentajeAvance ?? 0}%`}</strong>
                       <time dateTime={avance.fecha}>{avance.fecha}</time>
                     </div>
-                    <span className="actividad-avance__estado">{estadosRevision[avance.estadoRevision]}</span>
+                    <div className="actividad-avance__indicadores">
+                      <span className="actividad-avance__estado">{estadosRevision[avance.estadoRevision]}</span>
+                      <span className="actividad-avance__fotos" title="Fotografías asociadas a este avance">
+                        {avance.cantidadEvidencias ?? 0} {(avance.cantidadEvidencias ?? 0) === 1 ? 'fotografía' : 'fotografías'}
+                      </span>
+                    </div>
                     <p>{avance.descripcion}</p>
                     {avance.observaciones && <p><strong>Observaciones:</strong> {avance.observaciones}</p>}
                     <span>Responsable · {avance.responsable ?? 'No identificado'}</span>
