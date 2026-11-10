@@ -70,7 +70,7 @@ export default function DetalleProyecto({
   const [porcentajeProyecto, setPorcentajeProyecto] = useState<number | null>(null);
   const [pesoConfigurado, setPesoConfigurado] = useState(0);
   const [responsables, setResponsables] = useState<{ id: string; nombre: string }[]>([]);
-  const [vista, setVista] = useState<'planificacion' | 'ejecucion' | 'resultados'>('planificacion');
+  const [vista, setVista] = useState<'resumen' | 'planificacion' | 'ejecucion' | 'resultados'>('resumen');
   const [formularioActividad, setFormularioActividad] = useState<ActividadProyecto | 'nueva' | null>(null);
   const [avanceFormulario, setAvanceFormulario] = useState<{ actividad: ActividadProyecto; avance?: AvanceActividadProyecto; corregir?: boolean } | null>(null);
   const [devolucion, setDevolucion] = useState<{ actividad: ActividadProyecto; avance: AvanceActividadProyecto } | null>(null);
@@ -580,6 +580,7 @@ export default function DetalleProyecto({
         <>
           <div className="proyecto-detalle__pestanas" role="tablist" aria-label="Secciones del proyecto">
             {([
+              ['resumen', 'Resumen'],
               ['planificacion', 'Planificación'],
               ['ejecucion', 'Ejecución'],
               ['resultados', 'Resultados'],
@@ -593,6 +594,37 @@ export default function DetalleProyecto({
           </div>
           <section id={`proyecto-panel-${vista}`} role="tabpanel"
             aria-labelledby={`proyecto-tab-${vista}`} className="proyecto-detalle__panel">
+            {vista === 'resumen' && (
+              <section className="proyecto-resumen" aria-label="Resumen de seguimiento">
+                <div className="proyecto-resumen__titulo">
+                  <h3>Resumen del proyecto</h3>
+                  <p>Vista rápida de la planificación y los resultados validados.</p>
+                </div>
+                <div className="proyecto-resumen__indicadores">
+                  <div><span>Actividades planificadas</span><strong>{actividades.length}</strong></div>
+                  <div><span>Avances en revisión</span><strong>{actividades.reduce((total, a) =>
+                    total + a.avances.filter((av) => av.estadoRevision === 'ENVIADO').length, 0)}</strong></div>
+                  <div><span>Presupuesto asignado a actividades</span><strong>{actividades.reduce((total, a) =>
+                    total + (a.presupuestoEstimado ?? 0), 0).toLocaleString('es-HN')} {moneda}</strong></div>
+                  <div><span>Avance físico validado</span><strong>{porcentajeProyecto === null
+                    ? 'Pendiente' : `${porcentajeProyecto.toLocaleString('es-HN', { maximumFractionDigits: 2 })}%`}</strong></div>
+                </div>
+                {porcentajeProyecto !== null && porcentajeProyecto >= 100 && (
+                  <p className="proyecto-resumen__cierre">
+                    Las metas ponderadas alcanzaron el 100 %. Revisá las evidencias, los recursos y las obligaciones
+                    antes de marcar administrativamente el proyecto como finalizado.
+                  </p>
+                )}
+                <p className="proyecto-resumen__nota">
+                  El avance físico proviene de reportes validados. El estado administrativo del proyecto se administra
+                  por separado; llegar al 100 % no lo archiva automáticamente.
+                </p>
+                <div className="proyecto-resumen__acciones">
+                  <button type="button" onClick={() => setVista('planificacion')}>Ver planificación</button>
+                  <button type="button" onClick={() => setVista('ejecucion')}>Ver ejecución y fotografías</button>
+                </div>
+              </section>
+            )}
             {vista === 'planificacion' && (
               <>
                 <header className="proyecto-detalle__resumen">
