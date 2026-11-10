@@ -614,7 +614,7 @@ export default function DetalleProyecto({
               <>
                 <h3>Ejecución</h3>
                 <p>Las cantidades son incrementales. Las estimaciones no cuantificables son acumuladas y justificadas.</p>
-                <div className="proyecto-detalle__lista">
+                <div className="proyecto-detalle__lista proyecto-detalle__lista--ejecucion">
                   {actividades.map((actividad) => tarjetaActividad(actividad, 'ejecucion'))}
                 </div>
               </>
