@@ -50,6 +50,7 @@ export default function MapaReactFlow({
         data: { label: titulo },
         style: estilo(tipo),
         draggable: false,
+        className: 'nopan',
         selectable: true,
         connectable: false,
       });
@@ -62,36 +63,41 @@ export default function MapaReactFlow({
       style: { stroke: '#96b6a0', strokeWidth: 1.5 },
       markerEnd: { type: MarkerType.ArrowClosed, color: '#96b6a0' },
     });
+    // Distribución jerárquica: cada rama reserva espacio según sus fotografías.
+    // Evita que los avances de una actividad se monten sobre la siguiente.
+    let siguienteY = 30;
+    const centros: number[] = [];
+    actividades.forEach((actividad) => {
+      const inicioRama = siguienteY;
+      const avancesActividad = avances.filter((av) => av.actividadId === actividad.id);
+      if (!avancesActividad.length) siguienteY += 105;
+      avancesActividad.forEach((avance) => {
+        const fotos = evidencias.filter((ev) => ev.avanceId === avance.id);
+        const alturaRama = Math.max(95, fotos.length * 76);
+        const yAvance = siguienteY + (alturaRama - 58) / 2;
+        agregar('avance:' + avance.id, 'avance',
+          `📋 ${avance.fecha} · ${avance.estado}`, 810, yAvance);
+        unir('actividad:' + actividad.id, 'avance:' + avance.id);
+        fotos.forEach((foto, i) => {
+          agregar('evidencia:' + foto.id, 'evidencia',
+            '📷 ' + (foto.titulo || 'Fotografía'), 1060, siguienteY + i * 76);
+          unir('avance:' + avance.id, 'evidencia:' + foto.id);
+        });
+        siguienteY += alturaRama + 24;
+      });
+      const centro = inicioRama + (siguienteY - inicioRama - 58) / 2;
+      agregar('actividad:' + actividad.id, 'actividad', '🗓️ ' + actividad.nombre, 560, centro);
+      unir('proyecto:' + datos.proyecto.id, 'actividad:' + actividad.id);
+      centros.push(centro);
+      siguienteY += 32;
+    });
+    const centroPrincipal = centros.length
+      ? (centros[0] + centros[centros.length - 1]) / 2 : 50;
     agregar('comunidad:' + datos.proyecto.comunidadId, 'comunidad',
-      '🏘️ ' + datos.proyecto.comunidad, 0, 40);
+      '🏘️ ' + datos.proyecto.comunidad, 0, centroPrincipal);
     agregar('proyecto:' + datos.proyecto.id, 'proyecto',
-      '📁 ' + datos.proyecto.nombre, 270, 40);
+      '📁 ' + datos.proyecto.nombre, 270, centroPrincipal);
     unir('comunidad:' + datos.proyecto.comunidadId, 'proyecto:' + datos.proyecto.id);
-    const coordenadas = new Map<string, number>();
-    actividades.forEach((a, i) => {
-      const y = i * 125 + 40;
-      agregar('actividad:' + a.id, 'actividad', '🗓️ ' + a.nombre, 560, y);
-      unir('proyecto:' + datos.proyecto.id, 'actividad:' + a.id);
-      coordenadas.set(a.id, y);
-    });
-    const avancesPorActividad = new Map<string, number>();
-    avances.forEach((av) => {
-      const indice = avancesPorActividad.get(av.actividadId) ?? 0;
-      avancesPorActividad.set(av.actividadId, indice + 1);
-      const base = coordenadas.get(av.actividadId) ?? 40;
-      const y = base + indice * 78;
-      agregar('avance:' + av.id, 'avance', `📋 ${av.fecha} · ${av.estado}`, 810, y);
-      unir('actividad:' + av.actividadId, 'avance:' + av.id);
-      coordenadas.set(av.id, y);
-    });
-    const fotosPorAvance = new Map<string, number>();
-    evidencias.forEach((foto) => {
-      const indice = fotosPorAvance.get(foto.avanceId) ?? 0;
-      fotosPorAvance.set(foto.avanceId, indice + 1);
-      const y = (coordenadas.get(foto.avanceId) ?? 40) + indice * 62;
-      agregar('evidencia:' + foto.id, 'evidencia', '📷 ' + (foto.titulo || 'Fotografía'), 1060, y);
-      unir('avance:' + foto.avanceId, 'evidencia:' + foto.id);
-    });
     const omitidos = datos.actividades.length - actividades.length +
       datos.avances.length - avances.length + datos.evidencias.length - evidencias.length;
     return { nodes, edges, omitidos };
