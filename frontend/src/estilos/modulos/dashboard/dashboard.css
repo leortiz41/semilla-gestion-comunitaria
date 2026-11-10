@@ -32,3 +32,34 @@
   .dashboard-widget__handle{cursor:default}
   .dashboard-grid .dashboard-widget__contenido{padding:.55rem .7rem}
 }
+
+/* Filtros de negocio y catálogo de widgets: las tarjetas no se anidan dentro de otras. */
+.dashboard-filtros{display:grid;gap:.8rem;padding:1rem;border:1px solid #dce8d8;border-radius:.9rem;background:#f7faf5}
+.dashboard-filtros__titulo h2{margin:0;font-size:1rem;color:#315d3c}
+.dashboard-filtros__titulo p{margin:.2rem 0 0;color:#687b6a;font-size:.8rem}
+.dashboard-filtros__controles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,165px),1fr));gap:.7rem;align-items:end}
+.dashboard-filtros__controles label{display:grid;gap:.3rem;color:#49634e;font-size:.78rem;font-weight:750}
+.dashboard-filtros__controles select{width:100%;min-width:0;padding:.66rem .65rem;border:1px solid #c9dcc7;border-radius:.6rem;background:white;color:#2c4832;font:inherit;font-weight:500}
+.dashboard-filtros__controles button{min-height:39px;border:1px solid #b9d4bd;border-radius:.6rem;background:#edf6ec;color:#315b3a;font:inherit;font-weight:750;cursor:pointer}
+.dashboard-filtros>small{color:#708274;line-height:1.5}
+.dashboard-comunidades__nota{grid-column:1/-1;margin:0;color:#6b7e70;font-size:.74rem}
+.dashboard-catalogo{border:1px solid #dce8d8;border-radius:.9rem;background:#fff;min-width:0}
+.dashboard-catalogo summary{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.85rem 1rem;cursor:pointer;color:#365e40;font-weight:800;font-size:.88rem}
+.dashboard-catalogo summary::-webkit-details-marker{display:none}
+.dashboard-catalogo summary span{color:#6d816f;font-size:.74rem;font-weight:500}
+.dashboard-catalogo[open] summary{border-bottom:1px solid #e4ece1}
+.dashboard-catalogo__contenido{display:grid;gap:.8rem;padding:1rem}
+.dashboard-catalogo__contenido>p{margin:0;color:#718174;font-size:.8rem}
+.dashboard-catalogo__lista{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:.6rem}
+.dashboard-catalogo__opcion{display:flex;align-items:flex-start;gap:.55rem;padding:.7rem;border:1px solid #e2ebe1;border-radius:.65rem;background:#f9fbf8;cursor:pointer}
+.dashboard-catalogo__opcion input{accent-color:#397951;margin-top:.18rem}
+.dashboard-catalogo__opcion span{display:grid;gap:.2rem}
+.dashboard-catalogo__opcion strong{font-size:.8rem;color:#345a3b}
+.dashboard-catalogo__opcion small{font-size:.73rem;color:#697e6e;line-height:1.45}
+.dashboard-catalogo__acciones{display:flex;gap:.5rem;flex-wrap:wrap}
+.dashboard-catalogo__acciones button{border:1px solid #c9ddc9;border-radius:.6rem;background:#edf6ee;color:#356141;padding:.55rem .75rem;font:inherit;font-weight:700;cursor:pointer;font-size:.8rem}
+.dashboard-filtros select:focus-visible,.dashboard-filtros button:focus-visible,.dashboard-catalogo input:focus-visible,.dashboard-catalogo button:focus-visible,.dashboard-catalogo summary:focus-visible{outline:3px solid #d9a35e;outline-offset:2px}
+@media(max-width:800px){
+ .dashboard-filtros{padding:.85rem}
+ .dashboard-catalogo__contenido{padding:.8rem}
+}
