@@ -41,6 +41,7 @@ export async function obtenerResumenDashboard(
 }
 
 export interface EstadisticasDashboard {
+  moneda: string;
   proyectosTotales: number;
   proyectosActivos: number;
   proyectosFinalizados: number;
@@ -56,7 +57,7 @@ export async function obtenerEstadisticasDashboard(organizacionId: string): Prom
   const pool = obtenerPool();
   // Todas las métricas se calculan dentro de la organización autenticada.
   // Presupuesto asignado NO equivale a gasto ejecutado o donaciones recibidas.
-  const [totales, estados, meses, areas] = await Promise.all([
+  const [totales, estados, meses, areas, organizacion] = await Promise.all([
     pool.query<{
       proyectosTotales: number; proyectosActivos: number; proyectosFinalizados: number;
       presupuestoAsignado: number; evidenciasRegistradas: number; avancesValidados: number;
@@ -92,8 +93,10 @@ export async function obtenerEstadisticasDashboard(organizacionId: string): Prom
     pool.query<{ area: string; cantidad: number }>(`SELECT p.tipo AS area, COUNT(*)::int AS cantidad
       FROM proyectos p JOIN comunidades c ON c.id=p.comunidad_id
       WHERE c.organizacion_id=$1 GROUP BY p.tipo ORDER BY cantidad DESC, p.tipo`, [organizacionId]),
+    pool.query<{ moneda: string }>('SELECT moneda FROM organizaciones WHERE id=$1', [organizacionId]),
   ]);
   return {
+    moneda: organizacion.rows[0]?.moneda ?? 'HNL',
     proyectosTotales: totales.rows[0]?.proyectosTotales ?? 0,
     proyectosActivos: totales.rows[0]?.proyectosActivos ?? 0,
     proyectosFinalizados: totales.rows[0]?.proyectosFinalizados ?? 0,
