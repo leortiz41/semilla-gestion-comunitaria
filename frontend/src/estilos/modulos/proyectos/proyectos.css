@@ -39,3 +39,16 @@
   .proyectos-espacio{padding:.7rem}
   .proyectos-espacio__cerrar{width:100%}
 }
+
+/* Resumen del proyecto: indicadores sin cuadros anidados de navegación. */
+.proyecto-resumen{display:grid;gap:1.1rem}
+.proyecto-resumen__titulo h3{margin:0;color:#315f3a;font-size:1.2rem}
+.proyecto-resumen__titulo p{margin:.3rem 0 0;color:#687a6b;font-size:.86rem}
+.proyecto-resumen__indicadores{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:.7rem}
+.proyecto-resumen__indicadores>div{display:grid;gap:.3rem;padding:.9rem;background:#f5f9f3;border-radius:.75rem}
+.proyecto-resumen__indicadores span{font-size:.75rem;color:#677b69}
+.proyecto-resumen__indicadores strong{font-size:1.15rem;color:#2f5638;overflow-wrap:anywhere}
+.proyecto-resumen__nota{margin:0;font-size:.82rem;line-height:1.5;color:#647767}
+.proyecto-resumen__cierre{margin:0;padding:.85rem 1rem;border-left:3px solid #5d9366;background:#f0f8ec;border-radius:.55rem;color:#325d3a;font-size:.86rem}
+.proyecto-resumen__acciones{display:flex;gap:.65rem;flex-wrap:wrap}
+.proyecto-resumen__acciones button{padding:.7rem 1rem;border:1px solid #c5d9c3;border-radius:.65rem;background:#edf5e9;color:#32613d;font:inherit;font-weight:700;cursor:pointer}
