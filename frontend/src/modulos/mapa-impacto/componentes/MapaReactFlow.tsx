@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ReactFlow, Background, Controls, MiniMap, MarkerType,
-  type Edge, type Node, type NodeMouseHandler, type ReactFlowInstance,
+  type Edge, type Node, type NodeMouseHandler, type ReactFlowInstance, type NodeChange,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import type { DetalleImpacto } from '../../../servicios/mapa-impacto/servicioMapaImpacto';
@@ -10,11 +10,11 @@ type TipoNodo = 'comunidad' | 'proyecto' | 'actividad' | 'avance' | 'evidencia';
 type NivelMapa = 'resumen' | 'completo';
 
 const colores: Record<TipoNodo, { fondo: string; borde: string; simbolo: string; nombre: string }> = {
-  comunidad: { fondo: '#e5f1df', borde: '#8bb69a', simbolo: '🏘️', nombre: 'Comunidad' },
-  proyecto: { fondo: '#d4ead9', borde: '#52865d', simbolo: '📁', nombre: 'Proyecto' },
-  actividad: { fondo: '#eaf4e8', borde: '#a1c1a0', simbolo: '🗓️', nombre: 'Actividad' },
-  avance: { fondo: '#fff3dc', borde: '#cfaa68', simbolo: '📋', nombre: 'Avance' },
-  evidencia: { fondo: '#e4f0fb', borde: '#83abc9', simbolo: '📷', nombre: 'Fotografía' },
+  comunidad: { fondo: '#ffffff', borde: '#318b72', simbolo: '🏘️', nombre: 'Comunidad' },
+  proyecto: { fondo: '#ffffff', borde: '#245b82', simbolo: '📁', nombre: 'Proyecto' },
+  actividad: { fondo: '#ffffff', borde: '#428c54', simbolo: '🗓️', nombre: 'Actividad' },
+  avance: { fondo: '#ffffff', borde: '#b87825', simbolo: '📋', nombre: 'Avance' },
+  evidencia: { fondo: '#ffffff', borde: '#456cba', simbolo: '📷', nombre: 'Fotografía' },
 };
 const nombreEstado: Record<string, string> = {
   VALIDADO: 'Validado', ENVIADO: 'En revisión', BORRADOR: 'Borrador',
@@ -25,21 +25,23 @@ function estilo(tipo: TipoNodo, seleccionado: boolean, coincide: boolean): Node[
   return {
     width: tipo === 'proyecto' ? 235 : 215,
     background: colores[tipo].fondo,
-    border: `${seleccionado ? 3 : 1.5}px solid ${seleccionado ? '#ce9346' : colores[tipo].borde}`,
+    border: `1px solid ${seleccionado ? '#c88a32' : '#d8e0e7'}`,
+    borderLeft: `5px solid ${colores[tipo].borde}`,
     borderRadius: 14,
-    padding: '13px 15px',
-    color: '#284b37',
+    padding: '12px 13px',
+    color: '#213c47',
     fontWeight: 650,
-    fontSize: 14,
-    boxShadow: seleccionado ? '0 0 0 4px #e7b96c55, 0 10px 22px #244f3520' : '0 7px 18px #244f3512',
+    fontSize: 13,
+    boxShadow: seleccionado ? '0 0 0 3px #daa35450, 0 12px 24px #152b4130' : '0 6px 17px #20364d17',
     opacity: coincide ? 1 : 0.38,
   };
 }
 
 export default function MapaReactFlow({
-  datos, seleccion, seleccionar,
+  datos, usuarioId, seleccion, seleccionar,
 }: {
   datos: DetalleImpacto;
+  usuarioId: string;
   seleccion: { tipo: string; id: string } | null;
   seleccionar: (tipo: string, id: string) => void;
 }) {
@@ -49,6 +51,14 @@ export default function MapaReactFlow({
   const [avancesAbiertos, setAvancesAbiertos] = useState<string[]>([]);
   const [busquedaNodo, setBusquedaNodo] = useState('');
   const [instancia, setInstancia] = useState<ReactFlowInstance | null>(null);
+  const llavePosiciones = `semilla:mapa-impacto:posiciones:v1:${usuarioId}:${datos.proyecto.id}`;
+  const [posiciones, setPosiciones] = useState<Record<string, { x: number; y: number }>>(() => {
+    try {
+      const valor = JSON.parse(localStorage.getItem(llavePosiciones) || '{}') as Record<string, { x: number; y: number }>;
+      return valor && !Array.isArray(valor) && typeof valor === 'object' ? valor : {};
+    } catch { return {}; }
+  });
+  const [edicionVisual, setEdicionVisual] = useState(true);
 
   const { nodes, edges, omitidos, encontrados } = useMemo(() => {
     const actividades = datos.actividades.slice(0, 24);
@@ -61,22 +71,26 @@ export default function MapaReactFlow({
     const termino = busquedaNodo.trim().toLocaleLowerCase('es');
     let encontrados = 0;
     const agregar = (id: string, tipo: TipoNodo, titulo: string, subtitulo: string, x: number, y: number) => {
+      const guardada = posiciones[id];
+      const posicion = guardada && Number.isFinite(guardada.x) && Number.isFinite(guardada.y) &&
+        Math.abs(guardada.x) < 20000 && Math.abs(guardada.y) < 20000
+        ? guardada : { x, y };
       const coincide = !termino || `${titulo} ${subtitulo} ${colores[tipo].nombre}`.toLocaleLowerCase('es').includes(termino);
       if (termino && coincide) encontrados++;
       const seleccionado = seleccion?.tipo + ':' + seleccion?.id === id;
       nodes.push({
-        id, position: { x, y },
+        id, position: posicion,
         data: { label: `${colores[tipo].simbolo} ${titulo}${subtitulo ? ' · ' + subtitulo : ''}` },
         style: estilo(tipo, seleccionado, coincide),
         className: 'mapa-impacto__nodo',
-        draggable: false, selectable: true, connectable: false,
+        draggable: edicionVisual, selectable: true, connectable: false,
       });
     };
     const unir = (origen: string, destino: string) => edges.push({
       id: `e-${origen}-${destino}`,
       source: origen, target: destino, type: 'smoothstep',
-      style: { stroke: '#96b6a0', strokeWidth: 1.7 },
-      markerEnd: { type: MarkerType.ArrowClosed, color: '#96b6a0' },
+      style: { stroke: '#8195a8', strokeWidth: 1.8 },
+      markerEnd: { type: MarkerType.ArrowClosed, color: '#8195a8' },
     });
 
     let siguienteY = 50;
@@ -120,7 +134,7 @@ export default function MapaReactFlow({
     const omitidos = datos.actividades.length - actividades.length +
       datos.avances.length - avances.length + datos.evidencias.length - evidencias.length;
     return { nodes, edges, omitidos, encontrados };
-  }, [datos, nivel, actividadesAbiertas, avancesAbiertos, busquedaNodo, seleccion]);
+  }, [datos, nivel, actividadesAbiertas, avancesAbiertos, busquedaNodo, seleccion, posiciones, edicionVisual]);
 
   const ajustarVista = useCallback(() => {
     if (instancia) void instancia.fitView({ padding: 0.2, duration: 400, maxZoom: 1.05 });
@@ -132,7 +146,11 @@ export default function MapaReactFlow({
     setActividadesAbiertas([]);
     setAvancesAbiertos([]);
     setBusquedaNodo('');
-  }, [datos.proyecto.id]);
+    try {
+      const valor = JSON.parse(localStorage.getItem(llavePosiciones) || '{}') as Record<string, { x: number; y: number }>;
+      setPosiciones(valor && !Array.isArray(valor) && typeof valor === 'object' ? valor : {});
+    } catch { setPosiciones({}); }
+  }, [datos.proyecto.id, llavePosiciones]);
 
   useEffect(() => {
     if (!instancia) return;
@@ -141,6 +159,35 @@ export default function MapaReactFlow({
     });
     return () => window.cancelAnimationFrame(identificador);
   }, [instancia, nivel, actividadesAbiertas, avancesAbiertos, datos.proyecto.id]);
+
+  const cambiarPosiciones = useCallback((cambios: NodeChange[]) => {
+    const cambiosPosicion = cambios.filter((c): c is NodeChange & {
+      type: 'position'; position: { x: number; y: number };
+    } => c.type === 'position' && !!c.position);
+    if (!cambiosPosicion.length) return;
+    setPosiciones((actual) => {
+      const siguiente = { ...actual };
+      cambiosPosicion.forEach((c) => {
+        if (Number.isFinite(c.position.x) && Number.isFinite(c.position.y)) {
+          siguiente[c.id] = { x: c.position.x, y: c.position.y };
+        }
+      });
+      return siguiente;
+    });
+  }, []);
+
+  const guardarPosiciones = useCallback(() => {
+    try { localStorage.setItem(llavePosiciones, JSON.stringify(posiciones)); }
+    catch { /* El navegador puede bloquear almacenamiento. */ }
+  }, [llavePosiciones, posiciones]);
+
+  function restablecerDisposicion() {
+    setPosiciones({});
+    try { localStorage.removeItem(llavePosiciones); } catch { /* Sin almacenamiento. */ }
+    if (instancia) window.requestAnimationFrame(() => void instancia.fitView({
+      padding: 0.23, maxZoom: 1, duration: 380,
+    }));
+  }
 
   const alSeleccionar: NodeMouseHandler = (_evento, nodo) => {
     const separador = nodo.id.indexOf(':');
@@ -179,24 +226,34 @@ export default function MapaReactFlow({
             aria-pressed={nivel === 'completo'} onClick={mostrarTodo}>Ver mapa completo</button>
         </div>
         <label className="mapa-impacto__buscar-nodo">
-          <span className="sr-only">Buscar un nodo del mapa</span>
+          <span>Buscar nodo</span>
           <input value={busquedaNodo} onChange={(e) => setBusquedaNodo(e.target.value)}
             placeholder="Buscar nodo…" aria-label="Buscar nodo del mapa" />
         </label>
-        <button type="button" className="mapa-impacto__centrar" onClick={ajustarVista}>Centrar mapa</button>
+        <div className="mapa-impacto__acciones-mapa">
+          <button type="button" className={edicionVisual ? 'mapa-impacto__modo-activo' : ''}
+            aria-pressed={edicionVisual} onClick={() => setEdicionVisual((valor) => !valor)}>
+            {edicionVisual ? 'Mover nodos: activo' : 'Mover nodos: inactivo'}
+          </button>
+          <button type="button" className="mapa-impacto__centrar" onClick={ajustarVista}>Centrar</button>
+          <button type="button" onClick={restablecerDisposicion}>Restablecer posiciones</button>
+        </div>
       </div>
-      <ReactFlow nodes={nodes} edges={edges}
-        onInit={setInstancia} onNodeClick={alSeleccionar}
-        nodesDraggable={false} nodesConnectable={false}
-        fitView fitViewOptions={{ padding: 0.2, maxZoom: 1.05 }}
-        minZoom={0.12} maxZoom={2}
-        proOptions={{ hideAttribution: false }}>
-        <Background color="#d6e5d9" gap={20} />
-        <Controls showInteractive={false} />
-        <MiniMap pannable zoomable
-          nodeColor={(n) => n.id.startsWith('evidencia:') ? '#83abc9'
-            : n.id.startsWith('avance:') ? '#cfaa68' : '#72a782'} />
-      </ReactFlow>
+      <div className="mapa-impacto__visor">
+        <ReactFlow nodes={nodes} edges={edges}
+          onInit={setInstancia} onNodeClick={alSeleccionar}
+          onNodesChange={cambiarPosiciones} onNodeDragStop={guardarPosiciones}
+          nodesDraggable={edicionVisual} nodesConnectable={false}
+          fitView fitViewOptions={{ padding: 0.2, maxZoom: 1.05 }}
+          minZoom={0.12} maxZoom={2}
+          proOptions={{ hideAttribution: false }}>
+          <Background color="#becbd8" gap={22} size={1} />
+          <Controls showInteractive={false} />
+          <MiniMap pannable zoomable
+            nodeColor={(n) => n.id.startsWith('evidencia:') ? '#456cba'
+              : n.id.startsWith('avance:') ? '#b87825' : '#318b72'} />
+        </ReactFlow>
+      </div>
       <div className="mapa-impacto__leyenda">
         {Object.entries(colores).map(([tipo, color]) =>
           <span key={tipo}><i style={{ backgroundColor: color.borde }} />{color.nombre}</span>)}
