@@ -604,6 +604,7 @@ export interface AvancePendienteRevision {
   porcentajeAvance: number | null;
   unidadMedida: string | null;
   responsable: string;
+  cantidadEvidencias: number;
   esPropio: boolean;
 }
 
@@ -665,6 +666,7 @@ export interface AvanceActividadProyecto {
   revisor: string | null;
   revisadoEn: string | null;
   motivoDevolucion: string | null;
+  cantidadEvidencias: number;
   historial: {
     accion: string;
     actor: string | null;
