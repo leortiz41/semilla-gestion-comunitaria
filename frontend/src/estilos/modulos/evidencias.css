@@ -9,3 +9,20 @@
 .evidencias-explorador__resultado h3{margin:0;color:#315f3a}
 .evidencias-explorador__ayuda{padding:.7rem .9rem;border-radius:.7rem;background:#f1f6ee;color:#4c6652;font-size:.85rem;line-height:1.5}
 .evidencias-explorador__error{padding:.75rem;border:1px solid #e6bbaa;background:#fff3ee;color:#994737;border-radius:.7rem}
+
+/* HU-15: índice accesible de avances que sí tienen fotografías. */
+.evidencias-indice{display:grid;gap:.8rem;padding:1rem;border:1px solid #d8e4d5;border-radius:.85rem;background:#f7faf5;min-width:0}
+.evidencias-indice__cabecera{display:flex;align-items:center;justify-content:space-between;gap:.7rem;flex-wrap:wrap}
+.evidencias-indice__cabecera h3{margin:0;color:#315f3a;font-size:1rem}
+.evidencias-indice__cabecera p{margin:.25rem 0 0;font-size:.8rem;color:#647969;line-height:1.4}
+.evidencias-indice__cabecera button{border:1px solid #cbdcc9;border-radius:.6rem;background:#fff;color:#315f3a;padding:.6rem .85rem;font:inherit;cursor:pointer}
+.evidencias-indice__lista{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,235px),1fr));gap:.6rem;max-height:320px;overflow:auto}
+.evidencias-indice__lista button{display:grid;gap:.3rem;text-align:left;align-content:start;padding:.85rem;border:1px solid #d7e5d4;border-radius:.7rem;background:#fff;color:#31523a;font:inherit;cursor:pointer;min-width:0}
+.evidencias-indice__lista button[aria-pressed="true"]{background:#ebf5e8;border-color:#579566}
+.evidencias-indice__lista button strong{font-size:.86rem;overflow-wrap:anywhere}
+.evidencias-indice__lista button span{font-size:.78rem;overflow-wrap:anywhere}
+.evidencias-indice__lista button small{font-size:.72rem;color:#697e6c}
+.evidencias-indice__cantidad{width:fit-content;padding:.2rem .55rem;border-radius:1rem;background:#e4f2e1;color:#2c6739;font-weight:750}
+.evidencias-explorador__check{display:flex;gap:.5rem;align-items:center;color:#405e48;font-size:.84rem;font-weight:650}
+.evidencias-explorador__check input{accent-color:#337143}
+.evidencias-indice button:focus-visible,.evidencias-explorador__check input:focus-visible{outline:3px solid #d9a15f;outline-offset:2px}
