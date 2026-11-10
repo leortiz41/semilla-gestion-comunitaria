@@ -216,7 +216,10 @@ function App() {
       case 'evidencias':
         return esDonante && accessToken
           ? <SeguimientoDonante tokenAcceso={accessToken} vista="evidencias" />
-          : <PaginaEvidencias />;
+          : usuario && accessToken ? (
+              <PaginaEvidencias token={accessToken} usuarioEmail={usuario.email}
+                puedeGestionar={usuario.permisos.includes('evidencias.gestionar')} />
+            ) : null;
       case 'pagos':
         return <PaginaPagos />;
       case 'donantes':
