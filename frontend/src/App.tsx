@@ -216,7 +216,7 @@ function App() {
           ) : null;
       case 'mapa-impacto':
         return !esDonante && accessToken && usuario?.permisos.includes('proyectos.ver')
-          ? <PaginaMapaImpacto token={accessToken} /> : null;
+          ? <PaginaMapaImpacto token={accessToken} usuarioId={usuario.id} /> : null;
       case 'evidencias':
         return esDonante && accessToken
           ? <SeguimientoDonante tokenAcceso={accessToken} vista="evidencias" />
