@@ -7,6 +7,7 @@ import '../../estilos/modulos/paginaModuloBase.css';
 import '../../estilos/modulos/roles.css';
 import '../donantes/donantes.css';
 import ActividadesProyecto from './ActividadesProyecto';
+import FotografiasAvance from './FotografiasAvance';
 import '../../estilos/modulos/proyectos/centroRevision.css';
 
 const categorias: Record<AreaVisionDesarrollo, string> = {
@@ -224,6 +225,8 @@ function PaginaProyectos({
                         )}
                       </div>
                       <p className="revision-centro__muted">{avanceSeleccionado.proyecto} · {avanceSeleccionado.comunidad}</p>
+                      <FotografiasAvance token={token} proyectoId={avanceSeleccionado.proyectoId}
+                        actividadId={avanceSeleccionado.actividadId} avanceId={avanceSeleccionado.id} />
                       <dl className="revision-centro__meta">
                         <div><dt>Avance reportado</dt><dd>{avanceSeleccionado.cantidadReportada === null
                           ? `${avanceSeleccionado.porcentajeAvance ?? 0}%`
