@@ -42,6 +42,34 @@ async function accesoEvidenciaAvance(proyectoId: string, actividadId: string, av
   );
   return rows[0] as { id: string; estado: string; responsable: string } | undefined;
 }
+// Índice de evidencias por organización: permite localizar las fotos sin adivinar el avance.
+proyectosRouter.get('/evidencias/indice', async (req, res) => {
+  try {
+    if (!databasePool) throw new Error('Base de datos no disponible');
+    const { rows } = await databasePool.query(
+      `SELECT av.id AS "avanceId", a.id AS "actividadId", p.id AS "proyectoId",
+         p.nombre AS proyecto, a.nombre AS actividad, c.nombre AS comunidad,
+         av.fecha_avance::text AS fecha, av.estado_revision AS "estadoRevision",
+         COUNT(ev.id)::int AS "cantidadEvidencias"
+       FROM evidencias ev
+       JOIN avances_proyecto av ON av.id = ev.avance_proyecto_id
+         AND av.proyecto_id = ev.proyecto_id
+       JOIN actividades_programadas a ON a.id = av.actividad_id AND a.proyecto_id = av.proyecto_id
+       JOIN proyectos p ON p.id = a.proyecto_id
+       JOIN comunidades c ON c.id = p.comunidad_id
+       WHERE c.organizacion_id = $1 AND ev.tipo_mime IN ('image/jpeg', 'image/png', 'image/webp')
+       GROUP BY av.id, a.id, p.id, p.nombre, a.nombre, c.nombre, av.fecha_avance, av.estado_revision
+       ORDER BY av.fecha_avance DESC, av.id DESC
+       LIMIT 200`,
+      [req.auth!.organizacionId],
+    );
+    res.json({ avances: rows });
+  } catch (error) {
+    console.error('Error consultando índice de evidencias:', error);
+    res.status(500).json({ message: 'No fue posible localizar los avances con fotografías.' });
+  }
+});
+
 const rutaEvidencias = '/:proyectoId/actividades/:actividadId/avances/:avanceId/evidencias';
 
 proyectosRouter.get(rutaEvidencias, async (req, res) => {
