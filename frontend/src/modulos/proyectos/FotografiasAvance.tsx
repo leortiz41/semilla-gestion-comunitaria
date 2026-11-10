@@ -11,6 +11,8 @@ export default function FotografiasAvance({
   const [cargando, setCargando] = useState(false);
   const [subiendo, setSubiendo] = useState(false);
   const [error, setError] = useState('');
+  const [mensajeCarga, setMensajeCarga] = useState('');
+  const [progreso, setProgreso] = useState('');
   const [version, setVersion] = useState(0);
   useEffect(() => {
     let vigente = true;
@@ -25,19 +27,33 @@ export default function FotografiasAvance({
 
   async function cargar(archivos: FileList | null) {
     if (!archivos?.length || subiendo) return;
-    if (archivos.length > 10) { setError('Podés seleccionar hasta 10 fotografías por carga.'); return; }
+    const seleccion = Array.from(archivos);
+    if (seleccion.length > 10) { setError('Podés seleccionar hasta 10 fotografías por carga.'); return; }
     setSubiendo(true);
     setError('');
+    setMensajeCarga('');
+    let confirmadas = 0;
     try {
-      for (const foto of Array.from(archivos)) {
+      for (const [indice, foto] of seleccion.entries()) {
+        setProgreso(`Subiendo y registrando fotografía ${indice + 1} de ${seleccion.length}…`);
         await subirFotoAvance(token, proyectoId, actividadId, avanceId, foto);
+        confirmadas++;
       }
-      setVersion((n) => n + 1);
+      setProgreso('Verificando que las fotografías aparezcan en el avance…');
+      const listado = await obtenerFotosAvance(token, proyectoId, actividadId, avanceId);
+      setFotos(listado.evidencias);
+      if (listado.evidencias.length < confirmadas) {
+        setError('La carga terminó, pero no se pudo confirmar que todas las fotos aparezcan en el registro. No envíes todavía el avance a revisión.');
+      } else {
+        setMensajeCarga(`Carga confirmada: ${confirmadas} ${confirmadas === 1 ? 'fotografía registrada' : 'fotografías registradas'} en el avance.`);
+      }
     } catch (fallo) {
-      setError(fallo instanceof Error ? fallo.message : 'No se pudo cargar la fotografía.');
+      const detalle = fallo instanceof Error ? fallo.message : 'Error desconocido.';
+      setError(`No se completó la carga (${confirmadas} de ${seleccion.length} confirmadas). ${detalle} No envíes el avance a revisión hasta resolverlo.`);
       setVersion((n) => n + 1);
     } finally {
       setSubiendo(false);
+      setProgreso('');
     }
   }
 
@@ -54,6 +70,8 @@ export default function FotografiasAvance({
         )}
       </div>
       {permitirCarga && <small>JPG, PNG o WebP; hasta 10 MB por fotografía. Adjuntá fotos antes de enviar el avance a revisión.</small>}
+      {progreso && <p role="status" className="fotos-avance__progreso">{progreso}</p>}
+      {mensajeCarga && <p role="status" className="fotos-avance__exito">{mensajeCarga}</p>}
       {error && <p role="alert" className="fotos-avance__error">{error}</p>}
       {cargando && <p role="status">Cargando fotografías…</p>}
       {!cargando && fotos.length === 0 && <p className="fotos-avance__vacio">Todavía no hay fotografías vinculadas.</p>}
