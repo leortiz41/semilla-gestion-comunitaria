@@ -5,9 +5,10 @@ import '../../estilos/modulos/proyectos/fotografiasAvance.css';
 type FotoPendiente = { id: string; archivo: File; vista: string };
 
 export default function FotografiasAvance({
-  token, proyectoId, actividadId, avanceId, permitirCarga = false,
+  token, proyectoId, actividadId, avanceId, permitirCarga = false, onCambio,
 }: {
-  token: string; proyectoId: string; actividadId: string; avanceId: string; permitirCarga?: boolean;
+  token: string; proyectoId: string; actividadId: string; avanceId: string;
+  permitirCarga?: boolean; onCambio?: (cantidad: number) => void;
 }) {
   const [fotos, setFotos] = useState<EvidenciaFotografica[]>([]);
   const [pendientes, setPendientes] = useState<FotoPendiente[]>([]);
@@ -77,6 +78,7 @@ export default function FotografiasAvance({
       setProgreso('Verificando los registros en Neon…');
       const listado = await obtenerFotosAvance(token, proyectoId, actividadId, avanceId);
       setFotos(listado.evidencias);
+      onCambio?.(listado.evidencias.length);
       if (listado.evidencias.length < confirmadas) {
         setError('Las fotografías se enviaron, pero la consulta no confirmó todos los registros. No envíes el avance a revisión.');
         setVersion((n) => n + 1);
