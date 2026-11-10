@@ -1,4 +1,6 @@
+import { randomUUID } from 'node:crypto';
 import { Router, type RequestHandler } from 'express';
+import { firmarObjetoR2, r2Disponible, verificarObjetoR2 } from '../services/r2-evidencias.service.js';
 import { databasePool } from '../config/database.js';
 import { areasNecesidad } from '../domain/necesidades.js';
 import { esUuid } from '../domain/expediente.js';
@@ -21,6 +23,139 @@ proyectosRouter.use(authenticateAccessToken, requirePermission('proyectos.ver'),
     return;
   }
   next();
+});
+
+
+const tiposFoto = ['image/jpeg', 'image/png', 'image/webp'];
+
+// Verifica pertenencia del avance a la actividad, proyecto y organización de la sesión.
+async function accesoEvidenciaAvance(proyectoId: string, actividadId: string, avanceId: string, organizacionId: string) {
+  if (!databasePool || ![proyectoId, actividadId, avanceId, organizacionId].every(esUuid)) return null;
+  const { rows } = await databasePool.query(
+    `SELECT av.id, av.estado_revision AS estado, av.responsable_usuario_id AS responsable
+     FROM avances_proyecto av
+     JOIN actividades_programadas a ON a.id = av.actividad_id AND a.proyecto_id = av.proyecto_id
+     JOIN proyectos p ON p.id = a.proyecto_id
+     JOIN comunidades c ON c.id = p.comunidad_id
+     WHERE p.id = $1 AND a.id = $2 AND av.id = $3 AND c.organizacion_id = $4`,
+    [proyectoId, actividadId, avanceId, organizacionId],
+  );
+  return rows[0] as { id: string; estado: string; responsable: string } | undefined;
+}
+const rutaEvidencias = '/:proyectoId/actividades/:actividadId/avances/:avanceId/evidencias';
+
+proyectosRouter.get(rutaEvidencias, async (req, res) => {
+  const { proyectoId, actividadId, avanceId } = req.params;
+  try {
+    if (!await accesoEvidenciaAvance(proyectoId, actividadId, avanceId, req.auth!.organizacionId)) {
+      res.status(404).json({ message: 'Avance no disponible.' }); return;
+    }
+    const { rows } = await databasePool!.query(
+      `SELECT id, titulo, descripcion, tipo_mime AS "tipoMime", archivo_url AS "archivoUrl", creado_en AS "creadoEn"
+       FROM evidencias WHERE proyecto_id=$1 AND avance_proyecto_id=$2
+       ORDER BY creado_en DESC, id DESC`, [proyectoId, avanceId],
+    );
+    res.json({ evidencias: rows.map((e) => ({
+      id: e.id, titulo: e.titulo, descripcion: e.descripcion, tipoMime: e.tipoMime,
+      creadoEn: e.creadoEn,
+      url: typeof e.archivoUrl === 'string' && e.archivoUrl.startsWith('r2:') && r2Disponible()
+        ? firmarObjetoR2(e.archivoUrl.slice(3), 'GET', undefined, 300)
+        : e.archivoUrl?.startsWith('https://') ? e.archivoUrl : null,
+    })) });
+  } catch (error) {
+    console.error('Error consultando fotografías de avance:', error);
+    res.status(500).json({ message: 'No fue posible consultar las fotografías.' });
+  }
+});
+
+proyectosRouter.post(rutaEvidencias + '/preparar', requirePermission('evidencias.gestionar'), async (req, res) => {
+  const { proyectoId, actividadId, avanceId } = req.params;
+  const mime = typeof req.body?.tipoMime === 'string' ? req.body.tipoMime.toLowerCase().trim() : '';
+  if (!tiposFoto.includes(mime) || !r2Disponible()) {
+    res.status(r2Disponible() ? 400 : 503).json({ message: r2Disponible()
+      ? 'Solo se permiten fotografías JPEG, PNG o WebP.' : 'El almacenamiento de evidencias todavía no está configurado.' });
+    return;
+  }
+  try {
+    const avance = await accesoEvidenciaAvance(proyectoId, actividadId, avanceId, req.auth!.organizacionId);
+    if (!avance) { res.status(404).json({ message: 'Avance no disponible.' }); return; }
+    if (!['BORRADOR', 'DEVUELTO'].includes(avance.estado) || avance.responsable !== req.auth!.sub) {
+      res.status(409).json({ message: 'Solo el responsable puede añadir fotografías a su avance en borrador o devuelto.' }); return;
+    }
+    const clave = `organizaciones/${req.auth!.organizacionId}/proyectos/${proyectoId}/avances/${avanceId}/${randomUUID()}`;
+    res.json({ clave, url: firmarObjetoR2(clave, 'PUT', mime, 300), tipoMime: mime, maxBytes: 10485760 });
+  } catch (error) {
+    console.error('Error preparando fotografía:', error);
+    res.status(500).json({ message: 'No fue posible preparar la carga de la fotografía.' });
+  }
+});
+
+proyectosRouter.post(rutaEvidencias + '/confirmar', requirePermission('evidencias.gestionar'), async (req, res) => {
+  const { proyectoId, actividadId, avanceId } = req.params;
+  const clave = req.body?.clave;
+  const mime = req.body?.tipoMime;
+  const titulo = typeof req.body?.titulo === 'string' ? req.body.titulo.trim() : '';
+  const descripcion = typeof req.body?.descripcion === 'string' ? req.body.descripcion.trim() : '';
+  const prefijo = `organizaciones/${req.auth!.organizacionId}/proyectos/${proyectoId}/avances/${avanceId}/`;
+  if (!r2Disponible()) { res.status(503).json({ message: 'Almacenamiento R2 no configurado.' }); return; }
+  if (typeof clave !== 'string' || !clave.startsWith(prefijo) ||
+      !/^[0-9a-f-]{36}$/.test(clave.slice(prefijo.length)) ||
+      !tiposFoto.includes(mime) || titulo.length > 180 || descripcion.length > 3000) {
+    res.status(400).json({ message: 'Los datos de la fotografía no son válidos.' }); return;
+  }
+  try {
+    const avance = await accesoEvidenciaAvance(proyectoId, actividadId, avanceId, req.auth!.organizacionId);
+    if (!avance) { res.status(404).json({ message: 'Avance no disponible.' }); return; }
+    if (!['BORRADOR', 'DEVUELTO'].includes(avance.estado) || avance.responsable !== req.auth!.sub) {
+      res.status(409).json({ message: 'El avance ya no admite nuevas fotografías.' }); return;
+    }
+    if (!await verificarObjetoR2(clave, mime)) {
+      res.status(422).json({ message: 'La fotografía no existe en R2 o no cumple el tamaño y tipo permitido (10 MB).' }); return;
+    }
+    const cliente = await databasePool!.connect();
+    try {
+      await cliente.query('BEGIN');
+      // Revalidar el estado dentro de la misma transacción que escribe la evidencia.
+      const validacion = await cliente.query(
+        `SELECT av.id FROM avances_proyecto av
+         JOIN actividades_programadas a ON a.id=av.actividad_id AND a.proyecto_id=av.proyecto_id
+         JOIN proyectos p ON p.id=a.proyecto_id JOIN comunidades c ON c.id=p.comunidad_id
+         WHERE av.id=$1 AND a.id=$2 AND p.id=$3 AND c.organizacion_id=$4
+           AND av.responsable_usuario_id=$5 AND av.estado_revision IN ('BORRADOR','DEVUELTO')
+         FOR UPDATE OF av`,
+        [avanceId, actividadId, proyectoId, req.auth!.organizacionId, req.auth!.sub],
+      );
+      if (!validacion.rows.length) {
+        await cliente.query('ROLLBACK');
+        res.status(409).json({ message: 'El avance cambió de estado antes de confirmar la fotografía.' }); return;
+      }
+      const existente = await cliente.query(
+        'SELECT id FROM evidencias WHERE proyecto_id=$1 AND avance_proyecto_id=$2 AND archivo_url=$3 LIMIT 1',
+        [proyectoId, avanceId, 'r2:' + clave],
+      );
+      if (existente.rows.length) {
+        await cliente.query('COMMIT');
+        res.json({ id: existente.rows[0].id }); return;
+      }
+      const { rows } = await cliente.query(
+        `INSERT INTO evidencias (proyecto_id, avance_proyecto_id, tipo_evidencia, titulo, descripcion,
+           archivo_url, tipo_mime, subido_por_usuario_id, visible_para_donantes)
+         VALUES ($1,$2,'FOTOGRAFIA',$3,$4,$5,$6,$7,false) RETURNING id`,
+        [proyectoId, avanceId, titulo || null, descripcion || null, 'r2:' + clave, mime, req.auth!.sub],
+      );
+      await cliente.query(
+        `INSERT INTO bitacora_auditoria (usuario_id, accion, nombre_entidad, entidad_id, valores_nuevos)
+         VALUES ($1, 'REGISTRAR_EVIDENCIA', 'evidencias', $2, $3::jsonb)`,
+        [req.auth!.sub, rows[0].id, JSON.stringify({ proyectoId, actividadId, avanceId, tipoMime: mime })],
+      );
+      await cliente.query('COMMIT');
+      res.status(201).json({ id: rows[0].id });
+    } catch (error) { await cliente.query('ROLLBACK'); throw error; }
+    finally { cliente.release(); }
+  } catch (error) {
+    console.error('Error confirmando fotografía:', error);
+    res.status(500).json({ message: 'No fue posible registrar la fotografía.' });
+  }
 });
 
 // Bandeja centralizada: solo avances enviados de proyectos de la organización activa.
