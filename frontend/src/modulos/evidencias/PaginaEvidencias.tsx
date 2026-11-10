@@ -197,7 +197,15 @@ export default function PaginaEvidencias({
                 : 'Este avance ya fue enviado o validado. Podés consultar sus fotografías, pero no agregar nuevas.'}
             </p>}
             <FotografiasAvance key={avance.id} token={token} proyectoId={proyectoId}
-              actividadId={actividadId} avanceId={avance.id} permitirCarga={permitirCarga} />
+              actividadId={actividadId} avanceId={avance.id} permitirCarga={permitirCarga}
+              onCambio={(cantidad) => {
+                setActividades((actual) => actual.map((item) => item.id !== actividadId ? item : {
+                  ...item,
+                  avances: item.avances.map((registro) => registro.id === avance.id
+                    ? { ...registro, cantidadEvidencias: cantidad } : registro),
+                }));
+                setRecargaIndice((actual) => actual + 1);
+              }} />
           </div>
         )}
         {!proyectoId && <p className="evidencias-explorador__ayuda">
