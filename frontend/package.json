@@ -13,7 +13,9 @@
     "vite": "latest",
     "typescript": "latest",
     "react": "latest",
-    "react-dom": "latest"
+    "react-dom": "latest",
+    "echarts": "^6.0.0",
+    "gridstack": "^14.1.0"
   },
   "devDependencies": {
     "@types/react": "latest",
