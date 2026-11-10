@@ -47,4 +47,4 @@ Tras instalar, confirmar que `frontend/package-lock.json` incluye `@xyflow/react
 
 ## Dependencias bloqueadas
 
-El flujo automatizado de `develop` actualiza `frontend/package-lock.json` para fijar versiones de `@xyflow/react`, ECharts y GridStack. En nuevos equipos conviene usar `npm ci` una vez sincronizado el archivo lock.
+El archivo `frontend/package-lock.json` ya se regeneró y se versionó en `develop`, incluyendo `@xyflow/react`, ECharts y GridStack. La automatización temporal usada para generarlo fue retirada. En nuevos equipos es recomendable usar `npm ci`.
