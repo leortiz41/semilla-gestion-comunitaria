@@ -1,0 +1,35 @@
+name: Actualizar lock del frontend
+on:
+  push:
+    branches: [develop]
+    paths:
+      - 'frontend/package.json'
+      - '.github/workflows/actualizar-lock-frontend.yml'
+permissions:
+  contents: write
+jobs:
+  actualizar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Obtener develop
+        uses: actions/checkout@v4
+        with:
+          ref: develop
+          persist-credentials: true
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Actualizar solo archivo lock
+        working-directory: frontend
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Guardar lock en develop si cambió
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add frontend/package-lock.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'build(frontend): sincronizar package-lock con React Flow, ECharts y GridStack'
+            git push origin HEAD:develop
+          fi
