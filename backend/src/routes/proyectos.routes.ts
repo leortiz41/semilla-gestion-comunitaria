@@ -169,6 +169,9 @@ proyectosRouter.get('/revision/pendientes', requirePermission('actividades.avanc
          av.observaciones, av.cantidad_reportada::double precision AS "cantidadReportada",
          av.porcentaje_avance::double precision AS "porcentajeAvance",
          a.unidad_medida AS "unidadMedida", autor.email AS responsable,
+         (SELECT COUNT(*)::int FROM evidencias ev WHERE ev.avance_proyecto_id = av.id
+           AND ev.proyecto_id = p.id
+           AND ev.tipo_mime IN ('image/jpeg', 'image/png', 'image/webp')) AS "cantidadEvidencias",
          (av.responsable_usuario_id = $2::uuid) AS "esPropio"
        FROM avances_proyecto av
        JOIN actividades_programadas a ON a.id = av.actividad_id AND a.proyecto_id = av.proyecto_id
