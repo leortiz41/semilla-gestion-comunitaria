@@ -44,6 +44,8 @@ function PaginaProyectos({
   const [mensaje, setMensaje] = useState('');
   const [recarga, setRecarga] = useState(0);
   const [proyectoAbierto, setProyectoAbierto] = useState<string | null>(null);
+  const [filtroProyectos, setFiltroProyectos] = useState<'activos' | 'finalizados' | 'todos'>('activos');
+  const [buscarProyecto, setBuscarProyecto] = useState('');
   const [verPendientes, setVerPendientes] = useState(false);
   const [pendientes, setPendientes] = useState<AvancePendienteRevision[]>([]);
   const [cargandoPendientes, setCargandoPendientes] = useState(false);
@@ -62,6 +64,16 @@ function PaginaProyectos({
     pendientesFiltrados[0];
 
   const proyecto = formulario === 'nuevo' ? null : formulario;
+  const proyectosVisibles = (datos?.proyectos ?? []).filter((item) => {
+    const finalizado = item.estado === 'FINALIZADO';
+    const coincideEstado = filtroProyectos === 'todos' ||
+      (filtroProyectos === 'finalizados' ? finalizado : !finalizado);
+    const texto = `${item.nombre} ${item.comunidad} ${item.tipo} ${item.donantes.join(' ')}`.toLocaleLowerCase('es');
+    return coincideEstado && texto.includes(buscarProyecto.trim().toLocaleLowerCase('es'));
+  });
+  const proyectoSeleccionado = datos?.proyectos.find((item) => item.id === proyectoAbierto);
+  const cantidadActivos = datos?.proyectos.filter((item) => item.estado !== 'FINALIZADO').length ?? 0;
+  const cantidadFinalizados = datos?.proyectos.filter((item) => item.estado === 'FINALIZADO').length ?? 0;
 
   useEffect(() => {
     if (!puedeVer) return;
@@ -363,44 +375,87 @@ function PaginaProyectos({
             </form>
           )}
           {!datos.proyectos.length && <p>Todavía no hay proyectos registrados.</p>}
-          <div className="roles-panel proyectos-lista">
-            {datos.proyectos.map((item) => (
-              <article className={`roles-panel__tarjeta proyectos-tarjeta${proyectoAbierto === item.id ? ' proyectos-tarjeta--abierta' : ''}`} key={item.id}>
-                <h2>{item.nombre}</h2>
-                <span className="pagina-modulo__estado">{estados[item.estado] ?? item.estado}</span>
-                <p>{item.comunidad} · {categorias[item.tipo as AreaVisionDesarrollo] ?? item.tipo}</p>
-                <p><strong>Presupuesto</strong> · {new Intl.NumberFormat('es-HN', {
-                  minimumFractionDigits: 2, maximumFractionDigits: 2,
-                }).format(Number(item.presupuesto))} {datos.moneda}</p>
-                <p><strong>Donantes asociados</strong> · {item.donantes.join(', ') || 'Por asignar'}</p>
-                <p>{item.fechaInicio}{item.fechaFin && ` — ${item.fechaFin}`}</p>
-                {item.descripcion && <p>{item.descripcion}</p>}
-                {puedeGestionar && (
-                  <button type="button" className="brigadas-accion" disabled={guardando}
-                    onClick={() => { setError(''); setMensaje(''); setFormulario(item); }}>
-                    Editar proyecto
-                  </button>
-                )}
-                {' '}<button type="button" className="brigadas-accion" aria-expanded={proyectoAbierto === item.id}
-                  onClick={() => setProyectoAbierto((actual) => actual === item.id ? null : item.id)}>
-                  {proyectoAbierto === item.id ? 'Ocultar actividades' : 'Ver actividades'}
+          <section className="proyectos-explorador" aria-label="Explorador de proyectos">
+            <div className="proyectos-explorador__encabezado">
+              <div>
+                <span className="revision-centro__eyebrow">Cartera de proyectos</span>
+                <h2>Seleccioná un proyecto</h2>
+                <p>Consultá rápidamente el estado de tus proyectos y abrí uno para trabajar en él.</p>
+              </div>
+              <div className="proyectos-explorador__filtros">
+                <label htmlFor="buscar-proyecto">Buscar proyecto
+                  <input id="buscar-proyecto" type="search" value={buscarProyecto}
+                    placeholder="Nombre, comunidad o donante"
+                    onChange={(evento) => setBuscarProyecto(evento.target.value)} />
+                </label>
+              </div>
+            </div>
+            <div className="proyectos-explorador__pestanas" role="group" aria-label="Filtrar proyectos por estado">
+              <button type="button" aria-pressed={filtroProyectos === 'activos'}
+                onClick={() => setFiltroProyectos('activos')}>En curso ({cantidadActivos})</button>
+              <button type="button" aria-pressed={filtroProyectos === 'finalizados'}
+                onClick={() => setFiltroProyectos('finalizados')}>Finalizados ({cantidadFinalizados})</button>
+              <button type="button" aria-pressed={filtroProyectos === 'todos'}
+                onClick={() => setFiltroProyectos('todos')}>Todos ({datos.proyectos.length})</button>
+            </div>
+            {!proyectosVisibles.length && <p className="proyectos-explorador__vacio">
+              No hay proyectos que coincidan con el filtro seleccionado.
+            </p>}
+            <div className="proyectos-lista" aria-label="Listado de proyectos">
+              {proyectosVisibles.map((item) => (
+                <article className="proyectos-tarjeta" key={item.id}>
+                  <div className="proyectos-tarjeta__cabecera">
+                    <h3>{item.nombre}</h3>
+                    <span className="pagina-modulo__estado">{estados[item.estado] ?? item.estado}</span>
+                  </div>
+                  <p className="proyectos-tarjeta__comunidad">{item.comunidad} · {categorias[item.tipo as AreaVisionDesarrollo] ?? item.tipo}</p>
+                  <dl className="proyectos-tarjeta__datos">
+                    <div><dt>Presupuesto</dt><dd>{new Intl.NumberFormat('es-HN', {
+                      minimumFractionDigits: 2, maximumFractionDigits: 2,
+                    }).format(Number(item.presupuesto))} {datos.moneda}</dd></div>
+                    <div><dt>Donantes</dt><dd>{item.donantes.length ? item.donantes.join(', ') : 'Por asignar'}</dd></div>
+                  </dl>
+                  <div className="proyectos-tarjeta__acciones">
+                    <button type="button" className="proyectos-tarjeta__abrir"
+                      aria-pressed={proyectoAbierto === item.id}
+                      onClick={() => setProyectoAbierto(item.id)}>
+                      {proyectoAbierto === item.id ? 'Proyecto abierto' : 'Abrir proyecto'}
+                    </button>
+                    {puedeGestionar && <button type="button" className="brigadas-accion" disabled={guardando}
+                      onClick={() => { setError(''); setMensaje(''); setFormulario(item); }}>
+                      Editar
+                    </button>}
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+          {proyectoSeleccionado && (
+            <section className="proyectos-espacio" aria-label={`Espacio de trabajo: ${proyectoSeleccionado.nombre}`}>
+              <header className="proyectos-espacio__cabecera">
+                <div>
+                  <span className="revision-centro__eyebrow">Espacio de trabajo del proyecto</span>
+                  <h2>{proyectoSeleccionado.nombre}</h2>
+                  <p>{proyectoSeleccionado.comunidad} · {estados[proyectoSeleccionado.estado] ?? proyectoSeleccionado.estado}</p>
+                </div>
+                <button type="button" className="proyectos-espacio__cerrar" onClick={() => setProyectoAbierto(null)}>
+                  Cerrar proyecto
                 </button>
-                {proyectoAbierto === item.id && (
-                  <ActividadesProyecto
-                    token={token}
-                    proyectoId={item.id}
-                    usuarioEmail={usuarioEmail}
-                    presupuestoProyecto={Number(item.presupuesto)}
-                    moneda={datos.moneda}
-                    puedeGestionar={puedeGestionar}
-                    puedeRegistrarAvance={puedeRegistrarAvance}
-                    puedeRevisarAvance={puedeRevisarAvance}
-                    puedeCorregirAvance={puedeCorregirAvance}
-                  />
-                )}
-              </article>
-            ))}
-          </div>
+              </header>
+              <ActividadesProyecto
+                key={proyectoSeleccionado.id}
+                token={token}
+                proyectoId={proyectoSeleccionado.id}
+                usuarioEmail={usuarioEmail}
+                presupuestoProyecto={Number(proyectoSeleccionado.presupuesto)}
+                moneda={datos.moneda}
+                puedeGestionar={puedeGestionar}
+                puedeRegistrarAvance={puedeRegistrarAvance}
+                puedeRevisarAvance={puedeRevisarAvance}
+                puedeCorregirAvance={puedeCorregirAvance}
+              />
+            </section>
+          )}
         </>
       )}
     </section>
