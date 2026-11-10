@@ -48,8 +48,35 @@ export interface EstadisticasDashboard {
   proyectosPorArea: { area: string; cantidad: number }[];
 }
 
-export async function obtenerEstadisticasDashboard(tokenAcceso: string): Promise<EstadisticasDashboard> {
-  const respuesta = await fetch(`${URL_API}/dashboard/estadisticas`, {
+export interface FiltrosDashboard {
+  comunidades: { id: string; nombre: string }[];
+  proyectos: { id: string; nombre: string; comunidadId: string; tipo: string }[];
+  areas: string[];
+}
+
+export interface SeleccionDashboard {
+  comunidadId?: string;
+  proyectoId?: string;
+  area?: string;
+  meses?: '' | '3' | '6' | '12';
+}
+
+export async function obtenerFiltrosDashboard(tokenAcceso: string): Promise<FiltrosDashboard> {
+  const respuesta = await fetch(`${URL_API}/dashboard/filtros`, {
+    headers: { Authorization: `Bearer ${tokenAcceso}` },
+  });
+  if (!respuesta.ok) throw new Error('No fue posible obtener las opciones de filtrado.');
+  return respuesta.json() as Promise<FiltrosDashboard>;
+}
+
+export async function obtenerEstadisticasDashboard(tokenAcceso: string, filtros: SeleccionDashboard = {}): Promise<EstadisticasDashboard> {
+  const parametros = new URLSearchParams();
+  if (filtros.comunidadId) parametros.set('comunidadId', filtros.comunidadId);
+  if (filtros.proyectoId) parametros.set('proyectoId', filtros.proyectoId);
+  if (filtros.area) parametros.set('area', filtros.area);
+  if (filtros.meses) parametros.set('meses', filtros.meses);
+  const consulta = parametros.toString();
+  const respuesta = await fetch(`${URL_API}/dashboard/estadisticas${consulta ? '?' + consulta : ''}`, {
     headers: { Authorization: `Bearer ${tokenAcceso}` },
   });
   if (!respuesta.ok) {
