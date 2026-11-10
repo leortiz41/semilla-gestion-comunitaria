@@ -61,3 +61,24 @@ IMPORTANTE: `frontend/package.json` incluye `echarts` y `gridstack`. Después de
 5. Recargar sesión/navegador y comprobar persistencia de la selección local.
 6. Confirmar que una organización distinta no puede seleccionar ni consultar proyectos de otra organización.
 7. Verificar la visualización en un teléfono; sin arrastre de widgets.
+
+## Incremento 3: persistencia del tablero por usuario
+
+- Migración `database/sql/022_preferencias_dashboard.sql`: tabla `preferencias_dashboard`, clave compuesta `(usuario_id, organizacion_id)` y configuración JSONB.
+- En desarrollo, la migración 022 se aplicó a la rama Neon correspondiente. **No se ejecutó en producción**: aplicar primero allí durante el despliegue controlado del backend.
+- `GET /api/dashboard/preferencias` recupera exclusivamente la configuración del usuario autenticado y su organización.
+- `PUT /api/dashboard/preferencias` permite guardar solo IDs conocidos de widgets y posiciones numéricas válidas. La identidad no se toma del cuerpo de solicitud.
+- Frontend: al entrar al módulo se recupera el diseño desde Neon; si falla la conexión, se usa la copia local. Los cambios de widgets y posición se envían secuencialmente para evitar escrituras desordenadas.
+- Corregida pérdida de configuración: GridStack **ya no guarda automáticamente durante el desmontaje** del Dashboard, que podía sobrescribir una distribución personalizada.
+- Los diseños se guardan por usuario, no por dispositivo. Los datos del Dashboard se filtran por organización independientemente del layout.
+- `frontend/src/modulos/dashboard/componentes/TableroGrid.tsx` sigue manteniendo una copia en localStorage como mecanismo de contingencia.
+
+### Validación funcional manual
+
+1. Reorganizar widgets y cambiar el módulo a Proyectos; regresar a Dashboard y comprobar las mismas posiciones.
+2. Recargar el navegador y comprobar que persisten widgets visibles y posiciones.
+3. Abrir la misma cuenta en otro navegador/equipo: comprobar recuperación desde Neon.
+4. Entrar con un usuario diferente: sus preferencias deben ser independientes.
+5. Ocultar un widget, volver a habilitarlo y verificar que no altera las posiciones guardadas de los demás.
+6. Utilizar «Restablecer distribución» y comprobar que también se actualiza en Neon.
+7. Simular que la API no responde: la copia local debe permitir usar el Dashboard sin perder los datos del gráfico.
