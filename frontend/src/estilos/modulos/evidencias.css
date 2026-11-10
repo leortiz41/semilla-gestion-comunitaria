@@ -1,0 +1,11 @@
+.evidencias-explorador{display:grid;gap:1rem;padding:clamp(1rem,3vw,1.5rem);border:1px solid #d9e6d6;border-radius:1rem;background:#fff;max-width:1050px}
+.evidencias-explorador__titulo h2{margin:0 0 .35rem;color:#315f3a;font-size:1.15rem}
+.evidencias-explorador__titulo p,.evidencias-explorador__resultado p{margin:0;color:#5b6d60;font-size:.88rem;line-height:1.5}
+.evidencias-explorador__filtros{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));gap:.85rem}
+.evidencias-explorador__filtros label{display:grid;gap:.4rem;color:#405b46;font-size:.84rem;font-weight:700}
+.evidencias-explorador__filtros select{width:100%;min-width:0;padding:.7rem;border:1px solid #cadac8;border-radius:.65rem;background:#fafcf9;color:#233c2c;font:inherit}
+.evidencias-explorador__filtros select:disabled{opacity:.55;cursor:not-allowed}
+.evidencias-explorador__resultado{display:grid;gap:.65rem;padding:1rem;border-radius:.85rem;background:#f7faf5;border:1px solid #e0e9dc}
+.evidencias-explorador__resultado h3{margin:0;color:#315f3a}
+.evidencias-explorador__ayuda{padding:.7rem .9rem;border-radius:.7rem;background:#f1f6ee;color:#4c6652;font-size:.85rem;line-height:1.5}
+.evidencias-explorador__error{padding:.75rem;border:1px solid #e6bbaa;background:#fff3ee;color:#994737;border-radius:.7rem}
