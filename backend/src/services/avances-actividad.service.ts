@@ -16,6 +16,7 @@ export interface AvanceActividad extends Omit<DatosAvanceActividad, 'claveIdempo
   revisor: string | null;
   revisadoEn: string | null;
   motivoDevolucion: string | null;
+  cantidadEvidencias?: number;
   historial: HistorialAvance[];
 }
 
