@@ -32,3 +32,42 @@
 .mapa-impacto__vacio{color:#68816e}
 .mapa-impacto__herramientas :is(input,select):focus-visible,.mapa-impacto__encabezado button:focus-visible{outline:3px solid #e2b66c;outline-offset:2px}
 @media(max-width:1000px){.mapa-impacto__espacio{grid-template-columns:minmax(0,1fr)}.mapa-impacto__lienzo{height:480px}.mapa-impacto__detalle{min-height:170px}}
+
+/* Exploración progresiva de React Flow y controles contextuales */
+.mapa-impacto__lienzo{height:640px;background:#fafdfa}
+.mapa-impacto__barra-mapa{position:absolute;z-index:8;top:12px;left:12px;right:12px;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;pointer-events:none}
+.mapa-impacto__barra-mapa>*{pointer-events:auto}
+.mapa-impacto__niveles{display:flex;align-items:center;gap:2px;padding:3px;background:#ffffffed;border:1px solid #d3e5d4;border-radius:.7rem;box-shadow:0 3px 15px #1e4e3412}
+.mapa-impacto__niveles button,.mapa-impacto__centrar{cursor:pointer;border:0;border-radius:.52rem;padding:.58rem .7rem;font:inherit;font-size:.76rem;font-weight:750;color:#507058;background:transparent;white-space:nowrap}
+.mapa-impacto__niveles button.activo{color:#245b35;background:#e2f0e2}
+.mapa-impacto__buscar-nodo{flex:1;min-width:130px;max-width:220px}
+.mapa-impacto__buscar-nodo input{width:100%;box-sizing:border-box;border:1px solid #d4e4d4;background:#fffffff0;box-shadow:0 3px 15px #1e4e3410;border-radius:.65rem;padding:.64rem .72rem;color:#315c3c;font:inherit;font-size:.79rem}
+.mapa-impacto__centrar{background:#fffffff0;border:1px solid #d4e4d4;box-shadow:0 3px 15px #1e4e3410}
+.mapa-impacto__lienzo .react-flow__controls{bottom:64px;box-shadow:0 4px 16px #17442d15;border:1px solid #d6e8da;border-radius:.6rem;overflow:hidden}
+.mapa-impacto__lienzo .react-flow__minimap{bottom:64px;background:#f9fcf9;border:1px solid #ddeade;border-radius:.6rem;box-shadow:0 4px 16px #17442d15;overflow:hidden}
+.mapa-impacto__lienzo .react-flow__node{line-height:1.35;white-space:normal;overflow-wrap:anywhere;transition:opacity .18s,box-shadow .18s}
+.mapa-impacto__lienzo .react-flow__node:hover{filter:brightness(.97);box-shadow:0 0 0 3px #89bca05c}
+.mapa-impacto__lienzo .react-flow__node:focus-visible{outline:4px solid #dba74c;outline-offset:3px}
+.mapa-impacto__leyenda{position:absolute;z-index:7;bottom:12px;left:12px;right:12px;display:flex;gap:.5rem 1rem;align-items:center;flex-wrap:wrap;width:fit-content;max-width:calc(100% - 24px);padding:.55rem .75rem;border-radius:.7rem;background:#ffffffed;border:1px solid #dfebdf;font-size:.73rem;color:#55715d;pointer-events:none}
+.mapa-impacto__leyenda span{display:flex;align-items:center;gap:.4rem}
+.mapa-impacto__leyenda i{width:10px;height:10px;border-radius:50%;display:inline-block;flex:0 0 auto}
+.mapa-impacto__coincidencias{position:absolute;z-index:7;top:68px;left:12px;right:12px;width:fit-content;max-width:calc(100% - 24px);margin:0;padding:.55rem .75rem;border-radius:.55rem;background:#fffbeef0;border:1px solid #e8d5aa;color:#725b37;font-size:.73rem}
+.mapa-impacto__limite{bottom:64px}
+.mapa-impacto__galeria{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.55rem}
+.mapa-impacto__galeria a{display:block;min-width:0;border-radius:.55rem;overflow:hidden;border:1px solid #e0e9df;background:#f4f8f3}
+.mapa-impacto__galeria img{display:block;width:100%;height:95px;object-fit:cover}
+.mapa-impacto__atajos{display:grid;gap:.5rem;margin-top:.3rem}
+.mapa-impacto__atajos button{text-align:left;font-size:.78rem;font-weight:600}
+.mapa-impacto__barra-mapa button:focus-visible,.mapa-impacto__barra-mapa input:focus-visible,.mapa-impacto__galeria a:focus-visible{outline:3px solid #dca450;outline-offset:2px}
+@media(max-width:1000px){
+  .mapa-impacto__lienzo{height:540px}
+}
+@media(max-width:630px){
+  .mapa-impacto__barra-mapa{gap:.35rem}
+  .mapa-impacto__niveles{width:100%}
+  .mapa-impacto__niveles button{flex:1;padding:.5rem .35rem;font-size:.69rem}
+  .mapa-impacto__buscar-nodo{max-width:none}
+  .mapa-impacto__lienzo .react-flow__minimap{display:none}
+  .mapa-impacto__leyenda{font-size:.66rem}
+  .mapa-impacto__coincidencias{top:102px}
+}
