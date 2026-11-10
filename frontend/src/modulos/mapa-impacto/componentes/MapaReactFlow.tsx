@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
-import ReactFlow, {
-  Background, Controls, MiniMap, MarkerType,
+import {
+  ReactFlow, Background, Controls, MiniMap, MarkerType,
   type Edge, type Node, type NodeMouseHandler,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
