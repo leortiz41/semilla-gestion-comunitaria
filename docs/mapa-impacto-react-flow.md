@@ -67,3 +67,22 @@ El archivo `frontend/package-lock.json` ya se regeneró y se versionó en `devel
 4. Buscar texto de un nodo y comprobar atenuación de los restantes; limpiar búsqueda.
 5. Usar «Centrar mapa», zoom y minimapa. Probar anchos menores a 630 px.
 6. Comprobar en Proyectos y Evidencias que no se alteraron registros ni permisos.
+
+## Incremento 1C — editor visual de distribución (sin edición de relaciones)
+
+- Los nodos de React Flow **se pueden arrastrar** para diagramar el proyecto; las conexiones continúan recalculándose al moverlos, pero su relación en PostgreSQL no se altera.
+- «Mover nodos: activo/inactivo» permite alternar entre reorganización y simple exploración.
+- Las posiciones se guardan en `localStorage` bajo `semilla:mapa-impacto:posiciones:v1:<usuarioId>:<proyectoId>`. Por ahora permanecen **en el mismo navegador**, no se sincronizan todavía con Neon ni entre dispositivos.
+- «Restablecer posiciones» elimina el diseño personal y recupera la distribución jerárquica automática. «Centrar» solo cambia el zoom y encuadre.
+- La barra de herramientas está fuera de la superficie del grafo. El lienzo ocupa menos alto, tiene fondo gris azulado neutro y cuadrícula discreta, nodos blancos con bordes acentuados y leyenda separada.
+- Se mantiene la exploración por niveles, la búsqueda, el detalle lateral y el acceso a R2.
+
+### Pruebas de este incremento
+
+1. En Aula para Kinder, mover proyecto, actividad y avance; las conexiones deben seguir unidos a cada nodo.
+2. Cambiar a Dashboard y regresar a Mapa de Impacto: el orden visual debe permanecer.
+3. Recargar la página con el mismo usuario: el diseño se restaura por proyecto.
+4. Cambiar de proyecto y volver: cada proyecto conserva su propia distribución.
+5. Desactivar «Mover nodos» y comprobar que los elementos siguen siendo seleccionables, pero no arrastrables.
+6. Usar «Restablecer posiciones» y comprobar que se recupera el diseño automático.
+7. Comprobar que el formulario de proyectos, el estado de avances y el registro de evidencias no cambian por mover un nodo.
