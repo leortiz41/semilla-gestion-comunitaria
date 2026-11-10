@@ -222,6 +222,7 @@ function PaginaProyectos({
                         <span>{item.cantidadReportada === null ? `${item.porcentajeAvance ?? 0}%`
                           : `${item.cantidadReportada} ${item.unidadMedida ?? ''}`}</span>
                         <small>{item.fecha}{item.esPropio ? ' · Autorrevisión' : ''}</small>
+                        <span className="revision-centro__fotos">{item.cantidadEvidencias ?? 0} {(item.cantidadEvidencias ?? 0) === 1 ? 'fotografía' : 'fotografías'}</span>
                       </button>
                     ))}
                   </div>
@@ -238,6 +239,7 @@ function PaginaProyectos({
                         )}
                       </div>
                       <p className="revision-centro__muted">{avanceSeleccionado.proyecto} · {avanceSeleccionado.comunidad}</p>
+                      <p className="revision-centro__fotos-resumen">Evidencias adjuntas: {avanceSeleccionado.cantidadEvidencias ?? 0} {(avanceSeleccionado.cantidadEvidencias ?? 0) === 1 ? 'fotografía' : 'fotografías'}</p>
                       <FotografiasAvance token={token} proyectoId={avanceSeleccionado.proyectoId}
                         actividadId={avanceSeleccionado.actividadId} avanceId={avanceSeleccionado.id} />
                       <dl className="revision-centro__meta">
