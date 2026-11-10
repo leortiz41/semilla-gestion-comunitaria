@@ -176,10 +176,17 @@ export default function MapaReactFlow({
     });
   }, []);
 
-  const guardarPosiciones = useCallback(() => {
-    try { localStorage.setItem(llavePosiciones, JSON.stringify(posiciones)); }
-    catch { /* El navegador puede bloquear almacenamiento. */ }
-  }, [llavePosiciones, posiciones]);
+  const guardarPosiciones = useCallback((_evento: unknown, nodo: Node) => {
+    setPosiciones((actual) => {
+      const siguientes = {
+        ...actual,
+        [nodo.id]: { x: nodo.position.x, y: nodo.position.y },
+      };
+      try { localStorage.setItem(llavePosiciones, JSON.stringify(siguientes)); }
+      catch { /* El navegador puede bloquear almacenamiento. */ }
+      return siguientes;
+    });
+  }, [llavePosiciones]);
 
   function restablecerDisposicion() {
     setPosiciones({});
