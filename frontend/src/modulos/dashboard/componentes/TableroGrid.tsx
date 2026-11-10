@@ -1,8 +1,9 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { GridStack, type GridStackWidget } from 'gridstack';
+import type { PosicionWidget } from '../../../servicios/dashboard/servicioDashboard';
 import 'gridstack/dist/gridstack.min.css';
 
-type Posicion = { id: string; x: number; y: number; w: number; h: number };
+type Posicion = PosicionWidget;
 const posicionesIniciales: Posicion[] = [
   { id: 'proyectos', x: 0, y: 0, w: 3, h: 2 },
   { id: 'actividades', x: 3, y: 0, w: 3, h: 2 },
@@ -14,15 +15,19 @@ const posicionesIniciales: Posicion[] = [
 ];
 
 export default function TableroGrid({
-  usuario, contenido, visibles,
+  usuario, contenido, visibles, posicionesGuardadas, alGuardarPosiciones,
 }: {
   usuario: string;
   contenido: Record<string, { titulo: string; contenido: ReactNode }>;
   visibles: string[];
+  posicionesGuardadas?: PosicionWidget[];
+  alGuardarPosiciones?: (posiciones: PosicionWidget[]) => void;
 }) {
   const contenedor = useRef<HTMLDivElement>(null);
   const cuadricula = useRef<GridStack | null>(null);
   const llave = 'semilla:dashboard:layout:v1:' + usuario;
+  const guardarServidor = useRef(alGuardarPosiciones);
+  guardarServidor.current = alGuardarPosiciones;
   const activos = posicionesIniciales.filter((p) => visibles.includes(p.id));
 
   useEffect(() => {
@@ -40,9 +45,9 @@ export default function TableroGrid({
     if (!grid) return;
     cuadricula.current = grid;
     try {
-      const guardado = localStorage.getItem(llave);
-      if (guardado) {
-        const posiciones = JSON.parse(guardado) as Posicion[];
+      const guardado = posicionesGuardadas ?? JSON.parse(localStorage.getItem(llave) || '[]') as Posicion[];
+      if (guardado.length) {
+        const posiciones = guardado;
         if (Array.isArray(posiciones) &&
             posiciones.every((p) => posicionesIniciales.some((v) => v.id === p.id) &&
               Number.isInteger(p.x) && p.x >= 0 && p.x < 12 &&
@@ -73,7 +78,9 @@ export default function TableroGrid({
           ? anterior.filter((p) => posicionesIniciales.some((base) => base.id === p.id) &&
             !posiciones.some((actual) => actual.id === p.id))
           : [];
-        localStorage.setItem(llave, JSON.stringify([...ocultos, ...posiciones]));
+        const completas = [...ocultos, ...posiciones];
+        localStorage.setItem(llave, JSON.stringify(completas));
+        guardarServidor.current?.(completas);
       } catch { /* Almacenamiento no disponible */ }
     };
     grid.on('dragstop', guardar);
@@ -88,7 +95,8 @@ export default function TableroGrid({
     observador.observe(elemento);
     adaptar();
     return () => {
-      guardar();
+      // Nunca guardar en cleanup: puede sobrescribir el diseño con posiciones predeterminadas
+      // durante el desmontaje, la navegación o al cambiar la visibilidad.
       observador.disconnect();
       grid.off('dragstop');
       grid.off('resizestop');
@@ -108,6 +116,9 @@ export default function TableroGrid({
       if (item) grid.update(item as HTMLElement, { x: p.x, y: p.y, w: p.w, h: p.h });
     });
     grid.batchUpdate(false);
+    const posiciones = posicionesIniciales.map((p) => ({ ...p }));
+    try { localStorage.setItem(llave, JSON.stringify(posiciones)); } catch { /* Almacenamiento no disponible */ }
+    guardarServidor.current?.(posiciones);
   }
 
   return (
