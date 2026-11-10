@@ -538,6 +538,46 @@ export function obtenerProyectosAdministrativos(token: string) {
   }>('/proyectos', { headers: { Authorization: `Bearer ${token}` } });
 }
 
+
+export interface EvidenciaFotografica {
+  id: string;
+  titulo: string | null;
+  descripcion: string | null;
+  tipoMime: string;
+  creadoEn: string;
+  url: string | null;
+}
+const rutaFotos = (proyectoId: string, actividadId: string, avanceId: string) =>
+  `/proyectos/${proyectoId}/actividades/${actividadId}/avances/${avanceId}/evidencias`;
+
+export function obtenerFotosAvance(token: string, proyectoId: string, actividadId: string, avanceId: string) {
+  return request<{ evidencias: EvidenciaFotografica[] }>(rutaFotos(proyectoId, actividadId, avanceId), {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export async function subirFotoAvance(
+  token: string, proyectoId: string, actividadId: string, avanceId: string,
+  foto: File,
+) {
+  const permitidos = ['image/jpeg', 'image/png', 'image/webp'];
+  if (!permitidos.includes(foto.type)) throw new Error('Solo se permiten fotografías JPG, PNG y WebP.');
+  if (!foto.size || foto.size > 10 * 1024 * 1024) throw new Error('La fotografía debe pesar entre 1 byte y 10 MB.');
+  const ruta = rutaFotos(proyectoId, actividadId, avanceId);
+  const preparacion = await request<{ url: string; clave: string; tipoMime: string }>(ruta + '/preparar', {
+    method: 'POST', headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ tipoMime: foto.type }),
+  });
+  const carga = await fetch(preparacion.url, {
+    method: 'PUT', headers: { 'Content-Type': preparacion.tipoMime }, body: foto,
+  });
+  if (!carga.ok) throw new Error('No se pudo cargar la fotografía a R2. Revisá la política CORS y tu conexión.');
+  return request<{ id: string }>(ruta + '/confirmar', {
+    method: 'POST', headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ clave: preparacion.clave, tipoMime: foto.type, titulo: foto.name }),
+  });
+}
+
 export interface AvancePendienteRevision {
   id: string;
   actividadId: string;
