@@ -41,3 +41,6 @@
 .revision-centro__detalle>.fotos-avance{margin:1rem 0}
 .revision-centro__detalle .fotos-avance__galeria{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
 .revision-centro__detalle .fotos-avance__imagen img{height:140px}
+
+.revision-centro__fotos{display:inline-flex;width:fit-content;padding:.2rem .55rem;border:1px solid #cce0c8;background:#f0f8ed;border-radius:999px;color:#356840;font-size:.74rem;font-weight:750}
+.revision-centro__fotos-resumen{margin:.6rem 0 0!important;color:#476b4d!important;font-weight:700;font-size:.8rem}
