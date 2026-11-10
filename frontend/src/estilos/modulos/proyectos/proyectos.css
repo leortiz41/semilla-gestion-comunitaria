@@ -1,0 +1,29 @@
+/* Proyectos: abrir actividades a ancho completo sin deformar las tarjetas cerradas. */
+.proyectos-lista{min-width:0;align-items:start}
+.proyectos-lista>.proyectos-tarjeta{min-width:0;box-sizing:border-box}
+.proyectos-lista>.proyectos-tarjeta--abierta{
+  grid-column:1/-1;
+  width:100%;
+  min-width:0;
+  box-sizing:border-box;
+  padding:clamp(1rem,2.5vw,1.65rem);
+  border-color:#a9c9aa;
+  box-shadow:0 14px 32px rgba(45,82,49,.1);
+}
+.proyectos-lista>.proyectos-tarjeta--abierta>.proyecto-detalle{
+  width:100%;
+  min-width:0;
+  margin-top:1.25rem;
+}
+.proyectos-lista>.proyectos-tarjeta--abierta .proyecto-detalle__panel{min-width:0}
+.proyectos-lista>.proyectos-tarjeta--abierta .proyecto-detalle__lista{min-width:0}
+.proyectos-lista>.proyectos-tarjeta--abierta .actividad-avances{min-width:0}
+.proyectos-lista>.proyectos-tarjeta--abierta .actividad-avance{min-width:0}
+@media(min-width:900px){
+  .proyectos-lista>.proyectos-tarjeta--abierta .proyecto-detalle__lista--ejecucion{
+    grid-template-columns:minmax(0,1fr);
+  }
+}
+@media(max-width:640px){
+  .proyectos-lista>.proyectos-tarjeta--abierta{padding:1rem}
+}
