@@ -7,7 +7,7 @@ import '../../estilos/modulos/paginaModuloBase.css';
 import '../../estilos/modulos/roles.css';
 import '../donantes/donantes.css';
 import ActividadesProyecto from './ActividadesProyecto';
-import './centroRevision.css';
+import '../../estilos/modulos/proyectos/centroRevision.css';
 
 const categorias: Record<AreaVisionDesarrollo, string> = {
   EVANGELISMO: 'Evangelismo',
