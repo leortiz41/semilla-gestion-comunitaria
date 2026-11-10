@@ -36,6 +36,7 @@ export async function obtenerResumenDashboard(
 }
 
 export interface EstadisticasDashboard {
+  moneda: string;
   proyectosTotales: number;
   proyectosActivos: number;
   proyectosFinalizados: number;
