@@ -27,6 +27,15 @@ const estadosRevision: Record<AvanceActividadProyecto['estadoRevision'], string>
   DEVUELTO: 'Devuelto',
 };
 
+const unidadesMedida = [
+  'Viviendas', 'Familias', 'Personas', 'Visitas', 'Talleres', 'Jornadas',
+  'Entregas', 'Instalaciones', 'Metros cuadrados', 'Metros lineales',
+  'Kilómetros', 'Unidades',
+] as const;
+
+const formatoCantidad = (valor: number) =>
+  valor.toLocaleString('es-HN', { maximumFractionDigits: 2 });
+
 const fechaLocalHoy = () => {
   const hoy = new Date();
   return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
@@ -69,7 +78,32 @@ export default function DetalleProyecto({
   const [guardando, setGuardando] = useState(false);
   const [errorPlanificacion, setErrorPlanificacion] = useState('');
   const [erroresCamposPlan, setErroresCamposPlan] = useState<Record<string, string>>({});
+  const [unidadSeleccionada, setUnidadSeleccionada] = useState('');
+  const [unidadPersonalizada, setUnidadPersonalizada] = useState('');
+  const [presupuestoBorrador, setPresupuestoBorrador] = useState('');
+  const [pesoBorrador, setPesoBorrador] = useState('');
   const [recarga, setRecarga] = useState(0);
+  const actividadActual = formularioActividad && formularioActividad !== 'nueva' ? formularioActividad : null;
+  const otrasActividades = (actividades ?? []).filter((a) => a.id !== actividadActual?.id);
+  const presupuestoOtros = otrasActividades.reduce((total, a) => total + (a.presupuestoEstimado ?? 0), 0);
+  const presupuestoDisponible = Math.max(0, presupuestoProyecto - presupuestoOtros);
+  const pesoOtros = otrasActividades.reduce((total, a) => total + (a.pesoResultado ?? 0), 0);
+  const pesoActual = Number(pesoBorrador.replace(',', '.'));
+  const pesoProyectado = pesoOtros + (pesoBorrador.trim() && Number.isFinite(pesoActual) ? pesoActual : 0);
+  const sugerenciaRestante = Math.max(0, Math.min(100, Math.round((100 - pesoOtros) * 100) / 100));
+
+  function abrirPlanificacion(actividad: ActividadProyecto | 'nueva') {
+    const seleccion = actividad === 'nueva' ? null : actividad;
+    const unidad = seleccion?.unidadMedida ?? '';
+    setUnidadSeleccionada(unidad && unidadesMedida.some((item) => item === unidad) ? unidad : unidad ? 'OTRA' : '');
+    setUnidadPersonalizada(unidad && !unidadesMedida.some((item) => item === unidad) ? unidad : '');
+    setPresupuestoBorrador(seleccion?.presupuestoEstimado?.toString() ?? '');
+    setPesoBorrador(seleccion?.pesoResultado?.toString() ?? '');
+    setFormularioActividad(actividad);
+    setErrorPlanificacion('');
+    setErroresCamposPlan({});
+  }
+
 
   useEffect(() => {
     let vigente = true;
@@ -124,7 +158,9 @@ export default function DetalleProyecto({
     if (fechaInicio && fechaFin && fechaFin < fechaInicio)
       errores.fechaFin = 'La fecha de finalización no puede ser anterior al inicio.';
     const metaCantidad = numero('metaCantidad', 3, 0.001);
-    const unidadMedida = valor('unidadMedida');
+    const unidadMedida = valor('unidadCatalogo') === 'OTRA'
+      ? valor('unidadMedida')
+      : valor('unidadCatalogo');
     if (metaCantidad !== null && !unidadMedida) errores.unidadMedida = 'Ingresá la unidad de medida.';
     if (metaCantidad === null && unidadMedida && !errores.metaCantidad)
       errores.metaCantidad = 'Ingresá la meta o eliminá la unidad de medida.';
@@ -251,53 +287,110 @@ export default function DetalleProyecto({
 
   function formularioActividadUI(actividad: ActividadProyecto | null) {
     return (
-      <form className="actividad-plan-form" onSubmit={guardarActividad} noValidate>
+      <form className="actividad-plan-form" key={actividad?.id ?? 'nueva'} onSubmit={guardarActividad} noValidate>
         <fieldset disabled={guardando}>
-          <legend>{actividad ? 'Editar planificación' : 'Nueva actividad'}</legend>
+          <legend>{actividad ? 'Editar planificación' : 'Nueva actividad del proyecto'}</legend>
+          <p className="actividad-plan-form__intro">Definí el trabajo, la meta que se espera lograr y cómo contribuye al proyecto.</p>
           {errorPlanificacion && <p className="actividad-plan-form__error" role="alert">{errorPlanificacion}</p>}
-          <div className="donantes-campos">
-            <label>Nombre<input name="nombre" required maxLength={180} defaultValue={actividad?.nombre} aria-invalid={Boolean(erroresCamposPlan.nombre)} />
-              {erroresCamposPlan.nombre && <small className="actividad-plan-form__campo-error">{erroresCamposPlan.nombre}</small>}</label>
-            <label>Responsable asignado
-              <select name="responsableAsignadoId" defaultValue={actividad?.responsableAsignadoId ?? ''}>
-                <option value="">Sin asignar</option>
-                {responsables.map((responsable) => (
-                  <option key={responsable.id} value={responsable.id}>{responsable.nombre}</option>
-                ))}
-              </select>
-            </label>
-            <label>Inicio previsto<input name="fechaInicio" type="date" defaultValue={actividad?.fechaInicio ?? ''} /></label>
-            <label>Finalización prevista<input name="fechaFin" type="date" defaultValue={actividad?.fechaFin ?? ''} aria-invalid={Boolean(erroresCamposPlan.fechaFin)} />
-              {erroresCamposPlan.fechaFin && <small className="actividad-plan-form__campo-error">{erroresCamposPlan.fechaFin}</small>}</label>
-            <label>Meta cuantificable (opcional)
-              <input name="metaCantidad" type="text" inputMode="decimal" defaultValue={actividad?.metaCantidad ?? ''} aria-invalid={Boolean(erroresCamposPlan.metaCantidad)} placeholder="Ej. 9,56" />
-              {erroresCamposPlan.metaCantidad && <small className="actividad-plan-form__campo-error">{erroresCamposPlan.metaCantidad}</small>}
-            </label>
-            <label>Unidad de medida
-              <input name="unidadMedida" maxLength={80} placeholder="Ej. hogares, talleres" defaultValue={actividad?.unidadMedida ?? ''} aria-invalid={Boolean(erroresCamposPlan.unidadMedida)} />
-              {erroresCamposPlan.unidadMedida && <small className="actividad-plan-form__campo-error">{erroresCamposPlan.unidadMedida}</small>}
-            </label>
-            <label>Asignación estimada ({moneda})
-              <input name="presupuestoEstimado" type="text" inputMode="decimal" defaultValue={actividad?.presupuestoEstimado ?? ''} aria-invalid={Boolean(erroresCamposPlan.presupuestoEstimado)} placeholder="Ej. 9,56" />
-              {erroresCamposPlan.presupuestoEstimado && <small className="actividad-plan-form__campo-error">{erroresCamposPlan.presupuestoEstimado}</small>}
-            </label>
-            <label>Peso para el resultado del proyecto (%)
-              <input name="pesoResultado" type="text" inputMode="decimal" defaultValue={actividad?.pesoResultado ?? ''} aria-invalid={Boolean(erroresCamposPlan.pesoResultado)} placeholder="Ej. 9,56" />
-              {erroresCamposPlan.pesoResultado && <small className="actividad-plan-form__campo-error">{erroresCamposPlan.pesoResultado}</small>}
-            </label>
-            <label>Estado operativo
-              <select name="estado" defaultValue={actividad?.estado ?? 'PLANIFICADA'}>
-                {Object.entries(estadosActividad).map(([codigo, etiqueta]) => (
-                  <option key={codigo} value={codigo}>{etiqueta}</option>
-                ))}
-              </select>
-            </label>
-            <label className="actividad-plan-form__descripcion">Descripción
-              <textarea name="descripcion" maxLength={3000} defaultValue={actividad?.descripcion ?? ''} />
-            </label>
-          </div>
-          <p>La asignación es parte del presupuesto total del proyecto; los pesos se normalizan entre actividades y no representan dinero.</p>
-          <div className="actividad-avance-form__acciones">
+          <section className="actividad-plan-form__grupo" aria-labelledby="grupo-trabajo">
+            <h4 id="grupo-trabajo">1. ¿Qué actividad vamos a realizar?</h4>
+            <div className="donantes-campos">
+              <label>Nombre de la actividad
+                <input name="nombre" required maxLength={180} defaultValue={actividad?.nombre}
+                  placeholder="Ej. Construcción de viviendas" aria-invalid={Boolean(erroresCamposPlan.nombre)} />
+                {erroresCamposPlan.nombre && <small className="actividad-plan-form__campo-error">{erroresCamposPlan.nombre}</small>}
+                <small>Especificá una tarea concreta dentro del proyecto.</small>
+              </label>
+              <label>Responsable asignado
+                <select name="responsableAsignadoId" defaultValue={actividad?.responsableAsignadoId ?? ''}>
+                  <option value="">Sin asignar</option>
+                  {responsables.map((responsable) => (
+                    <option key={responsable.id} value={responsable.id}>{responsable.nombre}</option>
+                  ))}
+                </select>
+              </label>
+              <label>Inicio previsto<input name="fechaInicio" type="date" defaultValue={actividad?.fechaInicio ?? ''} /></label>
+              <label>Finalización prevista
+                <input name="fechaFin" type="date" defaultValue={actividad?.fechaFin ?? ''} aria-invalid={Boolean(erroresCamposPlan.fechaFin)} />
+                {erroresCamposPlan.fechaFin && <small className="actividad-plan-form__campo-error">{erroresCamposPlan.fechaFin}</small>}
+              </label>
+              <label>Estado operativo
+                <select name="estado" defaultValue={actividad?.estado ?? 'PLANIFICADA'}>
+                  {Object.entries(estadosActividad).map(([codigo, etiqueta]) => (
+                    <option key={codigo} value={codigo}>{etiqueta}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="actividad-plan-form__descripcion">Descripción del trabajo
+                <textarea name="descripcion" maxLength={3000} defaultValue={actividad?.descripcion ?? ''}
+                  placeholder="Detallá brevemente lo que se realizará." />
+              </label>
+            </div>
+          </section>
+          <section className="actividad-plan-form__grupo" aria-labelledby="grupo-meta">
+            <h4 id="grupo-meta">2. ¿Qué esperamos lograr?</h4>
+            <p>La meta mide un resultado físico, no el presupuesto ni un porcentaje asignado.</p>
+            <div className="donantes-campos">
+              <label>Meta prevista (opcional)
+                <input name="metaCantidad" type="text" inputMode="decimal" defaultValue={actividad?.metaCantidad ?? ''}
+                  aria-invalid={Boolean(erroresCamposPlan.metaCantidad)} placeholder="Ej. 3" />
+                {erroresCamposPlan.metaCantidad && <small className="actividad-plan-form__campo-error">{erroresCamposPlan.metaCantidad}</small>}
+              </label>
+              <label>¿En qué se mide la meta?
+                <select name="unidadCatalogo" value={unidadSeleccionada}
+                  onChange={(evento) => setUnidadSeleccionada(evento.target.value)}
+                  aria-invalid={Boolean(erroresCamposPlan.unidadMedida)}>
+                  <option value="">Sin meta cuantificable</option>
+                  {unidadesMedida.map((unidad) => <option key={unidad} value={unidad}>{unidad}</option>)}
+                  <option value="OTRA">Otra unidad…</option>
+                </select>
+                {erroresCamposPlan.unidadMedida && <small className="actividad-plan-form__campo-error">{erroresCamposPlan.unidadMedida}</small>}
+              </label>
+              {unidadSeleccionada === 'OTRA' && (
+                <label className="actividad-plan-form__descripcion">Especificar otra unidad
+                  <input name="unidadMedida" maxLength={80} value={unidadPersonalizada}
+                    onChange={(evento) => setUnidadPersonalizada(evento.target.value)}
+                    placeholder="Ej. filtros instalados" />
+                </label>
+              )}
+            </div>
+            <small>Ejemplo: meta de 3 viviendas. El avance físico será la cantidad terminada y validada respecto a esas 3 viviendas.</small>
+          </section>
+          <section className="actividad-plan-form__grupo" aria-labelledby="grupo-recursos">
+            <h4 id="grupo-recursos">3. ¿Qué recursos y contribución tendrá?</h4>
+            <div className="donantes-campos">
+              <label>Presupuesto estimado de la actividad ({moneda})
+                <input name="presupuestoEstimado" type="text" inputMode="decimal" value={presupuestoBorrador}
+                  onChange={(evento) => setPresupuestoBorrador(evento.target.value)}
+                  aria-invalid={Boolean(erroresCamposPlan.presupuestoEstimado)} placeholder="Ej. 450000" />
+                {erroresCamposPlan.presupuestoEstimado && <small className="actividad-plan-form__campo-error">{erroresCamposPlan.presupuestoEstimado}</small>}
+                <small>Disponible para esta actividad: {formatoCantidad(presupuestoDisponible)} {moneda}.</small>
+              </label>
+              <label>Contribución al avance global del proyecto (%)
+                <input name="pesoResultado" type="text" inputMode="decimal" value={pesoBorrador}
+                  onChange={(evento) => setPesoBorrador(evento.target.value)}
+                  aria-invalid={Boolean(erroresCamposPlan.pesoResultado)} placeholder="Ej. 75" />
+                {erroresCamposPlan.pesoResultado && <small className="actividad-plan-form__campo-error">{erroresCamposPlan.pesoResultado}</small>}
+                <small>Es la importancia relativa de la actividad, no el porcentaje ejecutado ni el dinero asignado.</small>
+              </label>
+            </div>
+            <div className="actividad-plan-form__sugerencias">
+              <span>Ponderación manual asistida</span>
+              <button type="button" className="brigadas-accion" onClick={() => setPesoBorrador(String(sugerenciaRestante))}>
+                Asignar porcentaje restante ({formatoCantidad(sugerenciaRestante)}%)
+              </button>
+              <button type="button" className="brigadas-accion"
+                onClick={() => setPesoBorrador(String(Math.round(10000 / Math.max(1, (actividades?.length ?? 0) + (actividad ? 0 : 1))) / 100))}>
+                Sugerir reparto equitativo
+              </button>
+            </div>
+            <p className={Math.abs(pesoProyectado - 100) < 0.001 ? 'actividad-plan-form__balance actividad-plan-form__balance--completo' : 'actividad-plan-form__balance'}>
+              Ponderación prevista del proyecto: <strong>{formatoCantidad(pesoProyectado)}%</strong> de 100%.
+              {Math.abs(pesoProyectado - 100) >= 0.001 && ' Revisá los pesos antes de publicar indicadores globales.'}
+            </p>
+            <small>El backend actualmente normaliza los pesos entre actividades. Estas sugerencias no cambian otras actividades ni guardan automáticamente.</small>
+          </section>
+          <div className="actividad-plan-form__acciones">
             <button type="submit" disabled={guardando}>{guardando ? 'Guardando…' : 'Guardar planificación'}</button>
             <button type="button" className="brigadas-accion" disabled={guardando}
               onClick={() => { setFormularioActividad(null); setErrorPlanificacion(''); setErroresCamposPlan({}); }}>Cancelar</button>
@@ -373,10 +466,10 @@ export default function DetalleProyecto({
               <div><dt>Responsable</dt><dd>{actividad.responsableAsignado ?? 'Sin asignar'}</dd></div>
               <div><dt>Meta</dt><dd>{actividad.metaCantidad === null ? 'No cuantificable' : `${actividad.metaCantidad} ${actividad.unidadMedida}`}</dd></div>
               <div><dt>Recursos</dt><dd>{actividad.presupuestoEstimado === null ? 'Sin asignación' : `${actividad.presupuestoEstimado.toLocaleString('es-HN')} ${moneda}`}</dd></div>
-              <div><dt>Peso</dt><dd>{actividad.pesoResultado === null ? 'Pendiente' : `${actividad.pesoResultado}%`}</dd></div>
+              <div><dt>Contribución</dt><dd>{actividad.pesoResultado === null ? 'Pendiente' : `${actividad.pesoResultado}%`}</dd></div>
             </dl>
             {puedeGestionar && !formularioActividad && (
-              <button type="button" className="brigadas-accion" onClick={() => { setFormularioActividad(actividad); setErrorPlanificacion(''); setErroresCamposPlan({}); }}>
+              <button type="button" className="brigadas-accion" onClick={() => abrirPlanificacion(actividad)}>
                 Editar planificación
               </button>
             )}
@@ -501,7 +594,7 @@ export default function DetalleProyecto({
                   <h3>Planificación</h3>
                   {puedeGestionar && !formularioActividad && (
                     <button type="button" className="brigadas-accion"
-                      onClick={() => { setFormularioActividad('nueva'); setErrorPlanificacion(''); setErroresCamposPlan({}); }}>+ Nueva actividad</button>
+                      onClick={() => abrirPlanificacion('nueva')}>+ Nueva actividad</button>
                   )}
                 </header>
                 <p>El presupuesto por actividad es una asignación estimada dentro del presupuesto del proyecto.</p>
@@ -545,7 +638,7 @@ export default function DetalleProyecto({
                         <progress value={actividad.porcentajeResultado} max={100} />
                         <strong>{actividad.porcentajeResultado.toLocaleString('es-HN', { maximumFractionDigits: 2 })}%</strong>
                       </label>
-                      <p>Peso del proyecto · {actividad.pesoResultado ?? 'Pendiente'}</p>
+                      <p>Contribución al resultado global · {actividad.pesoResultado === null ? 'Pendiente' : `${actividad.pesoResultado}%`}</p>
                     </article>
                   ))}
                 </div>
