@@ -36,3 +36,8 @@
 .revision-centro__titulo-detalle{display:flex;align-items:center;flex-wrap:wrap;gap:.55rem}
 .revision-centro__titulo-detalle h3{margin:.55rem 0}
 .revision-centro__autorrevision{display:inline-flex;align-items:center;padding:.22rem .6rem;border-radius:999px;background:#edf3e9;color:#46664a;border:1px solid #d2e1cf;font-size:.72rem;font-weight:750}
+
+/* HU-15: revisión de fotografías en el panel de detalle */
+.revision-centro__detalle>.fotos-avance{margin:1rem 0}
+.revision-centro__detalle .fotos-avance__galeria{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
+.revision-centro__detalle .fotos-avance__imagen img{height:140px}
