@@ -1028,3 +1028,21 @@
 .actividad-plan-form__campo-error{color:#9a4035;font-size:.76rem;line-height:1.4;font-weight:600}
 .actividad-plan-form input[aria-invalid="true"]{border-color:#ba6757;background:#fff9f6}
 .actividad-plan-form input:focus-visible{outline:2px solid #56845b;outline-offset:2px}
+
+/* HU-12: planificación guiada de actividades */
+.actividad-plan-form__intro{margin:0 0 1rem;color:#65776a;font-size:.87rem;line-height:1.5}
+.actividad-plan-form__grupo{margin:0 0 1rem;padding:1rem;border:1px solid #dce7d8;border-radius:.9rem;background:#fff;min-width:0}
+.actividad-plan-form__grupo h4{margin:0 0 .5rem;color:#315f3a;font-size:1rem}
+.actividad-plan-form__grupo>p{margin:.2rem 0 .8rem;color:#617465;font-size:.85rem}
+.actividad-plan-form__grupo>small,.actividad-plan-form__grupo label small{display:block;color:#6b796c;font-size:.75rem;line-height:1.45;font-weight:450}
+.actividad-plan-form__grupo .donantes-campos{grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr))}
+.actividad-plan-form__grupo :is(input,select,textarea){box-sizing:border-box;min-width:0;width:100%}
+.actividad-plan-form__sugerencias{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;margin:1rem 0}
+.actividad-plan-form__sugerencias>span{flex:1 1 100%;font-size:.8rem;font-weight:750;color:#395c40}
+.actividad-plan-form__sugerencias button{font-size:.8rem;padding:.5rem .7rem}
+.actividad-plan-form__balance{padding:.8rem;border-radius:.7rem;background:#fff8e9;color:#6f562a;border:1px solid #eedfc0;font-size:.83rem}
+.actividad-plan-form__balance--completo{background:#edf7ea;color:#305b39;border-color:#d0e4cc}
+.actividad-plan-form__acciones{display:flex;flex-wrap:wrap;gap:.6rem;margin-top:1rem}
+.actividad-plan-form__acciones button[type="submit"]{padding:.7rem 1rem;margin:0;border:0;border-radius:.7rem;color:white;background:#356c43;font-weight:750;cursor:pointer}
+.actividad-plan-form__acciones .brigadas-accion{margin:0}
+@media(max-width:560px){.actividad-plan-form__grupo{padding:.75rem}.actividad-plan-form__acciones button{flex:1 1 100%}}
