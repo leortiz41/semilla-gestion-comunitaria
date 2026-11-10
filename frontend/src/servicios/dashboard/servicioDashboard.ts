@@ -89,3 +89,27 @@ export async function obtenerEstadisticasDashboard(tokenAcceso: string, filtros:
   }
   return respuesta.json() as Promise<EstadisticasDashboard>;
 }
+
+export interface PosicionWidget {
+  id: string; x: number; y: number; w: number; h: number;
+}
+export interface PreferenciasDashboard {
+  visibles: string[];
+  posiciones: PosicionWidget[];
+}
+export async function obtenerPreferenciasDashboard(token: string): Promise<PreferenciasDashboard | null> {
+  const respuesta = await fetch(`${URL_API}/dashboard/preferencias`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!respuesta.ok) throw new Error('No se pudieron recuperar las preferencias personales.');
+  const datos = await respuesta.json() as { configuracion: PreferenciasDashboard | null };
+  return datos.configuracion;
+}
+export async function guardarPreferenciasDashboard(token: string, configuracion: PreferenciasDashboard): Promise<void> {
+  const respuesta = await fetch(`${URL_API}/dashboard/preferencias`, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ configuracion }),
+  });
+  if (!respuesta.ok) throw new Error('No se pudo guardar la distribución personal en Neon.');
+}
