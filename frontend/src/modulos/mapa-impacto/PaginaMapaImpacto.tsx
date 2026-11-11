@@ -118,12 +118,15 @@ export default function PaginaMapaImpacto({ token, usuarioId }: { token: string;
         return av ? { titulo: 'Avance · ' + av.fecha, descripcion: av.descripcion || 'Sin observaciones.',
           estado: av.estado, foto: null as string | null } : null;
       })() :
-    seleccion.tipo === 'evidencia' ?
+    seleccion.tipo === 'evidencias' ?
       (() => {
-        const ev = datos.evidencias.find((v) => v.id === seleccion.id);
-        return ev ? { titulo: ev.titulo || 'Fotografía de evidencia',
-          descripcion: ev.descripcion || 'Evidencia documental del avance.',
-          estado: 'Fotografía', foto: ev.url } : null;
+        const fotos = datos.evidencias.filter((v) => v.avanceId === seleccion.id);
+        return fotos.length ? {
+          titulo: 'Evidencias del avance',
+          descripcion: 'Documentación fotográfica vinculada a este avance. Seleccioná una imagen para verla ampliada.',
+          estado: `${fotos.length} ${fotos.length === 1 ? 'fotografía' : 'fotografías'}`,
+          foto: null as string | null,
+        } : null;
       })() : null;
 
   return (
@@ -183,19 +186,18 @@ export default function PaginaMapaImpacto({ token, usuarioId }: { token: string;
                   <strong>{item.titulo}</strong>
                   <span className="mapa-impacto__estado">{item.estado}</span>
                   <p>{item.descripcion}</p>
-                  {seleccion?.tipo === 'evidencia' && item.foto &&
-                    <FotografiaPrivadaMapa key={seleccion.id} token={token}
-                      proyectoId={datos.proyecto.id} evidenciaId={seleccion.id}
-                      titulo={item.titulo} />}
-                  {seleccion?.tipo === 'avance' && <>
-                    <p>Fotografías de este avance: {datos.evidencias.filter((f) => f.avanceId === seleccion.id).length}</p>
-                    <div className="mapa-impacto__galeria">
-                      {datos.evidencias.filter((f) => f.avanceId === seleccion.id).map((foto) =>
+                  {seleccion?.tipo === 'avance' && <p>
+                    Evidencias asociadas: {datos.evidencias.filter((f) => f.avanceId === seleccion.id).length}.
+                    {' '}Seleccioná el nodo de Evidencias para abrir la galería.
+                  </p>}
+                  {seleccion?.tipo === 'evidencias' && (
+                    <div className="mapa-impacto__galeria" aria-label="Galería de fotografías del avance">
+                      {datos.evidencias.filter((foto) => foto.avanceId === seleccion.id).map((foto) =>
                         <FotografiaPrivadaMapa key={foto.id} token={token}
                           proyectoId={datos.proyecto.id} evidenciaId={foto.id}
                           titulo={foto.titulo || 'Fotografía del avance'} compacta />)}
                     </div>
-                  </>}
+                  )}
                   {seleccion?.tipo === 'actividad' && <div className="mapa-impacto__atajos">
                     <p>Avances asociados:</p>
                     {datos.avances.filter((v) => v.actividadId === seleccion.id).map((avance) =>
