@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import MapaReactFlow from './componentes/MapaReactFlow';
-import FotografiaPrivadaMapa from './componentes/FotografiaPrivadaMapa';
+import GaleriaFlotanteMapa from './componentes/GaleriaFlotanteMapa';
 import EspacioMapaGrid from './componentes/EspacioMapaGrid';
 import {
   listarProyectosMapa, obtenerMapaProyecto, obtenerPreferenciasMapa, guardarPreferenciasMapa,
@@ -16,6 +16,7 @@ export default function PaginaMapaImpacto({ token, usuarioId }: { token: string;
   const [proyectoId, setProyectoId] = useState('');
   const [datos, setDatos] = useState<DetalleImpacto | null>(null);
   const [seleccion, setSeleccion] = useState<Seleccion>(null);
+  const [galeriaAvanceId, setGaleriaAvanceId] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
   const [busqueda, setBusqueda] = useState('');
@@ -86,7 +87,7 @@ export default function PaginaMapaImpacto({ token, usuarioId }: { token: string;
   useEffect(() => {
     if (!proyectoId) { setDatos(null); setSeleccion(null); return; }
     let activo = true;
-    setCargando(true); setError(''); setDatos(null); setSeleccion(null);
+    setCargando(true); setError(''); setDatos(null); setSeleccion(null); setGaleriaAvanceId(null);
     obtenerMapaProyecto(token, proyectoId).then((respuesta) => {
       if (activo) {
         setDatos(respuesta);
@@ -175,7 +176,10 @@ export default function PaginaMapaImpacto({ token, usuarioId }: { token: string;
             mapa={<MapaReactFlow datos={datos} usuarioId={usuarioId} seleccion={seleccion}
               posicionesIniciales={preferencias?.nodos}
               onGuardar={(nodos) => persistirDiseño(datos.proyecto.id, 'nodos', nodos)}
-              seleccionar={(tipo, id) => setSeleccion({ tipo, id })} />}
+              seleccionar={(tipo, id) => {
+                setSeleccion({ tipo, id });
+                if (tipo === 'evidencias') setGaleriaAvanceId(id);
+              }} />}
             detalle={<aside className="mapa-impacto__detalle" aria-live="polite">
               <div className="mapa-impacto__detalle-titulo">
                 <h2>Detalle del elemento</h2>
@@ -191,12 +195,10 @@ export default function PaginaMapaImpacto({ token, usuarioId }: { token: string;
                     {' '}Seleccioná el nodo de Evidencias para abrir la galería.
                   </p>}
                   {seleccion?.tipo === 'evidencias' && (
-                    <div className="mapa-impacto__galeria" aria-label="Galería de fotografías del avance">
-                      {datos.evidencias.filter((foto) => foto.avanceId === seleccion.id).map((foto) =>
-                        <FotografiaPrivadaMapa key={foto.id} token={token}
-                          proyectoId={datos.proyecto.id} evidenciaId={foto.id}
-                          titulo={foto.titulo || 'Fotografía del avance'} compacta />)}
-                    </div>
+                    <button type="button" className="mapa-impacto__abrir-galeria"
+                      onClick={() => setGaleriaAvanceId(seleccion.id)}>
+                      Ver galería flotante
+                    </button>
                   )}
                   {seleccion?.tipo === 'actividad' && <div className="mapa-impacto__atajos">
                     <p>Avances asociados:</p>
@@ -210,6 +212,11 @@ export default function PaginaMapaImpacto({ token, usuarioId }: { token: string;
               ) : <p>Seleccioná un nodo para consultar su información y, cuando corresponda, abrir sus fotografías.</p>}
             </aside>} />
         </>
+      )}
+      {datos && galeriaAvanceId && (
+        <GaleriaFlotanteMapa token={token} proyectoId={datos.proyecto.id}
+          fotos={datos.evidencias.filter((foto) => foto.avanceId === galeriaAvanceId)}
+          cerrar={() => setGaleriaAvanceId(null)} />
       )}
       <p className="mapa-impacto__nota">Podés organizar paneles y nodos a tu gusto: su distribución se guarda por usuario y proyecto en Neon, con una copia local de respaldo. Las conexiones y los registros reales no cambian.
         La visualización para donantes tendrá permisos y datos específicos en una fase posterior.</p>
