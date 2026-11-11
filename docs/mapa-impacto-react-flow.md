@@ -86,3 +86,29 @@ El archivo `frontend/package-lock.json` ya se regeneró y se versionó en `devel
 5. Desactivar «Mover nodos» y comprobar que los elementos siguen siendo seleccionables, pero no arrastrables.
 6. Usar «Restablecer posiciones» y comprobar que se recupera el diseño automático.
 7. Comprobar que el formulario de proyectos, el estado de avances y el registro de evidencias no cambian por mover un nodo.
+
+## Incremento 1D — GridStack y fotografías privadas renovables
+
+### Fotografías R2
+- El navegador recibió `ExpiredRequest` al abrir enlaces firmados antiguos: la carga en R2 y su registro en Neon ya estaban confirmados; el error era la **caducidad del enlace GET**.
+- Backend: `GET /api/mapa-impacto/proyectos/:proyectoId/evidencias/:evidenciaId/enlace` genera un enlace GET de una hora bajo autenticación, permiso `proyectos.ver`, rol permitido y comprobación de organización; responde `Cache-Control: no-store`.
+- El componente `FotografiaPrivadaMapa.tsx` pide un enlace fresco cuando monta una miniatura. Si la imagen falla, solicita otro enlace una sola vez; si vuelve a fallar, muestra el error sin bucle. Al pulsar «Abrir fotografía» **siempre solicita un enlace nuevo**, por lo que el botón no reutiliza una URL caducada.
+- Las claves de R2 siguen siendo privadas: las URLs firmadas solo tienen duración limitada. No publicar ni copiar URLs firmadas en tickets.
+
+### Distribución de paneles
+- `EspacioMapaGrid.tsx` usa **GridStack** con dos widgets: Diagrama (React Flow) e Información seleccionada.
+- Se mueve un panel arrastrando solo su cabecera; las acciones internas del mapa no disparan movimiento del panel.
+- El usuario puede ajustar tamaños y posiciones. El diseño se guarda en `localStorage` por usuario y proyecto con clave `semilla:mapa-impacto:grid:v1:<usuarioId>:<proyectoId>`, y puede restablecerlo.
+- React Flow gestiona por separado las posiciones de **nodos** y su clave de almacenamiento. Mover un panel nunca modifica la relación comunitaria, ni altera las evidencias o actividades.
+- En pantallas estrechas GridStack cambia a una columna y deshabilita el arrastre de los paneles, conservando el uso de React Flow.
+- **No** se sincroniza aún este diseño con Neon; la distribución queda solo en el navegador.
+
+### Validaciones
+1. Abrir Aula para Kinder, seleccionar el avance con tres fotos, verificar las miniaturas y abrirlas.
+2. Dejar el mapa abierto más de cinco minutos y pulsar «Abrir fotografía»: debe generarse un enlace fresco, sin error `ExpiredRequest`.
+3. Simular imagen inaccesible: mostrar un error y permitir navegar sin bloqueo.
+4. Redimensionar el panel Diagrama y mover el panel Detalles por la cabecera; comprobar que React Flow se adapta.
+5. Arrastrar un nodo dentro del grafo; confirmar que no se desplaza el widget GridStack.
+6. Cambiar de módulo y regresar: las posiciones de nodos y paneles deben permanecer.
+7. Restablecer paneles y restablecer nodos por separado; comprobar que ninguna acción cambia registros de Neon.
+8. Verificar permisos de otro usuario y otra organización.
