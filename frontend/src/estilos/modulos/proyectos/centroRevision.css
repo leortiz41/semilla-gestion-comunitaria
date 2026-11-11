@@ -54,3 +54,13 @@
 @keyframes revision-centro-girar{to{transform:rotate(360deg)}}
 .revision-centro__actualizado{display:inline-flex;align-items:center;gap:.32rem;color:#447458;font-size:.73rem;font-weight:700}
 @media(prefers-reduced-motion:reduce){.revision-centro__icono-girando{animation:none}.revision-centro__actualizar{transition:none}}
+
+/* Alinear la base de los filtros y del botón, no sus centros verticales.
+   Los filtros tienen una etiqueta encima; el botón no. */
+.revision-centro__filtros{align-items:flex-end}
+.revision-centro__actualizar-grupo{align-self:flex-end}
+.revision-centro__actualizar{min-height:42px}
+@media(max-width:760px){
+  .revision-centro__filtros{align-items:flex-end}
+  .revision-centro__actualizar-grupo{align-self:flex-end}
+}
