@@ -50,23 +50,30 @@ proyectosRouter.get('/evidencias/indice', async (req, res) => {
       `SELECT av.id AS "avanceId", a.id AS "actividadId", p.id AS "proyectoId",
          p.nombre AS proyecto, a.nombre AS actividad, c.nombre AS comunidad,
          av.fecha_avance::text AS fecha, av.estado_revision AS "estadoRevision",
-         COUNT(ev.id)::int AS "cantidadEvidencias"
-       FROM evidencias ev
-       JOIN avances_proyecto av ON av.id = ev.avance_proyecto_id
-         AND av.proyecto_id = ev.proyecto_id
-       JOIN actividades_programadas a ON a.id = av.actividad_id AND a.proyecto_id = av.proyecto_id
-       JOIN proyectos p ON p.id = a.proyecto_id
-       JOIN comunidades c ON c.id = p.comunidad_id
-       WHERE c.organizacion_id = $1 AND ev.tipo_mime IN ('image/jpeg', 'image/png', 'image/webp')
-       GROUP BY av.id, a.id, p.id, p.nombre, a.nombre, c.nombre, av.fecha_avance, av.estado_revision
-       ORDER BY av.fecha_avance DESC, av.id DESC
-       LIMIT 200`,
+         av.comentarios AS descripcion, av.observaciones,
+         av.cantidad_reportada::float8 AS "cantidadReportada",
+         av.porcentaje_avance::float8 AS "porcentajeAvance",
+         av.revisado_en AS "revisadoEn", av.motivo_devolucion AS "motivoDevolucion",
+         COALESCE(u.email, '') AS responsable,
+         COALESCE(rev.email, '') AS revisor,
+         (SELECT COUNT(*)::int FROM evidencias ev
+           WHERE ev.proyecto_id=p.id AND ev.avance_proyecto_id=av.id
+             AND ev.tipo_mime IN ('image/jpeg','image/png','image/webp')) AS "cantidadEvidencias"
+       FROM avances_proyecto av
+       JOIN actividades_programadas a ON a.id=av.actividad_id AND a.proyecto_id=av.proyecto_id
+       JOIN proyectos p ON p.id=a.proyecto_id
+       JOIN comunidades c ON c.id=p.comunidad_id
+       LEFT JOIN usuarios u ON u.id=av.responsable_usuario_id
+       LEFT JOIN usuarios rev ON rev.id=av.revisor_usuario_id
+       WHERE c.organizacion_id=$1
+       ORDER BY av.fecha_avance DESC, av.creado_en DESC, av.id DESC
+       LIMIT 500`,
       [req.auth!.organizacionId],
     );
     res.json({ avances: rows });
   } catch (error) {
     console.error('Error consultando índice de evidencias:', error);
-    res.status(500).json({ message: 'No fue posible localizar los avances con fotografías.' });
+    res.status(500).json({ message: 'No fue posible consultar el expediente documental de avances.' });
   }
 });
 
