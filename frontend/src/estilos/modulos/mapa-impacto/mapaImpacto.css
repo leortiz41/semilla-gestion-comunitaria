@@ -129,3 +129,9 @@
 .mapa-impacto__nodo-estado{display:inline-flex;padding:.17rem .4rem;border-radius:999px;background:#e7f2e9;color:#296741;font-weight:750}
 .mapa-impacto__metricas-avance{display:flex;flex-wrap:wrap;gap:.45rem}
 .mapa-impacto__metricas-avance span{padding:.45rem .6rem;border:1px solid #d8e5dd;background:#f7faf7;border-radius:.55rem;color:#486655;font-size:.75rem}
+
+/* Filtros independientes para seleccionar comunidad y proyecto sin estados ambiguos. */
+.mapa-impacto__herramientas label{min-width:min(100%,175px)}
+.mapa-impacto__herramientas label:nth-child(2){flex:1.25}
+.mapa-impacto__herramientas label:nth-child(3){flex:1.45}
+@media(max-width:760px){.mapa-impacto__herramientas label{flex:1 1 100%}}
