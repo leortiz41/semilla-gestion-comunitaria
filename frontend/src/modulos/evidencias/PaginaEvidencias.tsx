@@ -247,6 +247,31 @@ export default function PaginaEvidencias({
                 Motivo de devolución: {seleccionado.motivoDevolucion}
               </p>}
             </div>
+            {actividadActual && (
+              <div className="evidencias-centro__bloque">
+                <h3><ClipboardCheck size={17} aria-hidden="true"/> Meta y contexto de la actividad</h3>
+                <p>{actividadActual.descripcion || 'Actividad sin descripción adicional.'}</p>
+                <div className="evidencias-centro__datos">
+                  {actividadActual.metaCantidad !== null &&
+                    <span>Meta planificada <strong>{actividadActual.metaCantidad} {actividadActual.unidadMedida || ''}</strong></span>}
+                  {actividadActual.metaCantidad !== null &&
+                    <span>Cantidad validada de la actividad <strong>{actividadActual.cantidadValidada} {actividadActual.unidadMedida || ''}</strong></span>}
+                  <span>Resultado informado <strong>{actividadActual.porcentajeResultado}%</strong></span>
+                </div>
+              </div>
+            )}
+            {avanceActual && avanceActual.historial.length > 0 && (
+              <div className="evidencias-centro__bloque">
+                <h3><Clock3 size={17} aria-hidden="true"/> Historial de revisión</h3>
+                <ol className="evidencias-centro__historial">
+                  {avanceActual.historial.slice(-8).reverse().map((evento, index) =>
+                    <li key={`${evento.fecha}-${evento.accion}-${index}`}>
+                      <strong>{evento.accion.replaceAll('_', ' ')}</strong>
+                      <span>{evento.actor || 'Sistema'} · {evento.fecha ? new Date(evento.fecha).toLocaleString('es-HN') : 'Sin fecha'}</span>
+                    </li>)}
+                </ol>
+              </div>
+            )}
             <div className="evidencias-centro__bloque">
               <h3><Archive size={17} aria-hidden="true"/> Respaldo fotográfico
                 <span className="evidencias-centro__contador">{seleccionado.cantidadEvidencias}</span></h3>
