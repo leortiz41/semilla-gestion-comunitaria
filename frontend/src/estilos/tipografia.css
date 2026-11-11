@@ -1,0 +1,144 @@
+/* Sistema tipográfico Semilla — lectura cómoda y jerarquía consistente.
+   Manrope: títulos, navegación y acciones. Source Sans 3: contenido, formularios y datos.
+   Ambas tienen respaldo local en caso de no poder cargar Google Fonts. */
+:root {
+  --fuente-titulos: 'Manrope', 'Avenir Next', 'Segoe UI', sans-serif;
+  --fuente-texto: 'Source Sans 3', 'Segoe UI', 'Helvetica Neue', sans-serif;
+  --texto-xs: .78rem;
+  --texto-sm: .875rem;
+  --texto-base: 1rem;
+  --texto-lg: 1.125rem;
+  --titulo-seccion: clamp(1.15rem, 1.4vw, 1.4rem);
+  --titulo-modulo: clamp(1.85rem, 2.7vw, 2.55rem);
+  --interlineado-texto: 1.5;
+  --interlineado-titulo: 1.18;
+}
+html {font-size: 16px}
+body {
+  font-family: var(--fuente-texto);
+  font-size: var(--texto-base);
+  font-weight: 400;
+  line-height: var(--interlineado-texto);
+  letter-spacing: 0;
+}
+:where(h1,h2,h3,h4,h5,h6) {
+  font-family: var(--fuente-titulos);
+  font-weight: 700;
+  line-height: var(--interlineado-titulo);
+  letter-spacing: -.025em;
+  text-wrap: pretty;
+}
+:where(p,li,dd,dt) {line-height: var(--interlineado-texto)}
+:where(button,input,select,textarea) {
+  font-family: var(--fuente-texto);
+  font-size: var(--texto-sm);
+  line-height: 1.35;
+}
+:where(button) {font-weight: 600}
+:where(label,small) {line-height: 1.4}
+:where(strong,b) {font-weight: 700}
+:where(code,pre,kbd,samp) {font-family: ui-monospace, SFMono-Regular, Consolas, monospace}
+
+/* Encabezados de módulo: priorizar lectura sobre titulares de marketing. */
+.pagina-modulo .pagina-modulo__titulo {
+  font-family: var(--fuente-titulos);
+  font-size: var(--titulo-modulo);
+  font-weight: 750;
+  line-height: 1.16;
+  letter-spacing: -.037em;
+}
+.pagina-modulo .pagina-modulo__etiqueta {
+  font-family: var(--fuente-titulos);
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .075em;
+}
+.pagina-modulo .pagina-modulo__descripcion {
+  max-width: 72ch;
+  font-size: var(--texto-base);
+  line-height: 1.55;
+}
+.pagina-modulo .pagina-modulo__encabezado {
+  gap: .4rem;
+}
+:where(.pagina-modulo,.estructura-administrativa) :is(h2,h3) {
+  font-family: var(--fuente-titulos);
+  letter-spacing: -.025em;
+}
+.proyectos-explorador__encabezado h2,
+.revision-centro__cabecera h2,
+.proyecto-resumen__titulo h3,
+.evidencias-centro__seccion-titulo h2 {
+  font-size: var(--titulo-seccion);
+  font-weight: 700;
+  line-height: 1.3;
+}
+.proyectos-tarjeta__cabecera h3,
+.evidencias-centro__registro-superior strong {
+  font-family: var(--fuente-titulos);
+  font-weight: 700;
+  line-height: 1.35;
+}
+:where(.barra-lateral__opcion,.barra-lateral__subopcion) {
+  font-family: var(--fuente-texto);
+  letter-spacing: 0;
+}
+.barra-lateral__opcion,
+.barra-lateral__opcion--activa {
+  font-size: .94rem;
+  font-weight: 600;
+}
+.barra-lateral__opcion--activa {font-weight: 700}
+.barra-lateral__titulo,
+.encabezado-administrativo__etiqueta,
+.revision-centro__eyebrow,
+.evidencias-centro__sobretitulo {
+  font-family: var(--fuente-titulos);
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .075em;
+}
+:where(.proyectos-explorador__pestanas button,.proyectos-tarjeta__acciones button,
+.revision-centro__filtros button,.evidencias-centro__vistas button) {
+  font-family: var(--fuente-texto);
+  font-weight: 600;
+}
+:where(.evidencias-centro__filtros,.revision-centro__filtros,.proyectos-explorador__filtros) label {
+  font-size: var(--texto-sm);
+  font-weight: 600;
+}
+:where(.evidencias-centro__filtros,.revision-centro__filtros,.proyectos-explorador__filtros)
+  :is(input,select) {font-size: var(--texto-sm)}
+:where(.proyectos-tarjeta__datos,.evidencias-centro__datos) dt {
+  font-size: var(--texto-xs);
+  font-weight: 500;
+}
+:where(.proyectos-tarjeta__datos,.evidencias-centro__datos) dd {
+  font-size: var(--texto-sm);
+  font-weight: 600;
+}
+:where(.proyectos-tarjeta,.evidencias-centro__registro) {
+  line-height: 1.45;
+}
+:where(.evidencias-centro__descripcion,.evidencias-centro__ubicacion,
+.proyectos-tarjeta__comunidad) {font-size: var(--texto-sm)}
+:where(.pagina-modulo__estado,.evidencias-centro__estado) {
+  font-family: var(--fuente-texto);
+  font-size: var(--texto-xs);
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+/* Titulares especiales sin interferir con escalas de gráficos o nodos React Flow. */
+.dashboard-title,.auth-title {
+  font-family: var(--fuente-titulos);
+  font-size: clamp(2rem, 3.2vw, 3.1rem);
+  font-weight: 750;
+  line-height: 1.1;
+  letter-spacing: -.04em;
+}
+.hero h1 {font-family: var(--fuente-titulos);letter-spacing: -.055em}
+@media(max-width:600px) {
+  :root {--titulo-modulo: 1.8rem;--titulo-seccion: 1.12rem}
+  .pagina-modulo .pagina-modulo__descripcion {font-size: .94rem}
+}
