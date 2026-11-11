@@ -112,3 +112,27 @@ El archivo `frontend/package-lock.json` ya se regeneró y se versionó en `devel
 6. Cambiar de módulo y regresar: las posiciones de nodos y paneles deben permanecer.
 7. Restablecer paneles y restablecer nodos por separado; comprobar que ninguna acción cambia registros de Neon.
 8. Verificar permisos de otro usuario y otra organización.
+
+## Incremento 1E — Persistencia de preferencias en Neon
+
+- Migración **023**: `database/sql/023_preferencias_mapa_impacto.sql`. Aplicada **solo en Neon development**. No ejecutar automáticamente sobre producción.
+- Tabla `preferencias_mapa_impacto` con clave `(usuario_id, organizacion_id, proyecto_id)` y configuración JSONB. No modifica proyectos, avances ni evidencias.
+- Rutas protegidas:
+  - `GET /api/mapa-impacto/proyectos/:proyectoId/preferencias`
+  - `PATCH /api/mapa-impacto/proyectos/:proyectoId/preferencias` con `{tipo:"paneles"|"nodos", valor:...}`.
+- El backend toma identidad y organización del JWT, verifica pertenencia del proyecto y valida los tamaños, identificadores y coordenadas. Escrituras parciales con `jsonb_set` para evitar que guardar un nodo sobrescriba GridStack, y viceversa.
+- El frontend espera la carga de preferencias antes de mostrar los paneles, reutiliza una configuración local anterior si aún no existe en Neon y mantiene copia local de respaldo.
+- GridStack persiste posición y tamaño cuando finaliza el arrastre o redimensionamiento; React Flow persiste posiciones de nodos al soltarlos o restablecerlos.
+- Se serializan los guardados rápidos del mismo usuario para evitar que una respuesta anterior reemplace una distribución posterior.
+- **En producción** se deberá aplicar migración 023 antes de desplegar el backend con estas rutas.
+
+### Prueba funcional obligatoria
+1. Actualizar `develop`, reiniciar frontend y backend.
+2. Mover panel de detalles, ampliar diagrama y arrastrar dos nodos de un proyecto.
+3. Cambiar de módulo y regresar: verificar tamaños/ubicaciones.
+4. Recargar el navegador: verificar la misma distribución.
+5. Iniciar sesión con el mismo usuario en otro navegador y seleccionar el mismo proyecto: verificar sincronización.
+6. Abrir otro proyecto: debe conservar diseño independiente.
+7. Iniciar sesión con otra cuenta: no debe heredar preferencias ajenas.
+8. Probar «Restablecer paneles» y «Restablecer posiciones» por separado: la restauración debe persistir.
+9. En caso de caída de backend, observar aviso y uso de copia local; no afirmar sincronización hasta que una escritura vuelva a funcionar.
