@@ -59,6 +59,7 @@ export default function MapaReactFlow({
     } catch { return {}; }
   });
   const [edicionVisual, setEdicionVisual] = useState(true);
+  const [mostrarMinimapa, setMostrarMinimapa] = useState(true);
 
   const { nodes, edges, omitidos, encontrados } = useMemo(() => {
     const actividades = datos.actividades.slice(0, 24);
@@ -243,6 +244,10 @@ export default function MapaReactFlow({
             {edicionVisual ? 'Mover nodos: activo' : 'Mover nodos: inactivo'}
           </button>
           <button type="button" className="mapa-impacto__centrar" onClick={ajustarVista}>Centrar</button>
+          <button type="button" aria-pressed={mostrarMinimapa}
+            onClick={() => setMostrarMinimapa((actual) => !actual)}>
+            {mostrarMinimapa ? 'Ocultar minimapa' : 'Mostrar minimapa'}
+          </button>
           <button type="button" onClick={restablecerDisposicion}>Restablecer posiciones</button>
         </div>
       </div>
@@ -256,9 +261,10 @@ export default function MapaReactFlow({
           proOptions={{ hideAttribution: false }}>
           <Background color="#becbd8" gap={22} size={1} />
           <Controls showInteractive={false} />
-          <MiniMap pannable zoomable
+          {mostrarMinimapa && <MiniMap pannable zoomable
+            style={{ width: 120, height: 80 }}
             nodeColor={(n) => n.id.startsWith('evidencia:') ? '#456cba'
-              : n.id.startsWith('avance:') ? '#b87825' : '#318b72'} />
+              : n.id.startsWith('avance:') ? '#b87825' : '#318b72'} />}
         </ReactFlow>
       </div>
       <div className="mapa-impacto__leyenda">
