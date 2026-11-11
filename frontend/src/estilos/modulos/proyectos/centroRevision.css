@@ -44,3 +44,13 @@
 
 .revision-centro__fotos{display:inline-flex;width:fit-content;padding:.2rem .55rem;border:1px solid #cce0c8;background:#f0f8ed;border-radius:999px;color:#356840;font-size:.74rem;font-weight:750}
 .revision-centro__fotos-resumen{margin:.6rem 0 0!important;color:#476b4d!important;font-weight:700;font-size:.8rem}
+
+/* Acción de actualización: estados de carga y confirmación accesibles. */
+.revision-centro__actualizar-grupo{display:flex;align-items:center;gap:.65rem;flex-wrap:wrap}
+.revision-centro__actualizar{display:inline-flex;align-items:center;justify-content:center;gap:.55rem;border:1px solid #a6cbb0;border-radius:.7rem;background:#e6f3e9;color:#265c39;padding:.72rem 1rem;font:inherit;font-size:.82rem;font-weight:750;cursor:pointer;transition:background .15s,border-color .15s,box-shadow .15s}
+.revision-centro__actualizar:hover:not(:disabled){background:#d8ebdd;border-color:#6fa581;box-shadow:0 3px 10px #30684418}
+.revision-centro__actualizar:disabled{opacity:.75;cursor:progress}
+.revision-centro__icono-girando{animation:revision-centro-girar 1s linear infinite}
+@keyframes revision-centro-girar{to{transform:rotate(360deg)}}
+.revision-centro__actualizado{display:inline-flex;align-items:center;gap:.32rem;color:#447458;font-size:.73rem;font-weight:700}
+@media(prefers-reduced-motion:reduce){.revision-centro__icono-girando{animation:none}.revision-centro__actualizar{transition:none}}
