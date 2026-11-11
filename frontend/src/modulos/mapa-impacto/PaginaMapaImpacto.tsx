@@ -20,6 +20,7 @@ export default function PaginaMapaImpacto({ token, usuarioId }: { token: string;
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
   const [busqueda, setBusqueda] = useState('');
+  const [comunidadFiltro, setComunidadFiltro] = useState('');
   const [recarga, setRecarga] = useState(0);
   const [preferencias, setPreferencias] = useState<PreferenciasMapaImpacto | null>(null);
   const [preferenciasProyecto, setPreferenciasProyecto] = useState('');
@@ -85,21 +86,28 @@ export default function PaginaMapaImpacto({ token, usuarioId }: { token: string;
   }, [token]);
 
   useEffect(() => {
-    if (!proyectoId) { setDatos(null); setSeleccion(null); return; }
+    if (!proyectoId) { setDatos(null); setSeleccion(null); setCargando(false); return; }
     let activo = true;
-    setCargando(true); setError(''); setDatos(null); setSeleccion(null); setGaleriaAvanceId(null);
+    setCargando(true); setError(''); setDatos(null); setSeleccion(null);
+    setPreferenciasProyecto(''); setGaleriaAvanceId(null);
     obtenerMapaProyecto(token, proyectoId).then((respuesta) => {
-      if (activo) {
-        setDatos(respuesta);
-        setSeleccion({ tipo: 'proyecto', id: respuesta.proyecto.id });
-      }
+      if (!activo) return;
+      if (respuesta.proyecto.id !== proyectoId) throw new Error('El proyecto recuperado no coincide con la selección.');
+      setDatos(respuesta);
+      setSeleccion({ tipo: 'proyecto', id: respuesta.proyecto.id });
     }).catch((fallo: Error) => { if (activo) setError(fallo.message); })
       .finally(() => { if (activo) setCargando(false); });
     return () => { activo = false; };
   }, [token, proyectoId, recarga]);
 
+  const comunidades = Array.from(new Set(proyectos.map((p) => p.comunidad))).sort(
+    (a, b) => a.localeCompare(b, 'es'),
+  );
   const seleccionados = proyectos.filter((p) =>
-    `${p.nombre} ${p.comunidad} ${p.tipo}`.toLowerCase().includes(busqueda.toLowerCase().trim()));
+    (!comunidadFiltro || p.comunidad === comunidadFiltro) &&
+    `${p.nombre} ${p.comunidad} ${p.tipo}`.toLocaleLowerCase('es')
+      .includes(busqueda.trim().toLocaleLowerCase('es')));
+  const proyectoElegidoVisible = seleccionados.some((p) => p.id === proyectoId);
   const item = !datos || !seleccion ? null :
     seleccion.tipo === 'comunidad' ? {
       titulo: datos.proyecto.comunidad, descripcion: 'Comunidad asociada al proyecto.',
@@ -146,13 +154,44 @@ export default function PaginaMapaImpacto({ token, usuarioId }: { token: string;
           disabled={!proyectoId || cargando}>{cargando ? 'Actualizando…' : 'Actualizar mapa'}</button>
       </header>
       <div className="mapa-impacto__herramientas">
+        <label>Comunidad
+          <select value={comunidadFiltro} onChange={(e) => {
+            const comunidad = e.target.value;
+            setComunidadFiltro(comunidad);
+            const encontrados = proyectos.filter((p) =>
+              (!comunidad || p.comunidad === comunidad) &&
+              `${p.nombre} ${p.comunidad} ${p.tipo}`.toLocaleLowerCase('es')
+                .includes(busqueda.trim().toLocaleLowerCase('es')));
+            if (encontrados.length && !encontrados.some((p) => p.id === proyectoId)) {
+              setProyectoId(encontrados[0].id);
+            }
+          }}>
+            <option value="">Todas las comunidades</option>
+            {comunidades.map((comunidad) =>
+              <option key={comunidad} value={comunidad}>{comunidad}</option>)}
+          </select>
+        </label>
         <label>Buscar proyectos
-          <input value={busqueda} onChange={(e) => setBusqueda(e.target.value)}
-            placeholder="Nombre, comunidad o área" />
+          <input value={busqueda} onChange={(e) => {
+            const texto = e.target.value;
+            setBusqueda(texto);
+            const encontrados = proyectos.filter((p) =>
+              (!comunidadFiltro || p.comunidad === comunidadFiltro) &&
+              `${p.nombre} ${p.comunidad} ${p.tipo}`.toLocaleLowerCase('es')
+                .includes(texto.trim().toLocaleLowerCase('es')));
+            if (encontrados.length && !encontrados.some((p) => p.id === proyectoId)) {
+              setProyectoId(encontrados[0].id);
+            }
+          }} placeholder="Nombre, comunidad o tipo de proyecto" />
         </label>
         <label>Proyecto a explorar
-          <select value={proyectoId} onChange={(e) => setProyectoId(e.target.value)}>
-            {seleccionados.length === 0 && <option value={proyectoId}>Sin coincidencias</option>}
+          <select value={proyectoElegidoVisible ? proyectoId : ''}
+            onChange={(e) => {
+              if (e.target.value) setProyectoId(e.target.value);
+            }}>
+            {!proyectoElegidoVisible && <option value="">
+              {seleccionados.length ? 'Seleccioná un proyecto' : 'Sin coincidencias'}
+            </option>}
             {seleccionados.map((p) => <option key={p.id} value={p.id}>
               {p.nombre} · {p.comunidad}
             </option>)}
@@ -164,9 +203,14 @@ export default function PaginaMapaImpacto({ token, usuarioId }: { token: string;
       {error && <p role="alert" className="mapa-impacto__error">{error}</p>}
       {avisoPreferencias && <p role="status" className="mapa-impacto__aviso">{avisoPreferencias}</p>}
       {cargando && <p role="status">Construyendo el mapa con los datos de Neon…</p>}
+      {!cargando && seleccionados.length === 0 && proyectos.length > 0 &&
+        <p role="status" className="mapa-impacto__vacio">
+          No hay proyectos que coincidan con los filtros. Cambiá la comunidad o el texto de búsqueda.
+        </p>}
       {!cargando && proyectos.length === 0 && !error &&
         <p className="mapa-impacto__vacio">Todavía no hay proyectos registrados en tu organización.</p>}
-      {datos && !cargando && preferenciasProyecto === datos.proyecto.id && (
+      {datos && !cargando && proyectoElegidoVisible && datos.proyecto.id === proyectoId &&
+        preferenciasProyecto === proyectoId && (
         <>
           <div className="mapa-impacto__resumen">
             <span><strong>{datos.actividades.length}</strong> actividades</span>
@@ -227,7 +271,7 @@ export default function PaginaMapaImpacto({ token, usuarioId }: { token: string;
             </aside>} />
         </>
       )}
-      {datos && galeriaAvanceId && (
+      {datos && datos.proyecto.id === proyectoId && galeriaAvanceId && (
         <GaleriaFlotanteMapa token={token} proyectoId={datos.proyecto.id}
           fotos={datos.evidencias.filter((foto) => foto.avanceId === galeriaAvanceId)}
           cerrar={() => setGaleriaAvanceId(null)} />
