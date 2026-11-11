@@ -88,3 +88,15 @@
  .mapa-impacto__grid .grid-stack-item-content{min-height:0}
  .mapa-impacto__layout-tools{display:none}
 }
+
+/* Visor de fotografías montado en document.body para no quedar cortado por GridStack. */
+.mapa-impacto__visor-modal{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;padding:clamp(12px,3vw,32px);box-sizing:border-box;background:rgba(13,27,35,.82);backdrop-filter:blur(5px)}
+.mapa-impacto__visor-modal-contenido{width:min(100%,1100px);max-height:calc(100dvh - 24px);display:flex;flex-direction:column;overflow:hidden;background:#fff;border-radius:1rem;box-shadow:0 20px 65px #0007}
+.mapa-impacto__visor-modal-cabecera{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:.85rem 1.15rem;background:#f8fafb;border-bottom:1px solid #dce6eb}
+.mapa-impacto__visor-modal-cabecera h2{margin:0;min-width:0;color:#254e39;font-size:clamp(.9rem,2vw,1.1rem);overflow-wrap:anywhere}
+.mapa-impacto__visor-modal-cabecera button{flex:none;border:1px solid #cbdcd3;border-radius:.6rem;background:#fff;color:#285942;font:inherit;font-weight:700;font-size:.85rem;padding:.55rem .75rem;cursor:pointer}
+.mapa-impacto__visor-modal-cabecera button:focus-visible{outline:3px solid #d6a15e;outline-offset:2px}
+.mapa-impacto__visor-modal-imagen{display:flex;align-items:center;justify-content:center;flex:1;min-height:180px;padding:1rem;overflow:auto;background:#192833}
+.mapa-impacto__visor-modal-imagen img{display:block;max-width:100%;max-height:calc(100dvh - 130px);width:auto;height:auto;object-fit:contain;border-radius:.35rem}
+.mapa-impacto__visor-modal-imagen p{margin:0;color:#f2f5f8;font-size:.9rem;text-align:center}
+@media(max-width:600px){.mapa-impacto__visor-modal{padding:8px}.mapa-impacto__visor-modal-cabecera{padding:.65rem .75rem}.mapa-impacto__visor-modal-imagen{padding:.45rem}}
