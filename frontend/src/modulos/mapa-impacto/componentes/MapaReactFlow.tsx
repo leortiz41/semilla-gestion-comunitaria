@@ -7,7 +7,7 @@ import '@xyflow/react/dist/style.css';
 import { MapPinned, FolderKanban, ListChecks, ClipboardCheck, Image as ImageIcon } from 'lucide-react';
 import type { DetalleImpacto, PosicionesNodosMapa } from '../../../servicios/mapa-impacto/servicioMapaImpacto';
 
-type TipoNodo = 'comunidad' | 'proyecto' | 'actividad' | 'avance' | 'evidencia';
+type TipoNodo = 'comunidad' | 'proyecto' | 'actividad' | 'avance' | 'evidencias';
 type NivelMapa = 'resumen' | 'completo';
 
 const iconos = {
@@ -15,7 +15,7 @@ const iconos = {
   proyecto: FolderKanban,
   actividad: ListChecks,
   avance: ClipboardCheck,
-  evidencia: ImageIcon,
+  evidencias: ImageIcon,
 } satisfies Record<TipoNodo, typeof MapPinned>;
 
 const colores: Record<TipoNodo, { fondo: string; borde: string; nombre: string }> = {
@@ -23,7 +23,7 @@ const colores: Record<TipoNodo, { fondo: string; borde: string; nombre: string }
   proyecto: { fondo: '#ffffff', borde: '#245b82', nombre: 'Proyecto' },
   actividad: { fondo: '#ffffff', borde: '#428c54', nombre: 'Actividad' },
   avance: { fondo: '#ffffff', borde: '#b87825', nombre: 'Avance' },
-  evidencia: { fondo: '#ffffff', borde: '#456cba', nombre: 'Fotografía' },
+  evidencias: { fondo: '#ffffff', borde: '#456cba', nombre: 'Evidencias' },
 };
 const nombreEstado: Record<string, string> = {
   VALIDADO: 'Validado', ENVIADO: 'En revisión', BORRADOR: 'Borrador',
@@ -130,16 +130,19 @@ export default function MapaReactFlow({
         avancesActividad.forEach((avance) => {
           const fotos = evidencias.filter((ev) => ev.avanceId === avance.id);
           const mostrarFotos = nivel === 'completo' || avancesAbiertos.includes(avance.id);
-          const altura = mostrarFotos && fotos.length ? Math.max(94, fotos.length * 85) : 105;
+          // Una rama conserva siempre la misma altura, independientemente del número de fotografías.
+          const altura = 105;
           const yAvance = siguienteY + (altura - 65) / 2;
           agregar('avance:' + avance.id, 'avance', avance.fecha,
             nombreEstado[avance.estado] || avance.estado, 810, yAvance);
           unir(idActividad, 'avance:' + avance.id);
-          if (mostrarFotos) fotos.forEach((foto, index) => {
-            agregar('evidencia:' + foto.id, 'evidencia', foto.titulo || 'Fotografía',
-              'Ver evidencia', 1080, siguienteY + index * 85);
-            unir('avance:' + avance.id, 'evidencia:' + foto.id);
-          });
+          if (mostrarFotos && fotos.length) {
+            // Nodo agregado con ID estable por avance: no se duplica la galería en el lienzo.
+            agregar('evidencias:' + avance.id, 'evidencias', 'Evidencias del avance',
+              `${fotos.length} ${fotos.length === 1 ? 'fotografía' : 'fotografías'} · ver galería`,
+              1080, yAvance);
+            unir('avance:' + avance.id, 'evidencias:' + avance.id);
+          }
           siguienteY += altura + 25;
         });
       } else siguienteY += 110;
