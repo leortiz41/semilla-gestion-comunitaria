@@ -180,17 +180,15 @@ export default function MapaReactFlow({
   }, []);
 
   const guardarPosiciones = useCallback((_evento: unknown, nodo: Node) => {
-    setPosiciones((actual) => {
-      const siguientes = {
-        ...actual,
-        [nodo.id]: { x: nodo.position.x, y: nodo.position.y },
-      };
-      try { localStorage.setItem(llavePosiciones, JSON.stringify(siguientes)); }
-      catch { /* El navegador puede bloquear almacenamiento. */ }
-      onGuardar?.(siguientes);
-      return siguientes;
-    });
-  }, [llavePosiciones, onGuardar]);
+    const siguientes = {
+      ...posiciones,
+      [nodo.id]: { x: nodo.position.x, y: nodo.position.y },
+    };
+    setPosiciones(siguientes);
+    try { localStorage.setItem(llavePosiciones, JSON.stringify(siguientes)); }
+    catch { /* El navegador puede bloquear almacenamiento. */ }
+    onGuardar?.(siguientes);
+  }, [llavePosiciones, onGuardar, posiciones]);
 
   function restablecerDisposicion() {
     setPosiciones({});
