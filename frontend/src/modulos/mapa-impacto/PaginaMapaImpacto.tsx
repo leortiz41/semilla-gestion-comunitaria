@@ -116,8 +116,12 @@ export default function PaginaMapaImpacto({ token, usuarioId }: { token: string;
     seleccion.tipo === 'avance' ?
       (() => {
         const av = datos.avances.find((v) => v.id === seleccion.id);
-        return av ? { titulo: 'Avance · ' + av.fecha, descripcion: av.descripcion || 'Sin observaciones.',
-          estado: av.estado, foto: null as string | null } : null;
+        return av ? {
+          titulo: 'Avance · ' + av.fecha,
+          descripcion: [av.descripcion, av.observaciones].filter((texto) => !!texto?.trim()).join(' · ')
+            || 'Sin descripción registrada.',
+          estado: av.estado, foto: null as string | null,
+        } : null;
       })() :
     seleccion.tipo === 'evidencias' ?
       (() => {
@@ -190,6 +194,16 @@ export default function PaginaMapaImpacto({ token, usuarioId }: { token: string;
                   <strong>{item.titulo}</strong>
                   <span className="mapa-impacto__estado">{item.estado}</span>
                   <p>{item.descripcion}</p>
+                  {seleccion?.tipo === 'avance' && (() => {
+                    const avance = datos.avances.find((a) => a.id === seleccion.id);
+                    return avance && (avance.cantidadReportada !== null || avance.porcentajeAvance !== null)
+                      ? <div className="mapa-impacto__metricas-avance">
+                          {avance.cantidadReportada !== null &&
+                            <span>Cantidad reportada: <strong>{avance.cantidadReportada}</strong></span>}
+                          {avance.porcentajeAvance !== null &&
+                            <span>Avance informado: <strong>{avance.porcentajeAvance}%</strong></span>}
+                        </div> : null;
+                  })()}
                   {seleccion?.tipo === 'avance' && <p>
                     Evidencias asociadas: {datos.evidencias.filter((f) => f.avanceId === seleccion.id).length}.
                     {' '}Seleccioná el nodo de Evidencias para abrir la galería.
