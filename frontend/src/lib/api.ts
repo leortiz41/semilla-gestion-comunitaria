@@ -549,6 +549,14 @@ export interface AvanceConFotografias {
   fecha: string;
   estadoRevision: 'BORRADOR' | 'ENVIADO' | 'VALIDADO' | 'DEVUELTO';
   cantidadEvidencias: number;
+  descripcion: string | null;
+  observaciones: string | null;
+  cantidadReportada: number | null;
+  porcentajeAvance: number | null;
+  responsable: string | null;
+  revisor: string | null;
+  revisadoEn: string | null;
+  motivoDevolucion: string | null;
 }
 
 export function obtenerIndiceFotografias(token: string) {
