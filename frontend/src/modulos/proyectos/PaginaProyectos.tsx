@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { Check, RefreshCw } from 'lucide-react';
 import {
   guardarProyectoAdministrativo, obtenerProyectosAdministrativos, obtenerAvancesPendientesRevision, revisarAvanceActividadProyecto,
   type AvancePendienteRevision, type ProyectoAdministrativo, type AreaVisionDesarrollo,
@@ -49,6 +50,7 @@ function PaginaProyectos({
   const [verPendientes, setVerPendientes] = useState(false);
   const [pendientes, setPendientes] = useState<AvancePendienteRevision[]>([]);
   const [cargandoPendientes, setCargandoPendientes] = useState(false);
+  const [revisionActualizada, setRevisionActualizada] = useState(false);
   const [motivos, setMotivos] = useState<Record<string, string>>({});
   const [busquedaRevision, setBusquedaRevision] = useState('');
   const [filtroRevision, setFiltroRevision] = useState('todos');
@@ -89,8 +91,9 @@ function PaginaProyectos({
     if (!verPendientes || !puedeRevisarAvance || !puedeVer) return;
     let vigente = true;
     setCargandoPendientes(true);
+    setRevisionActualizada(false);
     obtenerAvancesPendientesRevision(token).then(
-      ({ pendientes: lista }) => { if (vigente) { setPendientes(lista); setError(''); } },
+      ({ pendientes: lista }) => { if (vigente) { setPendientes(lista); setError(''); setRevisionActualizada(true); } },
       (fallo: Error) => { if (vigente) setError(fallo.message); },
     ).finally(() => { if (vigente) setCargandoPendientes(false); });
     return () => { vigente = false; };
@@ -200,8 +203,20 @@ function PaginaProyectos({
                     <option value="otros">Avances de otros</option>
                   </select>
                 </label>
-                <button className="revision-centro__neutral" type="button" disabled={cargandoPendientes}
-                  onClick={() => setRecarga((actual) => actual + 1)}>Actualizar lista</button>
+                <div className="revision-centro__actualizar-grupo">
+                  <button className="revision-centro__actualizar" type="button" disabled={cargandoPendientes}
+                    aria-label={cargandoPendientes ? 'Actualizando avances pendientes' : 'Actualizar lista de avances pendientes'}
+                    onClick={() => setRecarga((actual) => actual + 1)}>
+                    <RefreshCw className={cargandoPendientes ? 'revision-centro__icono-girando' : ''}
+                      size={17} strokeWidth={1.9} aria-hidden="true" />
+                    {cargandoPendientes ? 'Actualizando…' : 'Actualizar lista'}
+                  </button>
+                  {!cargandoPendientes && revisionActualizada && (
+                    <span className="revision-centro__actualizado" role="status">
+                      <Check size={14} aria-hidden="true" /> Lista al día
+                    </span>
+                  )}
+                </div>
               </div>
               {cargandoPendientes && <p role="status">Cargando avances pendientes…</p>}
               {!cargandoPendientes && pendientes.length === 0 && <p role="status">No hay avances pendientes de revisión.</p>}
