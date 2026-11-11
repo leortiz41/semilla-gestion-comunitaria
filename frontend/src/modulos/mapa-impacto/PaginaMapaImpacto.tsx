@@ -43,7 +43,7 @@ export default function PaginaMapaImpacto({ token, usuarioId }: { token: string;
     };
     obtenerPreferenciasMapa(token, proyectoId).then((resultado) => {
       if (!activo) return;
-      const cfg = resultado.configuracion ?? local();
+      const cfg = { ...local(), ...(resultado.configuracion ?? {}) };
       setPreferencias(cfg);
       setAvisoPreferencias('');
       // Mantener una copia de la configuración de Neon en el navegador.
