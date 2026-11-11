@@ -52,3 +52,9 @@
 .proyecto-resumen__cierre{margin:0;padding:.85rem 1rem;border-left:3px solid #5d9366;background:#f0f8ec;border-radius:.55rem;color:#325d3a;font-size:.86rem}
 .proyecto-resumen__acciones{display:flex;gap:.65rem;flex-wrap:wrap}
 .proyecto-resumen__acciones button{padding:.7rem 1rem;border:1px solid #c5d9c3;border-radius:.65rem;background:#edf5e9;color:#32613d;font:inherit;font-weight:700;cursor:pointer}
+
+/* Espacio de trabajo independiente: sin desplazamiento bajo la cartera. */
+.proyectos-espacio{margin-top:.35rem}
+.proyectos-espacio__cerrar{display:inline-flex;align-items:center;justify-content:center;gap:.45rem;font-weight:750}
+.proyectos-espacio__cerrar:hover{background:#e7f1e7;border-color:#97bba4}
+.proyectos-espacio__cerrar:focus-visible{outline:3px solid #d7a15e;outline-offset:2px}
