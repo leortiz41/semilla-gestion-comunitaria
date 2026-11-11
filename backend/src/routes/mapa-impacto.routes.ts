@@ -62,7 +62,10 @@ mapaImpactoRouter.get('/proyectos/:proyectoId', async (req, res) => {
       ),
       databasePool.query(
         `SELECT av.id, av.actividad_id AS "actividadId", av.fecha_avance::text AS fecha,
-           av.comentarios AS descripcion, av.estado_revision AS estado
+           av.comentarios AS descripcion, av.observaciones,
+           av.cantidad_reportada::float8 AS "cantidadReportada",
+           av.porcentaje_avance::float8 AS "porcentajeAvance",
+           av.estado_revision AS estado
          FROM avances_proyecto av
          WHERE av.proyecto_id = $1 ORDER BY av.fecha_avance DESC, av.creado_en DESC, av.id DESC LIMIT 500`,
         [proyectoId],
