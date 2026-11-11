@@ -145,3 +145,94 @@ mapaImpactoRouter.get('/proyectos/:proyectoId/evidencias/:evidenciaId/enlace', a
     res.status(500).json({ message: 'No fue posible renovar el enlace de la fotografía.' });
   }
 });
+
+type PosicionPanel = { id: 'diagrama' | 'detalle'; x: number; y: number; w: number; h: number };
+type PosicionNodo = { x: number; y: number };
+const patronNodo = /^(comunidad|proyecto|actividad|avance|evidencia):[0-9a-f-]{36}$/i;
+const numeroEntero = (x: unknown, min: number, max: number) =>
+  typeof x === 'number' && Number.isInteger(x) && x >= min && x <= max;
+function validarPaneles(valor: unknown): valor is PosicionPanel[] {
+  if (!Array.isArray(valor) || valor.length !== 2) return false;
+  const ids = valor.map((p) => p && typeof p === 'object' ? p.id : null);
+  return new Set(ids).size === 2 && ids.includes('diagrama') && ids.includes('detalle') &&
+    valor.every((p) => p && typeof p === 'object' &&
+      numeroEntero(p.x, 0, 11) && numeroEntero(p.y, 0, 79) &&
+      numeroEntero(p.w, 1, 12) && numeroEntero(p.h, 4, 14) && p.x + p.w <= 12);
+}
+function validarNodos(valor: unknown): valor is Record<string, PosicionNodo> {
+  if (!valor || typeof valor !== 'object' || Array.isArray(valor)) return false;
+  const posiciones = Object.entries(valor);
+  return posiciones.length <= 200 && posiciones.every(([id, p]) =>
+    patronNodo.test(id) && p && typeof p === 'object' && !Array.isArray(p) &&
+    typeof (p as PosicionNodo).x === 'number' && Number.isFinite((p as PosicionNodo).x) &&
+    Math.abs((p as PosicionNodo).x) <= 20000 &&
+    typeof (p as PosicionNodo).y === 'number' && Number.isFinite((p as PosicionNodo).y) &&
+    Math.abs((p as PosicionNodo).y) <= 20000);
+}
+async function proyectoDeOrganizacion(proyectoId: string, organizacionId: string) {
+  if (!databasePool) throw new Error('Base de datos no disponible');
+  const { rowCount } = await databasePool.query(
+    `SELECT 1 FROM proyectos p JOIN comunidades c ON c.id=p.comunidad_id
+      WHERE p.id=$1 AND c.organizacion_id=$2`, [proyectoId, organizacionId],
+  );
+  return !!rowCount;
+}
+
+// Lectura y guardado independientes por usuario/proyecto. Se actualiza solo una
+// parte del JSON para que mover nodos no sobrescriba la posición de GridStack.
+mapaImpactoRouter.get('/proyectos/:proyectoId/preferencias', async (req, res) => {
+  const { proyectoId } = req.params;
+  if (!esUuid(proyectoId)) { res.status(400).json({ message: 'Proyecto inválido.' }); return; }
+  try {
+    if (!databasePool) throw new Error('Base de datos no disponible');
+    if (!await proyectoDeOrganizacion(proyectoId, req.auth!.organizacionId)) {
+      res.status(404).json({ message: 'Proyecto no disponible.' }); return;
+    }
+    const { rows } = await databasePool.query(
+      `SELECT configuracion FROM preferencias_mapa_impacto
+        WHERE usuario_id=$1 AND organizacion_id=$2 AND proyecto_id=$3`,
+      [req.auth!.sub, req.auth!.organizacionId, proyectoId],
+    );
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ configuracion: rows[0]?.configuracion ?? null });
+  } catch (error) {
+    console.error('Error leyendo preferencias del mapa:', error);
+    res.status(500).json({ message: 'No se pudo recuperar la configuración del mapa.' });
+  }
+});
+
+mapaImpactoRouter.patch('/proyectos/:proyectoId/preferencias', async (req, res) => {
+  const { proyectoId } = req.params;
+  const tipo = req.body?.tipo;
+  const valor = req.body?.valor;
+  if (!esUuid(proyectoId) || !(
+    (tipo === 'paneles' && validarPaneles(valor)) ||
+    (tipo === 'nodos' && validarNodos(valor))
+  )) {
+    res.status(400).json({ message: 'La configuración del mapa no es válida.' }); return;
+  }
+  try {
+    if (!databasePool) throw new Error('Base de datos no disponible');
+    if (!await proyectoDeOrganizacion(proyectoId, req.auth!.organizacionId)) {
+      res.status(404).json({ message: 'Proyecto no disponible.' }); return;
+    }
+    const { rowCount } = await databasePool.query(
+      `INSERT INTO preferencias_mapa_impacto
+        (usuario_id, organizacion_id, proyecto_id, configuracion)
+       SELECT u.id, u.organizacion_id, $3::uuid,
+         jsonb_build_object($4::text, $5::jsonb)
+       FROM usuarios u WHERE u.id=$1 AND u.organizacion_id=$2 AND u.activo
+       ON CONFLICT (usuario_id, organizacion_id, proyecto_id)
+       DO UPDATE SET configuracion=jsonb_set(
+         COALESCE(preferencias_mapa_impacto.configuracion, '{}'::jsonb),
+         ARRAY[$4::text], $5::jsonb, true
+       ), actualizado_en=NOW()`,
+      [req.auth!.sub, req.auth!.organizacionId, proyectoId, tipo, JSON.stringify(valor)],
+    );
+    if (!rowCount) { res.status(403).json({ message: 'Usuario no autorizado.' }); return; }
+    res.sendStatus(204);
+  } catch (error) {
+    console.error('Error guardando preferencias del mapa:', error);
+    res.status(500).json({ message: 'No se pudo guardar la configuración del mapa.' });
+  }
+});
