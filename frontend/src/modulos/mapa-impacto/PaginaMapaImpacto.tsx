@@ -213,11 +213,15 @@ export default function PaginaMapaImpacto({ token, usuarioId }: { token: string;
         preferenciasProyecto === proyectoId && (
         <>
           <div className="mapa-impacto__resumen">
+            <span><strong>{datos.proyecto.nombre}</strong> · {datos.proyecto.comunidad}</span>
             <span><strong>{datos.actividades.length}</strong> actividades</span>
             <span><strong>{datos.avances.length}</strong> avances</span>
             <span><strong>{datos.evidencias.length}</strong> fotografías</span>
             <span><strong>{datos.proyecto.comunidad}</strong> comunidad</span>
           </div>
+          {datos.actividades.length === 0 && <p role="status" className="mapa-impacto__vacio">
+            Este proyecto todavía no tiene actividades registradas. El mapa mostrará la comunidad y el proyecto.
+          </p>}
           <EspacioMapaGrid key={datos.proyecto.id} usuarioId={usuarioId} proyectoId={datos.proyecto.id}
             posicionesIniciales={preferencias?.paneles}
             onGuardar={(paneles) => persistirDiseño(datos.proyecto.id, 'paneles', paneles)}
