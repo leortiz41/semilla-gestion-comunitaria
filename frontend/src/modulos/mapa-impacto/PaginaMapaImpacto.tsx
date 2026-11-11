@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import MapaReactFlow from './componentes/MapaReactFlow';
+import FotografiaPrivadaMapa from './componentes/FotografiaPrivadaMapa';
+import EspacioMapaGrid from './componentes/EspacioMapaGrid';
 import {
   listarProyectosMapa, obtenerMapaProyecto,
   type DetalleImpacto, type ProyectoMapa,
@@ -111,10 +113,10 @@ export default function PaginaMapaImpacto({ token, usuarioId }: { token: string;
             <span><strong>{datos.evidencias.length}</strong> fotografías</span>
             <span><strong>{datos.proyecto.comunidad}</strong> comunidad</span>
           </div>
-          <div className="mapa-impacto__espacio">
-            <MapaReactFlow datos={datos} usuarioId={usuarioId} seleccion={seleccion}
-              seleccionar={(tipo, id) => setSeleccion({ tipo, id })} />
-            <aside className="mapa-impacto__detalle" aria-live="polite">
+          <EspacioMapaGrid usuarioId={usuarioId} proyectoId={datos.proyecto.id}
+            mapa={<MapaReactFlow datos={datos} usuarioId={usuarioId} seleccion={seleccion}
+              seleccionar={(tipo, id) => setSeleccion({ tipo, id })} />}
+            detalle={<aside className="mapa-impacto__detalle" aria-live="polite">
               <div className="mapa-impacto__detalle-titulo">
                 <h2>Detalle del elemento</h2>
                 {seleccion && <button type="button" onClick={() => setSeleccion(null)}>Cerrar</button>}
@@ -124,19 +126,17 @@ export default function PaginaMapaImpacto({ token, usuarioId }: { token: string;
                   <strong>{item.titulo}</strong>
                   <span className="mapa-impacto__estado">{item.estado}</span>
                   <p>{item.descripcion}</p>
-                  {item.foto && <a href={item.foto} target="_blank" rel="noopener noreferrer"
-                    className="mapa-impacto__enlace-foto">
-                    <img src={item.foto} alt={item.titulo} />
-                    Abrir fotografía
-                  </a>}
+                  {seleccion?.tipo === 'evidencia' && item.foto &&
+                    <FotografiaPrivadaMapa key={seleccion.id} token={token}
+                      proyectoId={datos.proyecto.id} evidenciaId={seleccion.id}
+                      titulo={item.titulo} />}
                   {seleccion?.tipo === 'avance' && <>
                     <p>Fotografías de este avance: {datos.evidencias.filter((f) => f.avanceId === seleccion.id).length}</p>
                     <div className="mapa-impacto__galeria">
                       {datos.evidencias.filter((f) => f.avanceId === seleccion.id).map((foto) =>
-                        foto.url ? <a key={foto.id} href={foto.url} target="_blank" rel="noopener noreferrer"
-                          title={foto.titulo || 'Abrir fotografía'}>
-                          <img src={foto.url} alt={foto.titulo || 'Fotografía del avance'} loading="lazy" />
-                        </a> : <span key={foto.id}>Imagen temporalmente no disponible</span>)}
+                        <FotografiaPrivadaMapa key={foto.id} token={token}
+                          proyectoId={datos.proyecto.id} evidenciaId={foto.id}
+                          titulo={foto.titulo || 'Fotografía del avance'} compacta />)}
                     </div>
                   </>}
                   {seleccion?.tipo === 'actividad' && <div className="mapa-impacto__atajos">
@@ -149,8 +149,7 @@ export default function PaginaMapaImpacto({ token, usuarioId }: { token: string;
                   </div>}
                 </>
               ) : <p>Seleccioná un nodo para consultar su información y, cuando corresponda, abrir sus fotografías.</p>}
-            </aside>
-          </div>
+            </aside>} />
         </>
       )}
       <p className="mapa-impacto__nota">Podés organizar los nodos a tu gusto: su posición se guarda para este usuario y proyecto en este navegador. Las conexiones y los registros reales no cambian.
