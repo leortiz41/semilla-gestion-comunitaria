@@ -46,3 +46,13 @@ export function listarProyectosMapa(token: string) {
 export function obtenerMapaProyecto(token: string, proyectoId: string) {
   return consultar<DetalleImpacto>(`/proyectos/${encodeURIComponent(proyectoId)}`, token);
 }
+
+
+export function renovarEnlaceFotografiaMapa(
+  token: string, proyectoId: string, evidenciaId: string,
+) {
+  return consultar<{ url: string }>(
+    `/proyectos/${encodeURIComponent(proyectoId)}/evidencias/${encodeURIComponent(evidenciaId)}/enlace`,
+    token,
+  );
+}
