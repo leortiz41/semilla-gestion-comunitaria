@@ -94,7 +94,7 @@ proyectosRouter.get(rutaEvidencias, async (req, res) => {
       id: e.id, titulo: e.titulo, descripcion: e.descripcion, tipoMime: e.tipoMime,
       creadoEn: e.creadoEn,
       url: typeof e.archivoUrl === 'string' && e.archivoUrl.startsWith('r2:') && r2Disponible()
-        ? firmarObjetoR2(e.archivoUrl.slice(3), 'GET', undefined, 300)
+        ? firmarObjetoR2(e.archivoUrl.slice(3), 'GET', undefined, 3600)
         : e.archivoUrl?.startsWith('https://') ? e.archivoUrl : null,
     })) });
   } catch (error) {
