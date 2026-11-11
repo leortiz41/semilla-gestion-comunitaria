@@ -18,6 +18,7 @@ export default function FotografiasAvance({
   const [mensajeCarga, setMensajeCarga] = useState('');
   const [progreso, setProgreso] = useState('');
   const [ampliada, setAmpliada] = useState<EvidenciaFotografica | null>(null);
+  const [abriendo, setAbriendo] = useState<string | null>(null);
   const [version, setVersion] = useState(0);
   const vistasTemporales = useRef<string[]>([]);
 
@@ -35,6 +36,31 @@ export default function FotografiasAvance({
     const vistas = vistasTemporales.current;
     return () => { vistas.forEach((vista) => URL.revokeObjectURL(vista)); };
   }, []);
+
+  async function abrirImagen(foto: EvidenciaFotografica) {
+    if (abriendo) return;
+    setAbriendo(foto.id);
+    try {
+      const respuesta = await obtenerFotosAvance(token, proyectoId, actividadId, avanceId);
+      const actual = respuesta.evidencias.find((item) => item.id === foto.id);
+      if (!actual?.url) throw new Error('Esta fotografía no tiene un enlace de lectura disponible.');
+      setAmpliada(actual);
+      setError('');
+    } catch (fallo) {
+      setError(fallo instanceof Error ? fallo.message : 'No se pudo abrir la fotografía.');
+    } finally {
+      setAbriendo(null);
+    }
+  }
+
+  useEffect(() => {
+    if (!ampliada) return;
+    const cerrarEscape = (evento: KeyboardEvent) => {
+      if (evento.key === 'Escape') setAmpliada(null);
+    };
+    document.addEventListener('keydown', cerrarEscape);
+    return () => document.removeEventListener('keydown', cerrarEscape);
+  }, [ampliada]);
 
   function seleccionar(archivos: FileList | null) {
     if (!archivos?.length || subiendo) return;
@@ -145,7 +171,8 @@ export default function FotografiasAvance({
         {fotos.map((foto) => (
           foto.url ? (
             <button type="button" key={foto.id} className="fotos-avance__imagen fotos-avance__foto-guardada"
-              onClick={() => setAmpliada(foto)} title="Ampliar fotografía">
+              onClick={() => void abrirImagen(foto)} disabled={abriendo !== null}
+              title="Ampliar fotografía en el visor de Semilla">
               <img src={foto.url} alt={foto.titulo ?? 'Fotografía de ejecución'} loading="lazy" />
               <small>{foto.titulo ?? 'Fotografía'}</small>
             </button>
@@ -154,7 +181,7 @@ export default function FotografiasAvance({
       </div>
       {ampliada?.url && (
         <div className="fotos-avance__visor" role="dialog" aria-modal="true" aria-label="Vista ampliada de evidencia"
-          onKeyDown={(evento) => { if (evento.key === 'Escape') setAmpliada(null); }}>
+          onMouseDown={(evento) => { if (evento.target === evento.currentTarget) setAmpliada(null); }}>
           <div className="fotos-avance__visor-contenido">
             <button type="button" className="fotos-avance__cerrar" onClick={() => setAmpliada(null)}>Cerrar ×</button>
             <img src={ampliada.url} alt={ampliada.titulo ?? 'Fotografía ampliada'} />
