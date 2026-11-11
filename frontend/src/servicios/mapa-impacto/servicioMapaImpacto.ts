@@ -56,3 +56,32 @@ export function renovarEnlaceFotografiaMapa(
     token,
   );
 }
+
+export type PosicionPanelMapa = {
+  id: 'diagrama' | 'detalle'; x: number; y: number; w: number; h: number;
+};
+export type PosicionesNodosMapa = Record<string, { x: number; y: number }>;
+export interface PreferenciasMapaImpacto {
+  paneles?: PosicionPanelMapa[];
+  nodos?: PosicionesNodosMapa;
+}
+
+export async function obtenerPreferenciasMapa(token: string, proyectoId: string) {
+  return consultar<{ configuracion: PreferenciasMapaImpacto | null }>(
+    `/proyectos/${encodeURIComponent(proyectoId)}/preferencias`, token,
+  );
+}
+export async function guardarPreferenciasMapa(
+  token: string, proyectoId: string,
+  tipo: 'paneles' | 'nodos',
+  valor: PosicionPanelMapa[] | PosicionesNodosMapa,
+): Promise<void> {
+  const respuesta = await fetch(
+    `${API}/mapa-impacto/proyectos/${encodeURIComponent(proyectoId)}/preferencias`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tipo, valor }),
+    },
+  );
+  if (!respuesta.ok) throw new Error('No se pudo guardar la configuración del mapa en Neon.');
+}
