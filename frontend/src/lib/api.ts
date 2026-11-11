@@ -561,7 +561,10 @@ export interface AvanceConFotografias {
 }
 
 export function obtenerIndiceFotografias(token: string) {
-  return request<{ avances: AvanceConFotografias[] }>('/proyectos/evidencias/indice', {
+  return request<{
+    avances: AvanceConFotografias[];
+    proyectosFinalizados: { id: string; nombre: string; comunidad: string }[];
+  }>('/proyectos/evidencias/indice', {
     headers: { Authorization: `Bearer ${token}` },
   });
 }
