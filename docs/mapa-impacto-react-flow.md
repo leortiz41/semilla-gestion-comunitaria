@@ -136,3 +136,21 @@ El archivo `frontend/package-lock.json` ya se regeneró y se versionó en `devel
 7. Iniciar sesión con otra cuenta: no debe heredar preferencias ajenas.
 8. Probar «Restablecer paneles» y «Restablecer posiciones» por separado: la restauración debe persistir.
 9. En caso de caída de backend, observar aviso y uso de copia local; no afirmar sincronización hasta que una escritura vuelva a funcionar.
+
+## Incremento 1F — evidencias agrupadas y galería contextual
+
+- La trazabilidad pasa a `Comunidad → Proyecto → Actividad → Avance → Evidencias (N)`.
+- Cada avance con fotografías tiene **un solo nodo de Evidencias**, identificado visualmente por `evidencias:<avanceId>` y un contador; no se crean enlaces redundantes por fotografía.
+- Al seleccionar el nodo se abre una galería flotante con las fotografías del avance. Cada miniatura usa el componente existente `FotografiaPrivadaMapa` y renueva URL firmada R2 para evitar `ExpiredRequest`.
+- Las imágenes individuales se amplían dentro de Semilla; no se abren pestañas externas.
+- La galería se puede cerrar con Escape, botón o clic en el fondo. Se conserva navegación por teclado.
+- No cambia el esquema de base de datos, el backend, ni los documentos almacenados. El módulo Evidencias sigue siendo el centro de gestión documental.
+- Las posiciones previas de nodos individuales `evidencia:<uuid>` permanecen en preferencias históricas pero ya no se utilizan; los demás nodos mantienen sus posiciones.
+- La información de resultados de impacto y asociaciones con donantes todavía requiere desarrollo específico y validación de datos reales.
+
+### Prueba de aceptación
+1. Abrir Aula para Kinder; expandir actividad y avance, o pulsar «Ver mapa completo».
+2. Verificar un solo nodo «Evidencias del avance · 3 fotografías» y una sola conexión desde su avance.
+3. Pulsar el nodo: galería flotante de tres fotografías; pulsar «Ver fotografía» en cada una y cerrar.
+4. Comprobar que no aparece `ExpiredRequest` y que el modo exploración/arrastre y GridStack funcionan.
+5. Recargar y regresar al mapa: nodos y paneles no deben perder su distribución personalizada.
