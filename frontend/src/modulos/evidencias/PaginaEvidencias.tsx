@@ -38,6 +38,7 @@ export default function PaginaEvidencias({
   const [proyecto, setProyecto] = useState('');
   const [estado, setEstado] = useState('');
   const [respaldo, setRespaldo] = useState('todos');
+  const [vista, setVista] = useState<'seguimiento' | 'finalizados'>('seguimiento');
   const [seleccionId, setSeleccionId] = useState('');
   const [actividades, setActividades] = useState<ActividadProyecto[]>([]);
   const [cargandoDetalle, setCargandoDetalle] = useState(false);
@@ -53,14 +54,24 @@ export default function PaginaEvidencias({
     return () => { activo = false; };
   }, [token, recarga]);
 
-  const seleccionado = indice.find((x) => x.avanceId === seleccionId) ?? null;
+  const enVista = useMemo(() => indice.filter((i) =>
+    vista === 'finalizados' ? i.estadoProyecto === 'FINALIZADO' : i.estadoProyecto !== 'FINALIZADO',
+  ), [indice, vista]);
+  const totalFinalizados = useMemo(() => new Set(indice
+    .filter((i) => i.estadoProyecto === 'FINALIZADO').map((i) => i.proyectoId)).size, [indice]);
   const comunidades = useMemo(() =>
-    [...new Set(indice.map((i) => i.comunidad))].sort((a, b) => a.localeCompare(b, 'es')), [indice]);
-  const proyectos = useMemo(() => [...new Map(indice
+    [...new Set(enVista.map((i) => i.comunidad))].sort((a, b) => a.localeCompare(b, 'es')), [enVista]);
+  const proyectos = useMemo(() => [...new Map(enVista
     .filter((i) => !comunidad || i.comunidad === comunidad)
     .map((i) => [i.proyectoId, { id: i.proyectoId, nombre: i.proyecto, comunidad: i.comunidad }])).values()]
-    .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')), [indice, comunidad]);
-  const visibles = useMemo(() => indice.filter((i) => {
+    .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')), [enVista, comunidad]);
+  const archivos = useMemo(() => proyectos.map((p) => {
+    const expedientes = enVista.filter((i) => i.proyectoId === p.id);
+    return { ...p, cantidad: expedientes.length,
+      fotos: expedientes.reduce((total, i) => total + i.cantidadEvidencias, 0) };
+  }), [enVista, proyectos]);
+  const visibles = useMemo(() => enVista.filter((i) => {
+    if (vista === 'finalizados' && !proyecto) return false;
     if (comunidad && i.comunidad !== comunidad) return false;
     if (proyecto && i.proyectoId !== proyecto) return false;
     if (estado && i.estadoRevision !== estado) return false;
@@ -68,12 +79,24 @@ export default function PaginaEvidencias({
     if (respaldo === 'sin' && i.cantidadEvidencias > 0) return false;
     const texto = `${i.proyecto} ${i.comunidad} ${i.actividad} ${i.descripcion ?? ''} ${i.observaciones ?? ''} ${i.responsable ?? ''}`;
     return texto.toLocaleLowerCase('es').includes(busqueda.trim().toLocaleLowerCase('es'));
-  }), [indice, comunidad, proyecto, estado, respaldo, busqueda]);
+  }), [enVista, vista, comunidad, proyecto, estado, respaldo, busqueda]);
 
-  const fotosTotal = indice.reduce((total, i) => total + i.cantidadEvidencias, 0);
-  const validados = indice.filter((i) => i.estadoRevision === 'VALIDADO');
-  const sinRespaldo = indice.filter((i) => i.cantidadEvidencias === 0);
-  const porRevisar = indice.filter((i) => i.estadoRevision === 'ENVIADO');
+  const seleccionado = enVista.find((x) => x.avanceId === seleccionId) ?? null;
+  const fotosTotal = enVista.reduce((total, i) => total + i.cantidadEvidencias, 0);
+  const validados = enVista.filter((i) => i.estadoRevision === 'VALIDADO');
+  const sinRespaldo = enVista.filter((i) => i.cantidadEvidencias === 0);
+  const porRevisar = enVista.filter((i) => i.estadoRevision === 'ENVIADO');
+
+  function cambiarVista(siguiente: 'seguimiento' | 'finalizados') {
+    if (siguiente === vista) return;
+    setVista(siguiente);
+    setBusqueda('');
+    setComunidad('');
+    setProyecto('');
+    setEstado('');
+    setRespaldo('todos');
+    setSeleccionId('');
+  }
 
   useEffect(() => {
     if (!seleccionado) { setActividades([]); setErrorDetalle(''); return; }
@@ -110,10 +133,23 @@ export default function PaginaEvidencias({
         </button>
       </header>
 
-      <div className="evidencias-centro__indicadores" aria-label="Resumen de evidencias">
+      <nav className="evidencias-centro__vistas" aria-label="Organización de expedientes">
+        <button type="button" className={vista === 'seguimiento' ? 'activo' : ''}
+          aria-current={vista === 'seguimiento' ? 'page' : undefined}
+          onClick={() => cambiarVista('seguimiento')}>
+          <FolderOpen size={17} aria-hidden="true" /> En seguimiento
+        </button>
+        <button type="button" className={vista === 'finalizados' ? 'activo' : ''}
+          aria-current={vista === 'finalizados' ? 'page' : undefined}
+          onClick={() => cambiarVista('finalizados')}>
+          <Archive size={17} aria-hidden="true" /> Proyectos finalizados
+          <span className="evidencias-centro__vistas-cantidad">{totalFinalizados}</span>
+        </button>
+      </nav>
+      <div className="evidencias-centro__indicadores" aria-label="Resumen de evidencias de la vista seleccionada">
         <div className="evidencias-centro__indicador">
           <FolderOpen size={19} aria-hidden="true" />
-          <div><strong>{indice.length}</strong><span>Avances registrados</span></div>
+          <div><strong>{enVista.length}</strong><span>Avances en esta vista</span></div>
         </div>
         <div className="evidencias-centro__indicador">
           <Camera size={19} aria-hidden="true" />
@@ -133,11 +169,41 @@ export default function PaginaEvidencias({
         </div>
       </div>
       <p className="evidencias-centro__aclaracion">
-        Los indicadores corresponden a avances registrados, no a proyectos completos.
+        Los indicadores corresponden a avances de la pestaña seleccionada, no a proyectos completos.
         «Sin fotografías» indica falta de respaldo fotográfico, no necesariamente ausencia de otros documentos.
         La validación del avance no equivale a una auditoría documental independiente.
       </p>
 
+      {vista === 'finalizados' && (
+        <section className="evidencias-centro__archivo" aria-label="Archivo de proyectos finalizados">
+          <div className="evidencias-centro__seccion-titulo">
+            <div>
+              <h2>Archivo histórico de proyectos</h2>
+              <p>Elegí un proyecto finalizado para consultar sus expedientes de avance y fotografías.</p>
+            </div>
+            {proyecto && <button type="button" className="evidencias-centro__volver-archivo"
+              onClick={() => { setProyecto(''); setSeleccionId(''); }}>
+              Volver a proyectos
+            </button>}
+          </div>
+          {!archivos.length && !cargando &&
+            <p className="evidencias-centro__vacio">
+              No hay proyectos finalizados con expedientes registrados en esta comunidad.
+            </p>}
+          <div className="evidencias-centro__archivo-lista">
+            {archivos.map((item) => (
+              <button key={item.id} type="button"
+                aria-pressed={proyecto === item.id}
+                onClick={() => { setProyecto(item.id); setSeleccionId(''); }}>
+                <Archive size={19} aria-hidden="true" />
+                <strong>{item.nombre}</strong>
+                <small>{item.comunidad}</small>
+                <span>{item.cantidad} avances · {item.fotos} fotografías</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
       <div className="evidencias-centro__filtros" aria-label="Filtros del expediente documental">
         <label><Search size={15} aria-hidden="true"/> Buscar
           <input value={busqueda} onChange={(e) => setBusqueda(e.target.value)}
@@ -186,13 +252,18 @@ export default function PaginaEvidencias({
       <div className="evidencias-centro__contenido">
         <section className="evidencias-centro__listado" aria-label="Expedientes de avances">
           <div className="evidencias-centro__seccion-titulo">
-            <div><h2>Expedientes de avances</h2><p>Seleccioná un registro para revisar su respaldo y trazabilidad.</p></div>
+            <div><h2>{vista === 'finalizados' ? 'Expedientes del proyecto finalizado' : 'Expedientes en seguimiento'}</h2>
+              <p>{vista === 'finalizados' && !proyecto
+                ? 'Elegí un proyecto del archivo histórico para consultar sus avances.'
+                : 'Seleccioná un registro para revisar su respaldo y trazabilidad.'}</p></div>
             <span>{visibles.length} resultados</span>
           </div>
           {cargando && <p role="status" className="evidencias-centro__vacio">Consultando expedientes…</p>}
           {!cargando && visibles.length === 0 && !error &&
             <p className="evidencias-centro__vacio" role="status">
-              {indice.length ? 'No hay avances con estos filtros.' : 'Todavía no existen avances registrados.'}
+              {vista === 'finalizados' && !proyecto
+                ? 'Elegí un proyecto finalizado arriba para mostrar sus expedientes.'
+                : enVista.length ? 'No hay avances con estos filtros.' : 'Todavía no existen avances en esta sección.'}
             </p>}
           <div className="evidencias-centro__registros">
             {visibles.map((registro) => (
