@@ -88,3 +88,8 @@
 @media(max-width:1170px){.evidencias-centro__indicadores{grid-template-columns:repeat(3,minmax(0,1fr))}.evidencias-centro__filtros{grid-template-columns:repeat(3,minmax(0,1fr))}.evidencias-centro__filtros label:first-child{grid-column:span 2}}
 @media(max-width:920px){.evidencias-centro__contenido{grid-template-columns:minmax(0,1fr)}.evidencias-centro__registros{max-height:400px}}
 @media(max-width:620px){.evidencias-centro__indicadores{grid-template-columns:repeat(2,minmax(0,1fr))}.evidencias-centro__filtros{grid-template-columns:minmax(0,1fr)}.evidencias-centro__filtros label:first-child{grid-column:auto}.evidencias-centro__indicador{padding:.75rem}.evidencias-centro__indicador strong{font-size:1.2rem}}
+
+.evidencias-centro__historial{display:grid;gap:.5rem;list-style:none;margin:0;padding:0}
+.evidencias-centro__historial li{display:grid;gap:.12rem;padding:.48rem .65rem;border-left:3px solid #8fbaa0;background:#fff;border-radius:.3rem}
+.evidencias-centro__historial strong{color:#416551;font-size:.73rem;text-transform:capitalize}
+.evidencias-centro__historial span{color:#6c7e72;font-size:.69rem}
