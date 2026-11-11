@@ -4,7 +4,7 @@ import {
   type Edge, type Node, type NodeMouseHandler, type ReactFlowInstance, type NodeChange,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import type { DetalleImpacto } from '../../../servicios/mapa-impacto/servicioMapaImpacto';
+import type { DetalleImpacto, PosicionesNodosMapa } from '../../../servicios/mapa-impacto/servicioMapaImpacto';
 
 type TipoNodo = 'comunidad' | 'proyecto' | 'actividad' | 'avance' | 'evidencia';
 type NivelMapa = 'resumen' | 'completo';
@@ -38,12 +38,14 @@ function estilo(tipo: TipoNodo, seleccionado: boolean, coincide: boolean): Node[
 }
 
 export default function MapaReactFlow({
-  datos, usuarioId, seleccion, seleccionar,
+  datos, usuarioId, seleccion, seleccionar, posicionesIniciales, onGuardar,
 }: {
   datos: DetalleImpacto;
   usuarioId: string;
   seleccion: { tipo: string; id: string } | null;
   seleccionar: (tipo: string, id: string) => void;
+  posicionesIniciales?: PosicionesNodosMapa;
+  onGuardar?: (posiciones: PosicionesNodosMapa) => void;
 }) {
   // Mostrar solo los primeros niveles evita que la vista inicial se reduzca a nodos diminutos.
   const [nivel, setNivel] = useState<NivelMapa>('resumen');
@@ -54,7 +56,7 @@ export default function MapaReactFlow({
   const llavePosiciones = `semilla:mapa-impacto:posiciones:v1:${usuarioId}:${datos.proyecto.id}`;
   const [posiciones, setPosiciones] = useState<Record<string, { x: number; y: number }>>(() => {
     try {
-      const valor = JSON.parse(localStorage.getItem(llavePosiciones) || '{}') as Record<string, { x: number; y: number }>;
+      const valor = posicionesIniciales ?? JSON.parse(localStorage.getItem(llavePosiciones) || '{}') as PosicionesNodosMapa;
       return valor && !Array.isArray(valor) && typeof valor === 'object' ? valor : {};
     } catch { return {}; }
   });
@@ -148,7 +150,7 @@ export default function MapaReactFlow({
     setAvancesAbiertos([]);
     setBusquedaNodo('');
     try {
-      const valor = JSON.parse(localStorage.getItem(llavePosiciones) || '{}') as Record<string, { x: number; y: number }>;
+      const valor = posicionesIniciales ?? JSON.parse(localStorage.getItem(llavePosiciones) || '{}') as PosicionesNodosMapa;
       setPosiciones(valor && !Array.isArray(valor) && typeof valor === 'object' ? valor : {});
     } catch { setPosiciones({}); }
   }, [datos.proyecto.id, llavePosiciones]);
@@ -185,13 +187,15 @@ export default function MapaReactFlow({
       };
       try { localStorage.setItem(llavePosiciones, JSON.stringify(siguientes)); }
       catch { /* El navegador puede bloquear almacenamiento. */ }
+      onGuardar?.(siguientes);
       return siguientes;
     });
-  }, [llavePosiciones]);
+  }, [llavePosiciones, onGuardar]);
 
   function restablecerDisposicion() {
     setPosiciones({});
     try { localStorage.removeItem(llavePosiciones); } catch { /* Sin almacenamiento. */ }
+    onGuardar?.({});
     if (instancia) window.requestAnimationFrame(() => void instancia.fitView({
       padding: 0.23, maxZoom: 1, duration: 380,
     }));
