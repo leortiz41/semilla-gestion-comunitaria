@@ -30,6 +30,8 @@ export default function PaginaEvidencias({
   token: string; usuarioEmail: string; puedeGestionar?: boolean;
 }) {
   const [indice, setIndice] = useState<AvanceConFotografias[]>([]);
+  const [proyectosFinalizados, setProyectosFinalizados] = useState<
+    { id: string; nombre: string; comunidad: string }[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
   const [recarga, setRecarga] = useState(0);
@@ -47,8 +49,8 @@ export default function PaginaEvidencias({
   useEffect(() => {
     let activo = true;
     setCargando(true);
-    obtenerIndiceFotografias(token).then(({ avances }) => {
-      if (activo) { setIndice(avances); setError(''); }
+    obtenerIndiceFotografias(token).then(({ avances, proyectosFinalizados: finalizados }) => {
+      if (activo) { setIndice(avances); setProyectosFinalizados(finalizados ?? []); setError(''); }
     }).catch((fallo: Error) => { if (activo) setError(fallo.message); })
       .finally(() => { if (activo) setCargando(false); });
     return () => { activo = false; };
@@ -57,14 +59,20 @@ export default function PaginaEvidencias({
   const enVista = useMemo(() => indice.filter((i) =>
     vista === 'finalizados' ? i.estadoProyecto === 'FINALIZADO' : i.estadoProyecto !== 'FINALIZADO',
   ), [indice, vista]);
-  const totalFinalizados = useMemo(() => new Set(indice
-    .filter((i) => i.estadoProyecto === 'FINALIZADO').map((i) => i.proyectoId)).size, [indice]);
+  const totalFinalizados = proyectosFinalizados.length;
   const comunidades = useMemo(() =>
-    [...new Set(enVista.map((i) => i.comunidad))].sort((a, b) => a.localeCompare(b, 'es')), [enVista]);
-  const proyectos = useMemo(() => [...new Map(enVista
-    .filter((i) => !comunidad || i.comunidad === comunidad)
-    .map((i) => [i.proyectoId, { id: i.proyectoId, nombre: i.proyecto, comunidad: i.comunidad }])).values()]
-    .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')), [enVista, comunidad]);
+    [...new Set(vista === 'finalizados'
+      ? proyectosFinalizados.map((i) => i.comunidad)
+      : enVista.map((i) => i.comunidad))].sort((a, b) => a.localeCompare(b, 'es')),
+    [enVista, vista, proyectosFinalizados]);
+  const proyectos = useMemo(() =>
+    (vista === 'finalizados'
+      ? proyectosFinalizados
+      : [...new Map(enVista.map((i) =>
+          [i.proyectoId, { id: i.proyectoId, nombre: i.proyecto, comunidad: i.comunidad }])).values()])
+      .filter((i) => !comunidad || i.comunidad === comunidad)
+      .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')),
+    [enVista, comunidad, vista, proyectosFinalizados]);
   const archivos = useMemo(() => proyectos.map((p) => {
     const expedientes = enVista.filter((i) => i.proyectoId === p.id);
     return { ...p, cantidad: expedientes.length,
