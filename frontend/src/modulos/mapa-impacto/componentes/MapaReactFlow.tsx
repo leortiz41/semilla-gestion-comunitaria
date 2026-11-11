@@ -32,7 +32,7 @@ const nombreEstado: Record<string, string> = {
 
 function estilo(tipo: TipoNodo, seleccionado: boolean, coincide: boolean): Node['style'] {
   return {
-    width: tipo === 'proyecto' ? 235 : 215,
+    width: tipo === 'avance' ? 270 : tipo === 'proyecto' ? 235 : 215,
     background: colores[tipo].fondo,
     border: `1px solid ${seleccionado ? '#c88a32' : '#d8e0e7'}`,
     borderLeft: `5px solid ${colores[tipo].borde}`,
@@ -82,12 +82,13 @@ export default function MapaReactFlow({
     const edges: Edge[] = [];
     const termino = busquedaNodo.trim().toLocaleLowerCase('es');
     let encontrados = 0;
-    const agregar = (id: string, tipo: TipoNodo, titulo: string, subtitulo: string, x: number, y: number) => {
+    const agregar = (id: string, tipo: TipoNodo, titulo: string, subtitulo: string, x: number, y: number,
+      metadatos?: { fecha: string; estado: string; cantidad: number | null; porcentaje: number | null }) => {
       const guardada = posiciones[id];
       const posicion = guardada && Number.isFinite(guardada.x) && Number.isFinite(guardada.y) &&
         Math.abs(guardada.x) < 20000 && Math.abs(guardada.y) < 20000
         ? guardada : { x, y };
-      const coincide = !termino || `${titulo} ${subtitulo} ${colores[tipo].nombre}`.toLocaleLowerCase('es').includes(termino);
+      const coincide = !termino || `${titulo} ${subtitulo} ${metadatos?.estado || ''} ${metadatos?.fecha || ''} ${colores[tipo].nombre}`.toLocaleLowerCase('es').includes(termino);
       if (termino && coincide) encontrados++;
       const seleccionado = seleccion?.tipo + ':' + seleccion?.id === id;
       const Icono = iconos[tipo];
@@ -102,7 +103,13 @@ export default function MapaReactFlow({
               </span>
               <span className="mapa-impacto__nodo-textos">
                 <span className="mapa-impacto__nodo-titulo">{titulo}</span>
-                {subtitulo && <span className="mapa-impacto__nodo-subtitulo">{subtitulo}</span>}
+                {subtitulo && <span className={tipo === 'avance' ? 'mapa-impacto__nodo-resumen' : 'mapa-impacto__nodo-subtitulo'}>{subtitulo}</span>}
+                {metadatos && <span className="mapa-impacto__nodo-metadatos">
+                  <span className="mapa-impacto__nodo-estado">{nombreEstado[metadatos.estado] || metadatos.estado}</span>
+                  <span>{metadatos.fecha}</span>
+                  {metadatos.cantidad !== null && <span>Cantidad: {metadatos.cantidad}</span>}
+                  {metadatos.porcentaje !== null && <span>{metadatos.porcentaje}%</span>}
+                </span>}
               </span>
             </div>
           ),
@@ -131,16 +138,21 @@ export default function MapaReactFlow({
           const fotos = evidencias.filter((ev) => ev.avanceId === avance.id);
           const mostrarFotos = nivel === 'completo' || avancesAbiertos.includes(avance.id);
           // Una rama conserva siempre la misma altura, independientemente del número de fotografías.
-          const altura = 105;
-          const yAvance = siguienteY + (altura - 65) / 2;
-          agregar('avance:' + avance.id, 'avance', avance.fecha,
-            nombreEstado[avance.estado] || avance.estado, 810, yAvance);
+          const altura = 165;
+          const yAvance = siguienteY + (altura - 105) / 2;
+          const resumen = (avance.descripcion || '').trim() || (avance.observaciones || '').trim()
+            || 'Sin descripción registrada';
+          agregar('avance:' + avance.id, 'avance', 'Avance de ejecución',
+            resumen, 810, yAvance, {
+              fecha: avance.fecha, estado: avance.estado,
+              cantidad: avance.cantidadReportada, porcentaje: avance.porcentajeAvance,
+            });
           unir(idActividad, 'avance:' + avance.id);
           if (mostrarFotos && fotos.length) {
             // Nodo agregado con ID estable por avance: no se duplica la galería en el lienzo.
             agregar('evidencias:' + avance.id, 'evidencias', 'Evidencias del avance',
               `${fotos.length} ${fotos.length === 1 ? 'fotografía' : 'fotografías'} · ver galería`,
-              1080, yAvance);
+              1140, yAvance);
             unir('avance:' + avance.id, 'evidencias:' + avance.id);
           }
           siguienteY += altura + 25;
