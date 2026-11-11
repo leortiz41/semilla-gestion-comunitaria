@@ -48,7 +48,8 @@ proyectosRouter.get('/evidencias/indice', async (req, res) => {
     if (!databasePool) throw new Error('Base de datos no disponible');
     const { rows } = await databasePool.query(
       `SELECT av.id AS "avanceId", a.id AS "actividadId", p.id AS "proyectoId",
-         p.nombre AS proyecto, a.nombre AS actividad, c.nombre AS comunidad,
+         p.nombre AS proyecto, p.estado AS "estadoProyecto",
+         a.nombre AS actividad, c.nombre AS comunidad,
          av.fecha_avance::text AS fecha, av.estado_revision AS "estadoRevision",
          av.comentarios AS descripcion, av.observaciones,
          av.cantidad_reportada::float8 AS "cantidadReportada",
