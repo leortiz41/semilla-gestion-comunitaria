@@ -83,7 +83,7 @@ mapaImpactoRouter.get('/proyectos/:proyectoId', async (req, res) => {
       id: foto.id, avanceId: foto.avanceId, titulo: foto.titulo,
       descripcion: foto.descripcion, tipoMime: foto.tipoMime,
       url: typeof foto.archivoUrl === 'string' && foto.archivoUrl.startsWith('r2:') && r2Disponible()
-        ? firmarObjetoR2(foto.archivoUrl.slice(3), 'GET', undefined, 300)
+        ? firmarObjetoR2(foto.archivoUrl.slice(3), 'GET', undefined, 3600)
         : typeof foto.archivoUrl === 'string' && foto.archivoUrl.startsWith('https://')
           ? foto.archivoUrl : null,
     }));
@@ -97,5 +97,51 @@ mapaImpactoRouter.get('/proyectos/:proyectoId', async (req, res) => {
   } catch (error) {
     console.error('Error construyendo mapa de impacto:', error);
     res.status(500).json({ message: 'No fue posible construir el mapa de impacto.' });
+  }
+});
+
+
+// Renovación de lectura bajo demanda para fotografías privadas.
+// No acepta claves R2 ni URLs desde el navegador: resuelve por UUID y verifica la organización.
+mapaImpactoRouter.get('/proyectos/:proyectoId/evidencias/:evidenciaId/enlace', async (req, res) => {
+  const { proyectoId, evidenciaId } = req.params;
+  if (!esUuid(proyectoId) || !esUuid(evidenciaId)) {
+    res.status(400).json({ message: 'La fotografía solicitada no es válida.' });
+    return;
+  }
+  try {
+    if (!databasePool) throw new Error('Base de datos no disponible');
+    const { rows } = await databasePool.query<{ archivoUrl: string }>(
+      `SELECT e.archivo_url AS "archivoUrl"
+       FROM evidencias e
+       JOIN proyectos p ON p.id=e.proyecto_id
+       JOIN comunidades c ON c.id=p.comunidad_id
+       WHERE e.id=$1 AND e.proyecto_id=$2 AND c.organizacion_id=$3
+         AND e.tipo_mime IN ('image/jpeg','image/png','image/webp')`,
+      [evidenciaId, proyectoId, req.auth!.organizacionId],
+    );
+    if (!rows.length) {
+      res.status(404).json({ message: 'Fotografía no encontrada en tu organización.' });
+      return;
+    }
+    const archivoUrl = rows[0].archivoUrl;
+    if (archivoUrl.startsWith('r2:')) {
+      if (!r2Disponible()) {
+        res.status(503).json({ message: 'El almacenamiento R2 no está configurado.' });
+        return;
+      }
+      res.setHeader('Cache-Control', 'no-store');
+      res.json({ url: firmarObjetoR2(archivoUrl.slice(3), 'GET', undefined, 3600) });
+      return;
+    }
+    if (archivoUrl.startsWith('https://')) {
+      res.setHeader('Cache-Control', 'no-store');
+      res.json({ url: archivoUrl });
+      return;
+    }
+    res.status(404).json({ message: 'La fotografía no tiene una ubicación válida.' });
+  } catch (error) {
+    console.error('Error renovando enlace de evidencia del mapa:', error);
+    res.status(500).json({ message: 'No fue posible renovar el enlace de la fotografía.' });
   }
 });
