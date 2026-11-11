@@ -122,3 +122,10 @@
 .mapa-impacto__galeria-flotante-item .mapa-impacto__foto-privada--compacta img{height:140px;object-fit:cover}
 .mapa-impacto__galeria-flotante button:focus-visible{outline:3px solid #d7a863;outline-offset:2px}
 @media(max-width:600px){.mapa-impacto__galeria-flotante{padding:8px}.mapa-impacto__galeria-flotante-cabecera{padding:.7rem}.mapa-impacto__galeria-flotante-lista{padding:.65rem;gap:.6rem}}
+
+/* Avances descriptivos: jerarquía entre trabajo realizado y datos de revisión. */
+.mapa-impacto__nodo-resumen{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;line-clamp:3;overflow:hidden;font-size:.75rem;font-weight:550;color:#3d5967;line-height:1.4;overflow-wrap:anywhere}
+.mapa-impacto__nodo-metadatos{display:flex;align-items:center;gap:.3rem .55rem;flex-wrap:wrap;margin-top:.3rem;color:#647783;font-size:.67rem;line-height:1.4}
+.mapa-impacto__nodo-estado{display:inline-flex;padding:.17rem .4rem;border-radius:999px;background:#e7f2e9;color:#296741;font-weight:750}
+.mapa-impacto__metricas-avance{display:flex;flex-wrap:wrap;gap:.45rem}
+.mapa-impacto__metricas-avance span{padding:.45rem .6rem;border:1px solid #d8e5dd;background:#f7faf7;border-radius:.55rem;color:#486655;font-size:.75rem}
