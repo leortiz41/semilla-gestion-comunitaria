@@ -1,24 +1,29 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { GridStack, type GridStackWidget } from 'gridstack';
 import 'gridstack/dist/gridstack.min.css';
+import type { PosicionPanelMapa } from '../../../servicios/mapa-impacto/servicioMapaImpacto';
 
-type Posicion = { id: string; x: number; y: number; w: number; h: number };
+type Posicion = PosicionPanelMapa;
 const inicial: Posicion[] = [
   { id: 'diagrama', x: 0, y: 0, w: 9, h: 7 },
   { id: 'detalle', x: 9, y: 0, w: 3, h: 7 },
 ];
 
 export default function EspacioMapaGrid({
-  usuarioId, proyectoId, mapa, detalle,
+  usuarioId, proyectoId, mapa, detalle, posicionesIniciales, onGuardar,
 }: {
   usuarioId: string;
   proyectoId: string;
   mapa: ReactNode;
   detalle: ReactNode;
+  posicionesIniciales?: Posicion[];
+  onGuardar?: (posiciones: Posicion[]) => void;
 }) {
   const contenedor = useRef<HTMLDivElement>(null);
   const instancia = useRef<GridStack | null>(null);
   const llave = `semilla:mapa-impacto:grid:v1:${usuarioId}:${proyectoId}`;
+  const callbackGuardar = useRef(onGuardar);
+  callbackGuardar.current = onGuardar;
 
   useEffect(() => {
     const elemento = contenedor.current;
@@ -31,7 +36,7 @@ export default function EspacioMapaGrid({
     if (!grid) return;
     instancia.current = grid;
     try {
-      const guardadas = JSON.parse(localStorage.getItem(llave) || '[]') as Posicion[];
+      const guardadas = posicionesIniciales ?? JSON.parse(localStorage.getItem(llave) || '[]') as Posicion[];
       if (Array.isArray(guardadas) && guardadas.length === inicial.length &&
         guardadas.every((p) => inicial.some((i) => i.id === p.id) &&
           Number.isInteger(p.x) && Number.isInteger(p.y) && Number.isInteger(p.w) &&
@@ -50,10 +55,13 @@ export default function EspacioMapaGrid({
     const guardar = () => {
       if (elemento.clientWidth < 850) return;
       const posiciones = (grid.save(false) as GridStackWidget[])
-        .filter((w) => w.id).map((w) => ({
-          id: w.id!, x: w.x ?? 0, y: w.y ?? 0, w: w.w ?? 3, h: w.h ?? 7,
+        .filter((w) => w.id === 'diagrama' || w.id === 'detalle').map((w) => ({
+          id: w.id as 'diagrama' | 'detalle',
+          x: w.x ?? 0, y: w.y ?? 0, w: w.w ?? 3, h: w.h ?? 7,
         }));
+      if (posiciones.length !== 2) return;
       try { localStorage.setItem(llave, JSON.stringify(posiciones)); } catch { /* Sin almacenamiento */ }
+      callbackGuardar.current?.(posiciones);
     };
     grid.on('dragstop', guardar);
     grid.on('resizestop', guardar);
@@ -87,6 +95,7 @@ export default function EspacioMapaGrid({
       if (item) grid.update(item as HTMLElement, { x: p.x, y: p.y, w: p.w, h: p.h });
     });
     grid.batchUpdate(false);
+    callbackGuardar.current?.(inicial.map((p) => ({ ...p })));
   }
 
   return (
