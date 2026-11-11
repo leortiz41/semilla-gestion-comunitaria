@@ -71,7 +71,14 @@ proyectosRouter.get('/evidencias/indice', async (req, res) => {
        LIMIT 500`,
       [req.auth!.organizacionId],
     );
-    res.json({ avances: rows });
+    const { rows: finalizados } = await databasePool.query(
+      `SELECT p.id, p.nombre, c.nombre AS comunidad
+       FROM proyectos p JOIN comunidades c ON c.id=p.comunidad_id
+       WHERE c.organizacion_id=$1 AND p.estado='FINALIZADO'
+       ORDER BY p.nombre, p.id LIMIT 500`,
+      [req.auth!.organizacionId],
+    );
+    res.json({ avances: rows, proyectosFinalizados: finalizados });
   } catch (error) {
     console.error('Error consultando índice de evidencias:', error);
     res.status(500).json({ message: 'No fue posible consultar el expediente documental de avances.' });
