@@ -16,7 +16,9 @@ export interface DetalleImpacto {
   actividades: { id: string; nombre: string; descripcion: string | null; estado: string }[];
   avances: {
     id: string; actividadId: string; fecha: string;
-    descripcion: string | null; estado: string;
+    descripcion: string | null; observaciones: string | null;
+    cantidadReportada: number | null; porcentajeAvance: number | null;
+    estado: string;
   }[];
   evidencias: {
     id: string; avanceId: string; titulo: string | null;
