@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import MapaReactFlow from './componentes/MapaReactFlow';
 import FotografiaPrivadaMapa from './componentes/FotografiaPrivadaMapa';
 import EspacioMapaGrid from './componentes/EspacioMapaGrid';
 import {
-  listarProyectosMapa, obtenerMapaProyecto,
-  type DetalleImpacto, type ProyectoMapa,
+  listarProyectosMapa, obtenerMapaProyecto, obtenerPreferenciasMapa, guardarPreferenciasMapa,
+  type DetalleImpacto, type ProyectoMapa, type PreferenciasMapaImpacto,
+  type PosicionPanelMapa, type PosicionesNodosMapa,
 } from '../../servicios/mapa-impacto/servicioMapaImpacto';
 import '../../estilos/modulos/mapa-impacto/mapaImpacto.css';
 
@@ -19,6 +20,57 @@ export default function PaginaMapaImpacto({ token, usuarioId }: { token: string;
   const [error, setError] = useState('');
   const [busqueda, setBusqueda] = useState('');
   const [recarga, setRecarga] = useState(0);
+  const [preferencias, setPreferencias] = useState<PreferenciasMapaImpacto | null>(null);
+  const [preferenciasProyecto, setPreferenciasProyecto] = useState('');
+  const [avisoPreferencias, setAvisoPreferencias] = useState('');
+  const guardados = useRef<Promise<void>>(Promise.resolve());
+
+  useEffect(() => {
+    if (!datos || datos.proyecto.id !== proyectoId) return;
+    let activo = true;
+    setPreferenciasProyecto('');
+    const local = (): PreferenciasMapaImpacto => {
+      try {
+        const paneles = JSON.parse(localStorage.getItem(
+          `semilla:mapa-impacto:grid:v1:${usuarioId}:${proyectoId}`) || 'null') as PosicionPanelMapa[] | null;
+        const nodos = JSON.parse(localStorage.getItem(
+          `semilla:mapa-impacto:posiciones:v1:${usuarioId}:${proyectoId}`) || '{}') as PosicionesNodosMapa;
+        return {
+          paneles: Array.isArray(paneles) ? paneles : undefined,
+          nodos: nodos && typeof nodos === 'object' && !Array.isArray(nodos) ? nodos : {},
+        };
+      } catch { return {}; }
+    };
+    obtenerPreferenciasMapa(token, proyectoId).then((resultado) => {
+      if (!activo) return;
+      const cfg = resultado.configuracion ?? local();
+      setPreferencias(cfg);
+      setAvisoPreferencias('');
+      // Mantener una copia de la configuración de Neon en el navegador.
+      try {
+        if (cfg.paneles) localStorage.setItem(
+          `semilla:mapa-impacto:grid:v1:${usuarioId}:${proyectoId}`, JSON.stringify(cfg.paneles));
+        if (cfg.nodos) localStorage.setItem(
+          `semilla:mapa-impacto:posiciones:v1:${usuarioId}:${proyectoId}`, JSON.stringify(cfg.nodos));
+      } catch { /* almacenamiento local opcional */ }
+    }).catch(() => {
+      if (!activo) return;
+      setPreferencias(local());
+      setAvisoPreferencias('No se pudieron cargar las preferencias de Neon; se utiliza la copia local.');
+    }).finally(() => { if (activo) setPreferenciasProyecto(proyectoId); });
+    return () => { activo = false; };
+  }, [token, usuarioId, proyectoId, datos]);
+
+  function persistirDiseño(
+    idProyecto: string, tipo: 'paneles' | 'nodos', valor: PosicionPanelMapa[] | PosicionesNodosMapa,
+  ) {
+    guardados.current = guardados.current.catch(() => undefined).then(async () => {
+      await guardarPreferenciasMapa(token, idProyecto, tipo, valor);
+      setAvisoPreferencias('');
+    }).catch(() => {
+      setAvisoPreferencias('No se pudo guardar el diseño en Neon. Se conserva la copia local del navegador.');
+    });
+  }
 
   useEffect(() => {
     let activo = true;
@@ -102,10 +154,11 @@ export default function PaginaMapaImpacto({ token, usuarioId }: { token: string;
       </div>
 
       {error && <p role="alert" className="mapa-impacto__error">{error}</p>}
+      {avisoPreferencias && <p role="status" className="mapa-impacto__aviso">{avisoPreferencias}</p>}
       {cargando && <p role="status">Construyendo el mapa con los datos de Neon…</p>}
       {!cargando && proyectos.length === 0 && !error &&
         <p className="mapa-impacto__vacio">Todavía no hay proyectos registrados en tu organización.</p>}
-      {datos && !cargando && (
+      {datos && !cargando && preferenciasProyecto === datos.proyecto.id && (
         <>
           <div className="mapa-impacto__resumen">
             <span><strong>{datos.actividades.length}</strong> actividades</span>
@@ -113,8 +166,12 @@ export default function PaginaMapaImpacto({ token, usuarioId }: { token: string;
             <span><strong>{datos.evidencias.length}</strong> fotografías</span>
             <span><strong>{datos.proyecto.comunidad}</strong> comunidad</span>
           </div>
-          <EspacioMapaGrid usuarioId={usuarioId} proyectoId={datos.proyecto.id}
+          <EspacioMapaGrid key={datos.proyecto.id} usuarioId={usuarioId} proyectoId={datos.proyecto.id}
+            posicionesIniciales={preferencias?.paneles}
+            onGuardar={(paneles) => persistirDiseño(datos.proyecto.id, 'paneles', paneles)}
             mapa={<MapaReactFlow datos={datos} usuarioId={usuarioId} seleccion={seleccion}
+              posicionesIniciales={preferencias?.nodos}
+              onGuardar={(nodos) => persistirDiseño(datos.proyecto.id, 'nodos', nodos)}
               seleccionar={(tipo, id) => setSeleccion({ tipo, id })} />}
             detalle={<aside className="mapa-impacto__detalle" aria-live="polite">
               <div className="mapa-impacto__detalle-titulo">
@@ -152,7 +209,7 @@ export default function PaginaMapaImpacto({ token, usuarioId }: { token: string;
             </aside>} />
         </>
       )}
-      <p className="mapa-impacto__nota">Podés organizar los nodos a tu gusto: su posición se guarda para este usuario y proyecto en este navegador. Las conexiones y los registros reales no cambian.
+      <p className="mapa-impacto__nota">Podés organizar paneles y nodos a tu gusto: su distribución se guarda por usuario y proyecto en Neon, con una copia local de respaldo. Las conexiones y los registros reales no cambian.
         La visualización para donantes tendrá permisos y datos específicos en una fase posterior.</p>
     </section>
   );
