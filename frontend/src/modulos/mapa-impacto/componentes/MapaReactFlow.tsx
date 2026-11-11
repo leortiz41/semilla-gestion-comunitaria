@@ -4,17 +4,26 @@ import {
   type Edge, type Node, type NodeMouseHandler, type ReactFlowInstance, type NodeChange,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import { MapPinned, FolderKanban, ListChecks, ClipboardCheck, Image as ImageIcon } from 'lucide-react';
 import type { DetalleImpacto, PosicionesNodosMapa } from '../../../servicios/mapa-impacto/servicioMapaImpacto';
 
 type TipoNodo = 'comunidad' | 'proyecto' | 'actividad' | 'avance' | 'evidencia';
 type NivelMapa = 'resumen' | 'completo';
 
-const colores: Record<TipoNodo, { fondo: string; borde: string; simbolo: string; nombre: string }> = {
-  comunidad: { fondo: '#ffffff', borde: '#318b72', simbolo: '🏘️', nombre: 'Comunidad' },
-  proyecto: { fondo: '#ffffff', borde: '#245b82', simbolo: '📁', nombre: 'Proyecto' },
-  actividad: { fondo: '#ffffff', borde: '#428c54', simbolo: '🗓️', nombre: 'Actividad' },
-  avance: { fondo: '#ffffff', borde: '#b87825', simbolo: '📋', nombre: 'Avance' },
-  evidencia: { fondo: '#ffffff', borde: '#456cba', simbolo: '📷', nombre: 'Fotografía' },
+const iconos = {
+  comunidad: MapPinned,
+  proyecto: FolderKanban,
+  actividad: ListChecks,
+  avance: ClipboardCheck,
+  evidencia: ImageIcon,
+} satisfies Record<TipoNodo, typeof MapPinned>;
+
+const colores: Record<TipoNodo, { fondo: string; borde: string; nombre: string }> = {
+  comunidad: { fondo: '#ffffff', borde: '#318b72', nombre: 'Comunidad' },
+  proyecto: { fondo: '#ffffff', borde: '#245b82', nombre: 'Proyecto' },
+  actividad: { fondo: '#ffffff', borde: '#428c54', nombre: 'Actividad' },
+  avance: { fondo: '#ffffff', borde: '#b87825', nombre: 'Avance' },
+  evidencia: { fondo: '#ffffff', borde: '#456cba', nombre: 'Fotografía' },
 };
 const nombreEstado: Record<string, string> = {
   VALIDADO: 'Validado', ENVIADO: 'En revisión', BORRADOR: 'Borrador',
@@ -81,9 +90,23 @@ export default function MapaReactFlow({
       const coincide = !termino || `${titulo} ${subtitulo} ${colores[tipo].nombre}`.toLocaleLowerCase('es').includes(termino);
       if (termino && coincide) encontrados++;
       const seleccionado = seleccion?.tipo + ':' + seleccion?.id === id;
+      const Icono = iconos[tipo];
       nodes.push({
         id, position: posicion,
-        data: { label: `${colores[tipo].simbolo} ${titulo}${subtitulo ? ' · ' + subtitulo : ''}` },
+        data: {
+          label: (
+            <div className="mapa-impacto__nodo-contenido" title={titulo}>
+              <span className="mapa-impacto__nodo-icono"
+                style={{ color: colores[tipo].borde, backgroundColor: colores[tipo].borde + '12' }}>
+                <Icono size={18} strokeWidth={1.8} aria-hidden="true" />
+              </span>
+              <span className="mapa-impacto__nodo-textos">
+                <span className="mapa-impacto__nodo-titulo">{titulo}</span>
+                {subtitulo && <span className="mapa-impacto__nodo-subtitulo">{subtitulo}</span>}
+              </span>
+            </div>
+          ),
+        },
         style: estilo(tipo, seleccionado, coincide),
         className: 'mapa-impacto__nodo',
         draggable: edicionVisual, selectable: true, connectable: false,
