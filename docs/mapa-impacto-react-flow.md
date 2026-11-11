@@ -154,3 +154,18 @@ El archivo `frontend/package-lock.json` ya se regeneró y se versionó en `devel
 3. Pulsar el nodo: galería flotante de tres fotografías; pulsar «Ver fotografía» en cada una y cerrar.
 4. Comprobar que no aparece `ExpiredRequest` y que el modo exploración/arrastre y GridStack funcionan.
 5. Recargar y regresar al mapa: nodos y paneles no deben perder su distribución personalizada.
+
+## Incremento 1G — nodos de avance descriptivos
+
+- El nodo del avance deja de usar exclusivamente la fecha como título: muestra «Avance de ejecución», un resumen de los comentarios registrados (o de las observaciones, si no hay comentarios), la fecha y el estado de revisión.
+- Cuando existen datos, muestra la **cantidad reportada** y el **porcentaje de avance** tal como están almacenados, sin calcular metas ni interpretar unidades no especificadas.
+- El panel de detalles conserva los comentarios y observaciones completos y presenta las métricas disponibles.
+- El backend incorpora `observaciones`, `cantidadReportada` y `porcentajeAvance` en el GET existente; no añade migraciones ni cambia el estado de revisión.
+- Si falta la descripción, se informa «Sin descripción registrada», sin generar texto ficticio.
+- Las posiciones de nodos y paneles siguen persistiendo por usuario/proyecto.
+
+### Aceptación
+1. Comprobar en Aula para Kinder los avances con comentarios reales «lleva 3 hiladas de bloques» e «iniciamos con el proceso de construccion del aula».
+2. Verificar que «Validado» y la fecha son metadatos, no el único contenido visible.
+3. Pulsar un avance y revisar observaciones y valores numéricos en el detalle lateral.
+4. Verificar que el agrupamiento de evidencias, la galería R2, GridStack y los permisos permanecen funcionales.
