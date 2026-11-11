@@ -97,3 +97,18 @@
 .evidencias-centro__limpiar-filtros{display:flex;align-items:end;justify-content:flex-end;grid-column:1/-1}
 .evidencias-centro__limpiar-filtros button{display:inline-flex;align-items:center;justify-content:center;gap:.45rem;border:1px solid #cbded1;border-radius:.55rem;background:#f5f9f6;color:#315943;padding:.57rem .8rem;font:inherit;font-size:.77rem;font-weight:750;cursor:pointer}
 .evidencias-centro__limpiar-filtros button:disabled{opacity:.5;cursor:not-allowed}
+
+/* Navegación compacta entre expedientes activos y archivo histórico. */
+.evidencias-centro__vistas{display:flex;align-items:center;gap:.35rem;padding:.35rem;border:1px solid #d8e6dc;border-radius:.8rem;background:#f0f5f1;flex-wrap:wrap}
+.evidencias-centro__vistas button{display:inline-flex;align-items:center;gap:.5rem;justify-content:center;border:1px solid transparent;border-radius:.6rem;background:transparent;color:#557060;padding:.62rem .9rem;font:inherit;font-size:.84rem;font-weight:700;cursor:pointer}
+.evidencias-centro__vistas button.activo{color:#245d3d;background:#fff;border-color:#d3e2d7;box-shadow:0 2px 7px #27453014}
+.evidencias-centro__vistas-cantidad{display:inline-flex;align-items:center;justify-content:center;min-width:1.5rem;padding:.16rem .38rem;background:#e5efe7;border-radius:99px;color:#315f41;font-size:.7rem}
+.evidencias-centro__archivo{display:grid;gap:.8rem;padding:1rem;border:1px solid #dbe6df;border-radius:.85rem;background:#fff}
+.evidencias-centro__archivo-lista{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:.65rem}
+.evidencias-centro__archivo-lista button{display:grid;justify-items:start;align-content:start;gap:.4rem;text-align:left;min-width:0;cursor:pointer;font:inherit;padding:.9rem;border:1px solid #dbe4dc;border-radius:.75rem;background:#fafcfb;color:#336447}
+.evidencias-centro__archivo-lista button:hover,.evidencias-centro__archivo-lista button[aria-pressed="true"]{border-color:#74a286;background:#eef7f0}
+.evidencias-centro__archivo-lista strong{font-size:.87rem;color:#294c36;overflow-wrap:anywhere}
+.evidencias-centro__archivo-lista small{font-size:.72rem;color:#627969}
+.evidencias-centro__archivo-lista button span{font-size:.73rem;color:#54715f}
+.evidencias-centro__volver-archivo{border:1px solid #c6dacd;background:#f8fbf9;border-radius:.55rem;padding:.5rem .7rem;color:#335f44;font:inherit;font-size:.76rem;font-weight:750;cursor:pointer}
+@media(max-width:620px){.evidencias-centro__vistas button{flex:1 1 auto;padding:.57rem .5rem;font-size:.76rem}}
