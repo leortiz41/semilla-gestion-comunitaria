@@ -56,3 +56,35 @@
 .mapa-impacto__barra-mapa button:focus-visible,.mapa-impacto__barra-mapa input:focus-visible,.mapa-impacto__herramientas input:focus-visible,.mapa-impacto__herramientas select:focus-visible,.mapa-impacto__galeria a:focus-visible{outline:3px solid #d4a358;outline-offset:2px}
 @media(max-width:1150px){.mapa-impacto__espacio{grid-template-columns:minmax(0,1fr)}.mapa-impacto__detalle{min-height:150px}}
 @media(max-width:660px){.mapa-impacto__barra-mapa{align-items:stretch}.mapa-impacto__niveles{flex:1 1 100%}.mapa-impacto__niveles button{flex:1;white-space:normal}.mapa-impacto__buscar-nodo{max-width:none}.mapa-impacto__acciones-mapa{flex:1 1 100%}.mapa-impacto__acciones-mapa button{flex:1;white-space:normal}.mapa-impacto__visor{height:380px}.mapa-impacto__visor .react-flow__minimap{display:none}.mapa-impacto__modo{white-space:normal}}
+
+/* GridStack controla los paneles exteriores; React Flow solo los nodos del diagrama. */
+.mapa-impacto__espacio-grid{min-width:0;display:grid;gap:.45rem}
+.mapa-impacto__layout-tools{display:flex;align-items:center;justify-content:space-between;gap:.7rem;flex-wrap:wrap;color:#647482;font-size:.73rem}
+.mapa-impacto__layout-tools button{font:inherit;font-size:.74rem;font-weight:700;border:1px solid #d5e1e8;border-radius:.55rem;background:#fff;color:#36566a;padding:.48rem .7rem;cursor:pointer}
+.mapa-impacto__grid{min-width:0}
+.mapa-impacto__panel-grid{display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden;border-radius:.85rem;background:#fff;border:1px solid #d3dee7;box-shadow:0 7px 20px #17314412}
+.mapa-impacto__panel-arrastre{display:flex;justify-content:space-between;align-items:center;gap:.5rem;flex:0 0 auto;padding:.6rem .85rem;border-bottom:1px solid #dce5eb;background:#f8fafc;color:#3a5767;cursor:grab;user-select:none;font-size:.79rem}
+.mapa-impacto__panel-arrastre:active{cursor:grabbing}
+.mapa-impacto__panel-arrastre span{font-size:1.15rem;color:#9aaab8}
+.mapa-impacto__panel-cuerpo{min-width:0;min-height:0;flex:1;display:flex;flex-direction:column;overflow:auto}
+.mapa-impacto__panel-cuerpo>.mapa-impacto__lienzo{height:100%;flex:1;border:0;border-radius:0;box-shadow:none}
+.mapa-impacto__panel-cuerpo>.mapa-impacto__detalle{flex:1;min-height:0;border:0;border-radius:0;box-shadow:none;overflow:auto}
+.mapa-impacto__panel-cuerpo .mapa-impacto__visor{height:auto;flex:1;min-height:220px}
+.mapa-impacto__grid .grid-stack-item-content{inset:0}
+.mapa-impacto__grid .ui-resizable-handle{z-index:12}
+.mapa-impacto__foto-privada{display:grid;gap:.55rem;min-width:0}
+.mapa-impacto__foto-privada img{display:block;max-width:100%;width:100%;max-height:255px;object-fit:contain;background:#f3f6f8;border:1px solid #d9e5df;border-radius:.6rem}
+.mapa-impacto__foto-privada button{border:1px solid #bed7ca;background:#eaf5ee;color:#245e3d;border-radius:.55rem;cursor:pointer;padding:.5rem .65rem;font:inherit;font-size:.75rem;font-weight:700}
+.mapa-impacto__foto-privada button:disabled{opacity:.6;cursor:wait}
+.mapa-impacto__foto-estado{display:flex;align-items:center;justify-content:center;min-height:95px;padding:.5rem;border:1px dashed #cbd9db;border-radius:.55rem;background:#f4f7fa;color:#627887;font-size:.74rem;text-align:center;overflow-wrap:anywhere}
+.mapa-impacto__foto-privada small{font-size:.72rem;color:#9a5046}
+.mapa-impacto__foto-privada--compacta img{height:100px;object-fit:cover}
+.mapa-impacto__foto-privada--compacta button{font-size:.69rem;padding:.4rem}
+.mapa-impacto__foto-privada--compacta .mapa-impacto__foto-estado{min-height:90px}
+.mapa-impacto__layout-tools button:focus-visible,.mapa-impacto__foto-privada button:focus-visible{outline:3px solid #dbad65;outline-offset:2px}
+@media(max-width:1100px){.mapa-impacto__layout-tools span{display:none}}
+@media(max-width:850px){
+ .mapa-impacto__panel-arrastre{cursor:default}
+ .mapa-impacto__grid .grid-stack-item-content{min-height:0}
+ .mapa-impacto__layout-tools{display:none}
+}
