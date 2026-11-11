@@ -544,6 +544,7 @@ export interface AvanceConFotografias {
   actividadId: string;
   proyectoId: string;
   proyecto: string;
+  estadoProyecto: string;
   actividad: string;
   comunidad: string;
   fecha: string;
