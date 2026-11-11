@@ -168,7 +168,7 @@ function PaginaProyectos({
           setRecarga((actual) => actual + 1);
         }}>Volver a cargar</button>
       )}
-      {puedeVer && puedeRevisarAvance && (
+      {puedeVer && !proyectoSeleccionado && puedeRevisarAvance && (
         <section className="revision-centro" aria-label="Centro de revisión de avances">
           <div className="revision-centro__cabecera">
             <div>
@@ -308,6 +308,7 @@ function PaginaProyectos({
       )}
       {puedeVer && datos && (
         <>
+          {!proyectoSeleccionado && <>
           {puedeGestionar && !formulario && (
             <>
               <button className="brigadas-accion" type="button" disabled={!datos.comunidades.length}
@@ -420,7 +421,10 @@ function PaginaProyectos({
                   <div className="proyectos-tarjeta__acciones">
                     <button type="button" className="proyectos-tarjeta__abrir"
                       aria-pressed={proyectoAbierto === item.id}
-                      onClick={() => setProyectoAbierto(item.id)}>
+                      onClick={() => {
+                        setProyectoAbierto(item.id);
+                        window.scrollTo({ top: 0, behavior: 'auto' });
+                      }}>
                       {proyectoAbierto === item.id ? 'Proyecto abierto' : 'Abrir proyecto'}
                     </button>
                     {puedeGestionar && <button type="button" className="brigadas-accion" disabled={guardando}
@@ -432,6 +436,7 @@ function PaginaProyectos({
               ))}
             </div>
           </section>
+          </>}
           {proyectoSeleccionado && (
             <section className="proyectos-espacio" aria-label={`Espacio de trabajo: ${proyectoSeleccionado.nombre}`}>
               <header className="proyectos-espacio__cabecera">
@@ -440,8 +445,9 @@ function PaginaProyectos({
                   <h2>{proyectoSeleccionado.nombre}</h2>
                   <p>{proyectoSeleccionado.comunidad} · {estados[proyectoSeleccionado.estado] ?? proyectoSeleccionado.estado}</p>
                 </div>
-                <button type="button" className="proyectos-espacio__cerrar" onClick={() => setProyectoAbierto(null)}>
-                  Cerrar proyecto
+                <button type="button" className="proyectos-espacio__cerrar"
+                  onClick={() => setProyectoAbierto(null)}>
+                  ← Volver a proyectos
                 </button>
               </header>
               <ActividadesProyecto
