@@ -28,6 +28,7 @@ export default function EspacioMapaGrid({
       draggable: { handle: '.mapa-impacto__panel-arrastre' },
       resizable: { handles: 'e,se,s,sw,w' },
     }, elemento);
+    if (!grid) return;
     instancia.current = grid;
     try {
       const guardadas = JSON.parse(localStorage.getItem(llave) || '[]') as Posicion[];
