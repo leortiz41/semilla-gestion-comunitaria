@@ -538,10 +538,249 @@ export function obtenerProyectosAdministrativos(token: string) {
   }>('/proyectos', { headers: { Authorization: `Bearer ${token}` } });
 }
 
+
+export interface AvanceConFotografias {
+  avanceId: string;
+  actividadId: string;
+  proyectoId: string;
+  proyecto: string;
+  estadoProyecto: string;
+  actividad: string;
+  comunidad: string;
+  fecha: string;
+  estadoRevision: 'BORRADOR' | 'ENVIADO' | 'VALIDADO' | 'DEVUELTO';
+  cantidadEvidencias: number;
+  descripcion: string | null;
+  observaciones: string | null;
+  cantidadReportada: number | null;
+  porcentajeAvance: number | null;
+  responsable: string | null;
+  revisor: string | null;
+  revisadoEn: string | null;
+  motivoDevolucion: string | null;
+}
+
+export function obtenerIndiceFotografias(token: string) {
+  return request<{
+    avances: AvanceConFotografias[];
+    proyectosFinalizados: { id: string; nombre: string; comunidad: string }[];
+  }>('/proyectos/evidencias/indice', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export interface EvidenciaFotografica {
+  id: string;
+  titulo: string | null;
+  descripcion: string | null;
+  tipoMime: string;
+  creadoEn: string;
+  url: string | null;
+}
+const rutaFotos = (proyectoId: string, actividadId: string, avanceId: string) =>
+  `/proyectos/${proyectoId}/actividades/${actividadId}/avances/${avanceId}/evidencias`;
+
+export function obtenerFotosAvance(token: string, proyectoId: string, actividadId: string, avanceId: string) {
+  return request<{ evidencias: EvidenciaFotografica[] }>(rutaFotos(proyectoId, actividadId, avanceId), {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export async function subirFotoAvance(
+  token: string, proyectoId: string, actividadId: string, avanceId: string,
+  foto: File,
+) {
+  const permitidos = ['image/jpeg', 'image/png', 'image/webp'];
+  if (!permitidos.includes(foto.type)) throw new Error('Solo se permiten fotografías JPG, PNG y WebP.');
+  if (!foto.size || foto.size > 10 * 1024 * 1024) throw new Error('La fotografía debe pesar entre 1 byte y 10 MB.');
+  const ruta = rutaFotos(proyectoId, actividadId, avanceId);
+  const preparacion = await request<{ url: string; clave: string; tipoMime: string }>(ruta + '/preparar', {
+    method: 'POST', headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ tipoMime: foto.type }),
+  });
+  let carga: Response;
+  try {
+    carga = await fetch(preparacion.url, {
+      method: 'PUT', headers: { 'Content-Type': preparacion.tipoMime }, body: foto,
+    });
+  } catch {
+    throw new Error('No se pudo conectar con R2. Verificá CORS para el origen local, conexión y firma temporal.');
+  }
+  if (!carga.ok) {
+    throw new Error(`R2 rechazó la fotografía (HTTP ${carga.status}). Verificá las credenciales, el bucket y la firma de carga.`);
+  }
+  try {
+    return await request<{ id: string }>(ruta + '/confirmar', {
+      method: 'POST', headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ clave: preparacion.clave, tipoMime: foto.type, titulo: foto.name }),
+    });
+  } catch (fallo) {
+    throw new Error('La foto se envió a R2, pero no pudo confirmarse en Neon: ' +
+      (fallo instanceof Error ? fallo.message : 'Error desconocido.'));
+  }
+}
+
+export interface AvancePendienteRevision {
+  id: string;
+  actividadId: string;
+  proyectoId: string;
+  actividad: string;
+  proyecto: string;
+  comunidad: string;
+  fecha: string;
+  descripcion: string;
+  observaciones: string | null;
+  cantidadReportada: number | null;
+  porcentajeAvance: number | null;
+  unidadMedida: string | null;
+  responsable: string;
+  cantidadEvidencias: number;
+  esPropio: boolean;
+}
+
+export function obtenerAvancesPendientesRevision(token: string) {
+  return request<{ pendientes: AvancePendienteRevision[] }>('/proyectos/revision/pendientes', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
 export function guardarProyectoAdministrativo(token: string, datos: DatosProyecto, id?: string) {
   return request<{ id: string }>(id ? `/proyectos/${id}` : '/proyectos', {
     method: id ? 'PUT' : 'POST',
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify(datos),
+  });
+}
+
+export interface ActividadProyecto {
+  id: string;
+  nombre: string;
+  descripcion: string | null;
+  estado: string;
+  fechaInicio: string | null;
+  fechaFin: string | null;
+  responsableAsignadoId: string | null;
+  responsableAsignado: string | null;
+  metaCantidad: number | null;
+  unidadMedida: string | null;
+  presupuestoEstimado: number | null;
+  pesoResultado: number | null;
+  cantidadValidada: number;
+  porcentajeResultado: number;
+  ultimaEjecucionValidada: string | null;
+  avances: AvanceActividadProyecto[];
+}
+
+export interface DatosActividadProyecto {
+  nombre: string;
+  descripcion: string;
+  estado: string;
+  fechaInicio: string | null;
+  fechaFin: string | null;
+  responsableAsignadoId: string | null;
+  metaCantidad: number | null;
+  unidadMedida: string | null;
+  presupuestoEstimado: number | null;
+  pesoResultado: number | null;
+}
+
+export interface AvanceActividadProyecto {
+  id: string;
+  porcentajeAvance: number | null;
+  cantidadReportada: number | null;
+  fecha: string;
+  descripcion: string;
+  observaciones: string | null;
+  estadoRevision: 'BORRADOR' | 'ENVIADO' | 'VALIDADO' | 'DEVUELTO';
+  responsable: string | null;
+  revisor: string | null;
+  revisadoEn: string | null;
+  motivoDevolucion: string | null;
+  cantidadEvidencias: number;
+  historial: {
+    accion: string;
+    actor: string | null;
+    fecha: string;
+    antes: Record<string, unknown> | null;
+    despues: Record<string, unknown> | null;
+  }[];
+}
+
+export interface DatosAvanceActividadProyecto {
+  porcentajeAvance: number | null;
+  cantidadReportada: number | null;
+  fecha: string;
+  descripcion: string;
+  observaciones: string | null;
+  claveIdempotencia: string;
+}
+
+export function obtenerResponsablesProyecto(token: string, proyectoId: string) {
+  return request<{ responsables: { id: string; nombre: string }[] }>(
+    `/proyectos/${proyectoId}/responsables`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+}
+
+export function obtenerActividadesProyecto(token: string, proyectoId: string) {
+  return request<{
+    actividades: ActividadProyecto[];
+    porcentajeProyecto: number | null;
+    pesoConfigurado: number;
+  }>(`/proyectos/${proyectoId}/actividades`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function guardarActividadProyecto(token: string, proyectoId: string,
+  datos: DatosActividadProyecto, actividadId?: string) {
+  const ruta = `/proyectos/${proyectoId}/actividades${actividadId ? '/' + actividadId : ''}`;
+  return request<{ id: string }>(ruta, {
+    method: actividadId ? 'PUT' : 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(datos),
+  });
+}
+
+export function registrarAvanceActividadProyecto(token: string, proyectoId: string, actividadId: string,
+  datos: DatosAvanceActividadProyecto) {
+  return request<AvanceActividadProyecto>(`/proyectos/${proyectoId}/actividades/${actividadId}/avances`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(datos),
+  });
+}
+
+export function editarAvanceActividadProyecto(token: string, proyectoId: string, actividadId: string,
+  avanceId: string, datos: DatosAvanceActividadProyecto) {
+  return request<void>(`/proyectos/${proyectoId}/actividades/${actividadId}/avances/${avanceId}`, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(datos),
+  });
+}
+
+export function enviarAvanceActividadProyecto(token: string, proyectoId: string, actividadId: string, avanceId: string) {
+  return request<void>(`/proyectos/${proyectoId}/actividades/${actividadId}/avances/${avanceId}/enviar`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function revisarAvanceActividadProyecto(token: string, proyectoId: string, actividadId: string,
+  avanceId: string, accion: 'validar' | 'devolver', motivo?: string) {
+  return request<void>(`/proyectos/${proyectoId}/actividades/${actividadId}/avances/${avanceId}/${accion}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: accion === 'devolver' ? JSON.stringify({ motivo }) : undefined,
+  });
+}
+
+export function corregirAvanceValidadoProyecto(token: string, proyectoId: string, actividadId: string,
+  avanceId: string, datos: DatosAvanceActividadProyecto, motivoCorreccion: string) {
+  return request<void>(`/proyectos/${proyectoId}/actividades/${actividadId}/avances/${avanceId}/corregir`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ ...datos, motivoCorreccion }),
   });
 }

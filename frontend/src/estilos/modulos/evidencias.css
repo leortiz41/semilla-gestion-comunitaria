@@ -1,0 +1,114 @@
+.evidencias-explorador{display:grid;gap:1rem;padding:clamp(1rem,3vw,1.5rem);border:1px solid #d9e6d6;border-radius:1rem;background:#fff;max-width:1050px}
+.evidencias-explorador__titulo h2{margin:0 0 .35rem;color:#315f3a;font-size:1.15rem}
+.evidencias-explorador__titulo p,.evidencias-explorador__resultado p{margin:0;color:#5b6d60;font-size:.88rem;line-height:1.5}
+.evidencias-explorador__filtros{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));gap:.85rem}
+.evidencias-explorador__filtros label{display:grid;gap:.4rem;color:#405b46;font-size:.84rem;font-weight:700}
+.evidencias-explorador__filtros select{width:100%;min-width:0;padding:.7rem;border:1px solid #cadac8;border-radius:.65rem;background:#fafcf9;color:#233c2c;font:inherit}
+.evidencias-explorador__filtros select:disabled{opacity:.55;cursor:not-allowed}
+.evidencias-explorador__resultado{display:grid;gap:.65rem;padding:1rem;border-radius:.85rem;background:#f7faf5;border:1px solid #e0e9dc}
+.evidencias-explorador__resultado h3{margin:0;color:#315f3a}
+.evidencias-explorador__ayuda{padding:.7rem .9rem;border-radius:.7rem;background:#f1f6ee;color:#4c6652;font-size:.85rem;line-height:1.5}
+.evidencias-explorador__error{padding:.75rem;border:1px solid #e6bbaa;background:#fff3ee;color:#994737;border-radius:.7rem}
+
+/* HU-15: índice accesible de avances que sí tienen fotografías. */
+.evidencias-indice{display:grid;gap:.8rem;padding:1rem;border:1px solid #d8e4d5;border-radius:.85rem;background:#f7faf5;min-width:0}
+.evidencias-indice__cabecera{display:flex;align-items:center;justify-content:space-between;gap:.7rem;flex-wrap:wrap}
+.evidencias-indice__cabecera h3{margin:0;color:#315f3a;font-size:1rem}
+.evidencias-indice__cabecera p{margin:.25rem 0 0;font-size:.8rem;color:#647969;line-height:1.4}
+.evidencias-indice__cabecera button{border:1px solid #cbdcc9;border-radius:.6rem;background:#fff;color:#315f3a;padding:.6rem .85rem;font:inherit;cursor:pointer}
+.evidencias-indice__lista{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,235px),1fr));gap:.6rem;max-height:320px;overflow:auto}
+.evidencias-indice__lista button{display:grid;gap:.3rem;text-align:left;align-content:start;padding:.85rem;border:1px solid #d7e5d4;border-radius:.7rem;background:#fff;color:#31523a;font:inherit;cursor:pointer;min-width:0}
+.evidencias-indice__lista button[aria-pressed="true"]{background:#ebf5e8;border-color:#579566}
+.evidencias-indice__lista button strong{font-size:.86rem;overflow-wrap:anywhere}
+.evidencias-indice__lista button span{font-size:.78rem;overflow-wrap:anywhere}
+.evidencias-indice__lista button small{font-size:.72rem;color:#697e6c}
+.evidencias-indice__cantidad{width:fit-content;padding:.2rem .55rem;border-radius:1rem;background:#e4f2e1;color:#2c6739;font-weight:750}
+.evidencias-explorador__check{display:flex;gap:.5rem;align-items:center;color:#405e48;font-size:.84rem;font-weight:650}
+.evidencias-explorador__check input{accent-color:#337143}
+.evidencias-indice button:focus-visible,.evidencias-explorador__check input:focus-visible{outline:3px solid #d9a15f;outline-offset:2px}
+
+/* Centro de Evidencias — control documental y trazabilidad */
+.evidencias-centro{min-width:0;display:grid;gap:1rem}
+.evidencias-centro__encabezado{display:flex;justify-content:space-between;align-items:end;gap:1rem;flex-wrap:wrap}
+.evidencias-centro__actualizar{display:flex;align-items:center;justify-content:center;gap:.45rem;border:1px solid #c9dbd1;border-radius:.65rem;background:#fff;color:#305941;padding:.67rem .95rem;font:inherit;font-size:.8rem;font-weight:750;cursor:pointer}
+.evidencias-centro__actualizar:disabled{opacity:.55;cursor:wait}
+.evidencias-centro__indicadores{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:.7rem}
+.evidencias-centro__indicador{display:flex;align-items:center;gap:.75rem;padding:.95rem;border:1px solid #dce8e0;border-radius:.85rem;background:#fff;color:#397551;min-width:0;box-shadow:0 5px 15px #20392a09}
+.evidencias-centro__indicador>svg{flex:none}
+.evidencias-centro__indicador div{display:grid;min-width:0;gap:.1rem}
+.evidencias-centro__indicador strong{color:#243f35;font-size:1.45rem;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.2}
+.evidencias-centro__indicador span{color:#66796d;font-size:.71rem;line-height:1.35}
+.evidencias-centro__indicador--atencion{color:#af7729}
+.evidencias-centro__aclaracion{margin:-.25rem 0 0;font-size:.72rem;line-height:1.5;color:#758479}
+.evidencias-centro__filtros{display:grid;grid-template-columns:1.5fr repeat(4,minmax(0,1fr));gap:.7rem;padding:.9rem;border:1px solid #dbe7df;border-radius:.8rem;background:#fff}
+.evidencias-centro__filtros label{min-width:0;display:flex;align-items:center;gap:.32rem;flex-wrap:wrap;color:#415f50;font-size:.74rem;font-weight:750}
+.evidencias-centro__filtros :is(input,select){width:100%;min-width:0;box-sizing:border-box;min-height:38px;padding:.53rem .58rem;border:1px solid #cdded2;border-radius:.55rem;background:#fff;color:#2d4637;font:inherit;font-size:.76rem;font-weight:500}
+.evidencias-centro__contenido{display:grid;grid-template-columns:minmax(320px,1.2fr) minmax(325px,1fr);gap:.85rem;align-items:start}
+.evidencias-centro__listado,.evidencias-centro__expediente{min-width:0;border:1px solid #dbe5de;border-radius:.9rem;background:#fff;box-shadow:0 5px 15px #1b33240b}
+.evidencias-centro__listado{padding:1rem;display:grid;gap:.7rem}
+.evidencias-centro__expediente{padding:1rem;display:grid;gap:.9rem}
+.evidencias-centro__seccion-titulo{display:flex;justify-content:space-between;align-items:start;gap:.6rem;flex-wrap:wrap}
+.evidencias-centro__seccion-titulo h2{margin:0;color:#2d583d;font-size:1.04rem;line-height:1.35}
+.evidencias-centro__seccion-titulo p{margin:.3rem 0 0;color:#6a8070;font-size:.77rem;line-height:1.4}
+.evidencias-centro__seccion-titulo>span{border-radius:99px;background:#eef4ef;color:#50745a;padding:.3rem .57rem;font-size:.71rem;white-space:nowrap}
+.evidencias-centro__registros{display:grid;gap:.55rem;max-height:640px;overflow:auto;padding:1px 3px 3px 1px}
+.evidencias-centro__registro{display:grid;gap:.4rem;text-align:left;padding:.82rem .9rem;border:1px solid #dde7e0;border-radius:.72rem;background:#fff;color:#2e4d3b;cursor:pointer;font:inherit;min-width:0}
+.evidencias-centro__registro:hover{border-color:#97bba3;background:#f8fbf8}
+.evidencias-centro__registro[aria-pressed="true"]{border-color:#55906e;box-shadow:0 0 0 2px #8fc5a52d;background:#f6faf7}
+.evidencias-centro__registro-superior,.evidencias-centro__registro-pie{display:flex;align-items:center;justify-content:space-between;gap:.5rem}
+.evidencias-centro__registro-superior strong{font-size:.87rem;line-height:1.35;overflow-wrap:anywhere}
+.evidencias-centro__ubicacion{color:#687b70;font-size:.74rem}
+.evidencias-centro__descripcion{font-size:.78rem;color:#506859;line-height:1.4;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}
+.evidencias-centro__registro-pie{justify-content:flex-start;flex-wrap:wrap;color:#738174;font-size:.71rem}
+.evidencias-centro__registro-pie>span{display:inline-flex;align-items:center;gap:.3rem}
+.evidencias-centro__registro-pie>svg{margin-left:auto}
+.evidencias-centro__con-fotos{color:#37704d}
+.evidencias-centro__sin-fotos{color:#a36e26}
+.evidencias-centro__estado{display:inline-block;border-radius:99px;padding:.27rem .58rem;font-size:.69rem;font-weight:800;white-space:nowrap;background:#f0f2f5;color:#526476}
+.evidencias-centro__estado--validado{background:#e4f2e8;color:#28653a}
+.evidencias-centro__estado--enviado{background:#edf0fc;color:#4f6595}
+.evidencias-centro__estado--devuelto{background:#fff0e6;color:#945329}
+.evidencias-centro__estado--borrador{background:#f0f1f2;color:#5c6872}
+.evidencias-centro__sin-seleccion{display:grid;justify-items:center;align-content:center;gap:.6rem;text-align:center;min-height:300px;color:#678070}
+.evidencias-centro__sin-seleccion h2{margin:0;font-size:1.02rem;color:#375b45}
+.evidencias-centro__sin-seleccion p{margin:0;font-size:.82rem;line-height:1.55}
+.evidencias-centro__sobretitulo{margin:0 0 .3rem!important;text-transform:uppercase;letter-spacing:.06em;font-weight:800;font-size:.65rem!important}
+.evidencias-centro__ruta{margin:0;color:#64796c;font-size:.77rem;line-height:1.5}
+.evidencias-centro__bloque{display:grid;gap:.6rem;padding:.85rem;background:#f9fbf9;border:1px solid #e0e9e3;border-radius:.75rem;min-width:0}
+.evidencias-centro__bloque h3{display:flex;align-items:center;gap:.42rem;margin:0;color:#3b6349;font-size:.86rem}
+.evidencias-centro__bloque>p{margin:0;color:#536f5e;font-size:.79rem;line-height:1.55;overflow-wrap:anywhere}
+.evidencias-centro__datos{display:grid;gap:.42rem}
+.evidencias-centro__datos>span{display:flex;justify-content:space-between;align-items:center;gap:.5rem;flex-wrap:wrap;color:#697e70;font-size:.75rem}
+.evidencias-centro__datos strong{color:#335a41;font-weight:700;overflow-wrap:anywhere}
+.evidencias-centro__observacion{color:#955d29!important}
+.evidencias-centro__contador{margin-left:auto;border-radius:99px;background:#e2eee6;color:#316443;padding:.2rem .52rem;font-size:.72rem}
+.evidencias-centro__permisos{font-size:.72rem!important;color:#7a867b!important}
+.evidencias-centro__vacio{padding:1.1rem;text-align:center;background:#f7faf8;border-radius:.7rem;color:#637b6a;font-size:.84rem}
+.evidencias-centro :is(button,input,select):focus-visible{outline:3px solid #d7a15e;outline-offset:2px}
+@media(max-width:1170px){.evidencias-centro__indicadores{grid-template-columns:repeat(3,minmax(0,1fr))}.evidencias-centro__filtros{grid-template-columns:repeat(3,minmax(0,1fr))}.evidencias-centro__filtros label:first-child{grid-column:span 2}}
+@media(max-width:920px){.evidencias-centro__contenido{grid-template-columns:minmax(0,1fr)}.evidencias-centro__registros{max-height:400px}}
+@media(max-width:620px){.evidencias-centro__indicadores{grid-template-columns:repeat(2,minmax(0,1fr))}.evidencias-centro__filtros{grid-template-columns:minmax(0,1fr)}.evidencias-centro__filtros label:first-child{grid-column:auto}.evidencias-centro__indicador{padding:.75rem}.evidencias-centro__indicador strong{font-size:1.2rem}}
+
+.evidencias-centro__historial{display:grid;gap:.5rem;list-style:none;margin:0;padding:0}
+.evidencias-centro__historial li{display:grid;gap:.12rem;padding:.48rem .65rem;border-left:3px solid #8fbaa0;background:#fff;border-radius:.3rem}
+.evidencias-centro__historial strong{color:#416551;font-size:.73rem;text-transform:capitalize}
+.evidencias-centro__historial span{color:#6c7e72;font-size:.69rem}
+
+.evidencias-centro__limpiar-filtros{display:flex;align-items:end;justify-content:flex-end;grid-column:1/-1}
+.evidencias-centro__limpiar-filtros button{display:inline-flex;align-items:center;justify-content:center;gap:.45rem;border:1px solid #cbded1;border-radius:.55rem;background:#f5f9f6;color:#315943;padding:.57rem .8rem;font:inherit;font-size:.77rem;font-weight:750;cursor:pointer}
+.evidencias-centro__limpiar-filtros button:disabled{opacity:.5;cursor:not-allowed}
+
+/* Navegación compacta entre expedientes activos y archivo histórico. */
+.evidencias-centro__vistas{display:flex;align-items:center;gap:.35rem;padding:.35rem;border:1px solid #d8e6dc;border-radius:.8rem;background:#f0f5f1;flex-wrap:wrap}
+.evidencias-centro__vistas button{display:inline-flex;align-items:center;gap:.5rem;justify-content:center;border:1px solid transparent;border-radius:.6rem;background:transparent;color:#557060;padding:.62rem .9rem;font:inherit;font-size:.84rem;font-weight:700;cursor:pointer}
+.evidencias-centro__vistas button.activo{color:#245d3d;background:#fff;border-color:#d3e2d7;box-shadow:0 2px 7px #27453014}
+.evidencias-centro__vistas-cantidad{display:inline-flex;align-items:center;justify-content:center;min-width:1.5rem;padding:.16rem .38rem;background:#e5efe7;border-radius:99px;color:#315f41;font-size:.7rem}
+.evidencias-centro__archivo{display:grid;gap:.8rem;padding:1rem;border:1px solid #dbe6df;border-radius:.85rem;background:#fff}
+.evidencias-centro__archivo-lista{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:.65rem}
+.evidencias-centro__archivo-lista button{display:grid;justify-items:start;align-content:start;gap:.4rem;text-align:left;min-width:0;cursor:pointer;font:inherit;padding:.9rem;border:1px solid #dbe4dc;border-radius:.75rem;background:#fafcfb;color:#336447}
+.evidencias-centro__archivo-lista button:hover,.evidencias-centro__archivo-lista button[aria-pressed="true"]{border-color:#74a286;background:#eef7f0}
+.evidencias-centro__archivo-lista strong{font-size:.87rem;color:#294c36;overflow-wrap:anywhere}
+.evidencias-centro__archivo-lista small{font-size:.72rem;color:#627969}
+.evidencias-centro__archivo-lista button span{font-size:.73rem;color:#54715f}
+.evidencias-centro__volver-archivo{border:1px solid #c6dacd;background:#f8fbf9;border-radius:.55rem;padding:.5rem .7rem;color:#335f44;font:inherit;font-size:.76rem;font-weight:750;cursor:pointer}
+@media(max-width:620px){.evidencias-centro__vistas button{flex:1 1 auto;padding:.57rem .5rem;font-size:.76rem}}

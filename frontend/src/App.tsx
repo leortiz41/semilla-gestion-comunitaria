@@ -9,6 +9,7 @@ import PaginaAuditoria from './modulos/auditoria/PaginaAuditoria';
 import PaginaComunidades from './modulos/comunidades/PaginaComunidades';
 import PaginaDashboard from './modulos/dashboard/PaginaDashboard';
 import PaginaEvidencias from './modulos/evidencias/PaginaEvidencias';
+import PaginaMapaImpacto from './modulos/mapa-impacto/PaginaMapaImpacto';
 import PaginaFamilias from './modulos/familias/PaginaFamilias';
 import PaginaPagos from './modulos/pagos/PaginaPagos';
 import PaginaPerfilSeguridad from './modulos/perfil/PaginaPerfilSeguridad';
@@ -205,14 +206,24 @@ function App() {
           : usuario && accessToken ? (
             <PaginaProyectos
               token={accessToken}
+              usuarioEmail={usuario.email}
               puedeVer={usuario.permisos.includes('proyectos.ver')}
               puedeGestionar={usuario.permisos.includes('proyectos.gestionar')}
+              puedeRegistrarAvance={usuario.permisos.includes('actividades.avance.gestionar')}
+              puedeRevisarAvance={usuario.permisos.includes('actividades.avance.revisar')}
+              puedeCorregirAvance={usuario.permisos.includes('actividades.avance.corregir')}
             />
           ) : null;
+      case 'mapa-impacto':
+        return !esDonante && accessToken && usuario?.permisos.includes('proyectos.ver')
+          ? <PaginaMapaImpacto token={accessToken} usuarioId={usuario.id} /> : null;
       case 'evidencias':
         return esDonante && accessToken
           ? <SeguimientoDonante tokenAcceso={accessToken} vista="evidencias" />
-          : <PaginaEvidencias />;
+          : usuario && accessToken ? (
+              <PaginaEvidencias token={accessToken} usuarioEmail={usuario.email}
+                puedeGestionar={usuario.permisos.includes('evidencias.gestionar')} />
+            ) : null;
       case 'pagos':
         return <PaginaPagos />;
       case 'donantes':
@@ -252,7 +263,7 @@ function App() {
         );
       case 'dashboard':
       default:
-        return <PaginaDashboard tokenAcceso={accessToken} />;
+        return <PaginaDashboard tokenAcceso={accessToken} usuarioEmail={usuario?.email ?? 'sesion'} />;
     }
   }
 

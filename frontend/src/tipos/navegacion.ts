@@ -3,6 +3,7 @@ export type SeccionAdministrativa =
   | 'comunidades'
   | 'familias'
   | 'proyectos'
+  | 'mapa-impacto'
   | 'evidencias'
   | 'pagos'
   | 'donantes'

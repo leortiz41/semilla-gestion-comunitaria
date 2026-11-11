@@ -11,7 +11,7 @@ El esquema parte del modelo original diseñado en DrawDB con **14 tablas y 26 re
 - PostgreSQL desplegado en Neon.
 - Rama `production` reservada para producción.
 - Rama `development` utilizada para desarrollo.
-- Esquema inicial en `database/sql/001_esquema_inicial.sql`, ampliado mediante migraciones incrementales 002–010.
+- Esquema inicial en `database/sql/001_esquema_inicial.sql`, ampliado mediante migraciones incrementales 002–019.
 - El esquema inicial contiene 28 tablas; las migraciones posteriores amplían el modelo.
 - Las 14 entidades funcionales originales se conservan como núcleo del diseño.
 - UUID utilizados como claves primarias para facilitar sincronización offline.
@@ -23,6 +23,7 @@ El esquema parte del modelo original diseñado en DrawDB con **14 tablas y 26 re
 1. `Pagos.IdProyecto` ya no referencia `ServiciosBasicos.IdProyecto`. El flujo financiero se normaliza como `solicitudes_pago -> pagos`.
 2. `solicitudes_pago` identifica a un único beneficiario: proveedor, personal contratado o empleado.
 3. `avances_proyecto` deja de depender de un pago. Una solicitud de pago puede referenciar un avance cuando corresponda.
+   La migración 019 reutiliza esta tabla para el historial de ejecución por actividad, con fecha, responsable autenticado y descripción.
 4. Se separa `familias` de `perfiles_familia`, permitiendo que una familia tenga perfiles distintos en diferentes proyectos.
 5. `personas` deja de depender directamente de una familia. La relación familiar y el parentesco se manejan mediante `miembros_familia`.
 6. `empleados` y `personal_contratado` reutilizan la identidad almacenada en `personas`, evitando duplicidad.
@@ -82,7 +83,7 @@ Reglas principales:
 
 | Carpeta | Contenido |
 |---|---|
-| `database/sql/` | Migraciones ejecutables numeradas 001–010. Las nuevas continúan la secuencia. |
+| `database/sql/` | Migraciones ejecutables numeradas 001–019. Las nuevas continúan la secuencia. |
 | `database/sql/validaciones/` | Consultas de validación; no son migraciones. |
 | `database/documentacion/` | Guías y registros de aplicación en Neon. |
 | `database/referencias/` | Copias históricas para comparación y pruebas; no ejecutar como migraciones. |

@@ -1,0 +1,16 @@
+/* HU-15: diseño amplio y legible de la ejecución de actividades. */
+.proyecto-detalle__lista--ejecucion{grid-template-columns:minmax(0,1fr);gap:1rem}
+.proyecto-detalle__lista--ejecucion>.actividad-detalle{width:100%;box-sizing:border-box;padding:clamp(1rem,2vw,1.4rem)}
+.proyecto-detalle__lista--ejecucion .actividad-detalle__encabezado{align-items:center;flex-wrap:wrap}
+.proyecto-detalle__lista--ejecucion .actividad-avances{display:grid;gap:.85rem;min-width:0}
+.proyecto-detalle__lista--ejecucion .actividad-avances__lista{display:grid;grid-template-columns:minmax(0,1fr);gap:.9rem;margin:0;padding:0;list-style:none}
+.proyecto-detalle__lista--ejecucion .actividad-avance{box-sizing:border-box;min-width:0;padding:1rem;border:1px solid #d8e6d7;border-radius:.9rem;background:#fcfefb}
+.proyecto-detalle__lista--ejecucion .actividad-avance>p{overflow-wrap:anywhere;line-height:1.55}
+.proyecto-detalle__lista--ejecucion .actividad-avance__acciones{display:flex;justify-content:flex-end;gap:.65rem;flex-wrap:wrap}
+.proyecto-detalle__lista--ejecucion .fotos-avance{margin:.8rem 0}
+.proyecto-detalle__lista--ejecucion .actividad-avance-form{width:100%;box-sizing:border-box}
+@media(max-width:650px){.proyecto-detalle__lista--ejecucion .actividad-avance{padding:.75rem}.proyecto-detalle__lista--ejecucion .actividad-avance__acciones>button{flex:1 1 100%}}
+
+.actividad-avance__indicadores{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin:.25rem 0}
+.actividad-avance__indicadores .actividad-avance__estado{margin-top:0}
+.actividad-avance__fotos{display:inline-flex;align-items:center;padding:.25rem .6rem;border:1px solid #cddfc9;border-radius:999px;background:#f0f7ed;color:#366743;font-size:.73rem;font-weight:750}

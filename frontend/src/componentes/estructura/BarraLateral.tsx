@@ -20,6 +20,7 @@ const opcionesNavegacion: OpcionNavegacion[] = [
   { clave: 'comunidades', etiqueta: 'Comunidades' },
   { clave: 'familias', etiqueta: 'Familias' },
   { clave: 'proyectos', etiqueta: 'Proyectos' },
+  { clave: 'mapa-impacto', etiqueta: 'Mapa de Impacto' },
   { clave: 'evidencias', etiqueta: 'Evidencias' },
   { clave: 'pagos', etiqueta: 'Pagos' },
   { clave: 'donantes', etiqueta: 'Donantes' },

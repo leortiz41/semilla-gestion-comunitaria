@@ -26,8 +26,8 @@ donantesRouter.get(
     try {
       const { rows } = await databasePool.query(
         `SELECT p.id, p.nombre, p.estado, p.fecha_inicio::text AS "fechaInicio",
-                a.porcentaje_avance::float AS "porcentajeAvance",
-                a.fecha_avance::text AS "fechaAvance",
+                a."porcentajeAvance"::float AS "porcentajeAvance",
+                a."fechaAvance"::text AS "fechaAvance",
                 COALESCE((
                   SELECT jsonb_agg(jsonb_build_object(
                     'id', e.id, 'titulo', e.titulo, 'tipo', e.tipo_evidencia,
@@ -42,10 +42,40 @@ donantesRouter.get(
            JOIN comunidades c ON c.id = p.comunidad_id
            JOIN usuarios u ON u.id = pd.usuario_id AND u.organizacion_id = c.organizacion_id
            LEFT JOIN LATERAL (
-             SELECT porcentaje_avance, fecha_avance FROM avances_proyecto
-             WHERE proyecto_id = p.id
-             ORDER BY fecha_avance DESC, creado_en DESC, id DESC
-             LIMIT 1
+             SELECT CASE
+                      WHEN count(*) > 0 AND bool_and(ap.peso_resultado IS NOT NULL)
+                           AND COALESCE(sum(ap.peso_resultado), 0) > 0
+                      THEN sum(ap.peso_resultado * resultado.porcentaje) / sum(ap.peso_resultado)
+                    END AS "porcentajeAvance",
+                    max(resultado."fechaAvance") AS "fechaAvance"
+             FROM actividades_programadas ap
+             CROSS JOIN LATERAL (
+               SELECT CASE
+                        WHEN ap.estado = 'CANCELADA' THEN 0::numeric
+                        WHEN ap.meta_cantidad IS NOT NULL THEN LEAST(100::numeric,
+                          COALESCE((
+                            SELECT sum(av.cantidad_reportada)
+                            FROM avances_proyecto av
+                            WHERE av.actividad_id = ap.id AND av.proyecto_id = ap.proyecto_id
+                              AND av.estado_revision = 'VALIDADO' AND av.cantidad_reportada IS NOT NULL
+                          ), 0) * 100 / ap.meta_cantidad)
+                        ELSE COALESCE((
+                          SELECT av.porcentaje_avance
+                          FROM avances_proyecto av
+                          WHERE av.actividad_id = ap.id AND av.proyecto_id = ap.proyecto_id
+                            AND av.estado_revision = 'VALIDADO' AND av.porcentaje_avance IS NOT NULL
+                          ORDER BY av.revisado_en DESC, av.creado_en DESC, av.id DESC
+                          LIMIT 1
+                        ), 0)
+                      END AS porcentaje,
+                      (
+                        SELECT max(av.fecha_avance)::text
+                        FROM avances_proyecto av
+                        WHERE av.actividad_id = ap.id AND av.proyecto_id = ap.proyecto_id
+                          AND av.estado_revision = 'VALIDADO'
+                      ) AS "fechaAvance"
+             ) resultado
+             WHERE ap.proyecto_id = p.id
            ) a ON TRUE
           WHERE pd.usuario_id = $1 AND c.organizacion_id = $2 AND u.activo
             AND EXISTS (

@@ -45,7 +45,7 @@ El recorrido principal del usuario se organiza en las siguientes actividades:
 | HU-09 | Familias | Como personal de campo quiero registrar familias vinculadas a una comunidad para mantener un expediente familiar ordenado. | Must | Pendiente |
 | HU-10 | Beneficiarios | Como coordinador quiero asociar personas y beneficiarios a una familia para evitar duplicidad y mejorar la trazabilidad. | Must | Pendiente |
 | HU-11 | Proyectos | Como coordinador quiero registrar programas y proyectos vinculados a comunidades para controlar las intervenciones realizadas. | Must | Página base |
-| HU-12 | Actividades | Como personal de campo quiero registrar actividades de un proyecto para documentar su ejecución. | Must | Pendiente |
+| HU-12 | Actividades | Como personal de campo quiero planificar actividades, registrar su ejecución y consultar resultados validados. | Must | Planificación, flujo de revisión y resultados por actividad; evidencias pertenecen a HU-15 |
 | HU-13 | Recursos | Como finanzas quiero registrar donaciones y recursos recibidos para conocer su origen y disponibilidad. | Must | Pendiente |
 | HU-14 | Recursos | Como finanzas quiero relacionar compras, gastos o pagos con un proyecto para conocer cómo se utilizaron los recursos. | Must | Página base de pagos |
 | HU-15 | Evidencias | Como personal de campo quiero adjuntar evidencias de una actividad para demostrar el trabajo realizado. | Should | Página base |
@@ -83,6 +83,18 @@ El expediente debe permitir capturar, como mínimo:
 - Productividad local.
 
 La historia se considerará terminada cuando estos datos puedan validarse, enviarse al backend, persistirse en PostgreSQL y recuperarse nuevamente desde la aplicación.
+
+### HU-12 - Planificación y avance de ejecución por actividad
+
+- La vista del proyecto contiene las secciones **Planificación**, **Ejecución** y **Resultados**.
+- La planificación de cada actividad incluye descripción, responsable asignado, fechas previstas, meta/unidad opcionales, presupuesto estimado como asignación del presupuesto del proyecto y peso explícito para el resultado global. No se duplica el presupuesto del proyecto.
+- Se permiten múltiples avances por actividad. Cada avance guarda fecha, descripción, autor tomado de la sesión, observaciones y cantidad incremental para metas cuantificables o porcentaje acumulado justificado para actividades no cuantificables.
+- El avance tiene estado independiente del estado operativo de la actividad: `BORRADOR`, `ENVIADO`, `VALIDADO` o `DEVUELTO`. La revisión requiere un permiso separado; ADMINISTRADOR y COORDINADOR pueden validar o devolver sus propios avances cuando tienen el permiso, dejando evento explícito de autorrevisión en auditoría. CAMPO no puede revisar sus avances.
+- Solo cantidades y estimaciones validadas cuentan como resultados. Las cantidades incrementales se suman y limitan al 100% de la meta; para actividades no cuantificables se utiliza la última estimación validada, sin sumar porcentajes.
+- El porcentaje del proyecto se pondera con los pesos explícitos de las actividades y solo se publica cuando todas tienen peso configurado. Las actividades canceladas conservan su peso y cuentan como cero hasta que el plan se cambie explícitamente.
+- Historial cronológico de avances, revisiones, devoluciones y correcciones auditadas, consultable desde **Proyectos → Ver actividades**. Una corrección de un resultado validado es una operación explícita, con motivo y nueva revisión.
+- Toda consulta y escritura valida que el proyecto y la actividad pertenezcan a la organización de la sesión y que la actividad pertenezca al proyecto.
+- La aprobación o publicación de evidencias queda fuera de este alcance y se atiende en HU-15. Captura offline queda pendiente de HU-18.
 
 ## Cortes de entrega
 

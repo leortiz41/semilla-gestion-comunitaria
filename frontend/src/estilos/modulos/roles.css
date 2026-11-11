@@ -7,9 +7,17 @@
 
 .roles-panel__tarjeta {
   padding: 1.25rem;
-  border: 1px solid #dfe8db;
+  border: 1px solid rgba(61, 112, 70, 0.16);
   border-radius: 1rem;
-  background: #fff;
+  background: linear-gradient(145deg, #fff, #f8fbf6);
+  box-shadow: 0 12px 30px rgba(48, 69, 48, 0.07);
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.roles-panel__tarjeta:hover {
+  transform: translateY(-2px);
+  border-color: rgba(61, 112, 70, 0.25);
+  box-shadow: 0 18px 36px rgba(48, 69, 48, 0.11);
 }
 
 .roles-panel__tarjeta h2 {

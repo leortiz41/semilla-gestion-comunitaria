@@ -1,0 +1,137 @@
+/* Mapa de Impacto — superficie de trabajo independiente y legible */
+.pagina-mapa-impacto{display:grid;gap:.85rem;min-width:0;padding:.3rem 0 1.3rem}
+.mapa-impacto__encabezado{display:flex;align-items:end;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.mapa-impacto__etiqueta{margin:0;color:#647768;font-size:.73rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+.mapa-impacto__encabezado h1{margin:.2rem 0;color:#254f36;font-size:clamp(1.8rem,3vw,2.7rem);letter-spacing:-.04em}
+.mapa-impacto__encabezado p:not(.mapa-impacto__etiqueta){margin:0;color:#5f7666;font-size:.86rem;line-height:1.45}
+.mapa-impacto__encabezado button,.mapa-impacto__detalle button{border:1px solid #cadacf;border-radius:.6rem;background:#f4f8f5;color:#2d583e;font:inherit;font-size:.78rem;font-weight:700;padding:.58rem .8rem;cursor:pointer}
+.mapa-impacto__encabezado button:disabled{opacity:.55;cursor:wait}
+.mapa-impacto__herramientas{display:flex;align-items:end;gap:.7rem;flex-wrap:wrap;padding:.8rem;border:1px solid #dae4dc;border-radius:.8rem;background:#fff}
+.mapa-impacto__herramientas label{display:grid;gap:.3rem;flex:1;min-width:min(100%,210px);color:#41604b;font-size:.78rem;font-weight:700}
+.mapa-impacto__herramientas :is(select,input){width:100%;min-width:0;box-sizing:border-box;border:1px solid #cddccf;border-radius:.55rem;background:#fff;padding:.62rem;color:#2e4f3b;font:inherit}
+.mapa-impacto__modo{padding:.5rem .7rem;background:#e7f1ea;border-radius:.5rem;color:#37634a;font-size:.76rem;white-space:nowrap}
+.mapa-impacto__resumen{display:flex;flex-wrap:wrap;gap:.5rem}
+.mapa-impacto__resumen span{font-size:.76rem;padding:.43rem .7rem;color:#486551;background:#f2f7f2;border:1px solid #dce8dc;border-radius:.55rem}
+.mapa-impacto__resumen strong{color:#246139}
+.mapa-impacto__espacio{display:grid;grid-template-columns:minmax(0,1fr) minmax(225px,255px);gap:.7rem;align-items:start;min-width:0}
+.mapa-impacto__lienzo{display:flex;flex-direction:column;min-width:0;overflow:hidden;background:#fff;border:1px solid #d0dce5;border-radius:.9rem;box-shadow:0 8px 22px #172c4110}
+.mapa-impacto__barra-mapa{display:flex;align-items:center;flex-wrap:wrap;gap:.5rem;padding:.65rem .75rem;background:#ffffff;border-bottom:1px solid #e1e8ee}
+.mapa-impacto__niveles{display:flex;gap:3px;padding:3px;background:#eef3f7;border-radius:.6rem}
+.mapa-impacto__barra-mapa button{cursor:pointer;border:1px solid transparent;border-radius:.48rem;padding:.48rem .65rem;font:inherit;font-size:.72rem;font-weight:700;white-space:nowrap;color:#3c5265;background:transparent}
+.mapa-impacto__niveles button.activo{color:#184e3b;background:#fff;box-shadow:0 1px 4px #173d4d1c}
+.mapa-impacto__buscar-nodo{display:grid;gap:.18rem;min-width:135px;flex:1;max-width:220px;color:#425e6d;font-size:.66rem;font-weight:700}
+.mapa-impacto__buscar-nodo input{width:100%;box-sizing:border-box;border:1px solid #cddae5;border-radius:.5rem;padding:.48rem .6rem;background:#fff;color:#263f4c;font:inherit;font-size:.73rem}
+.mapa-impacto__acciones-mapa{display:flex;gap:.28rem;align-items:center;flex-wrap:wrap}
+.mapa-impacto__acciones-mapa button{background:#f1f5f8;border-color:#d8e1e8}
+.mapa-impacto__acciones-mapa button.mapa-impacto__modo-activo{background:#e4f2e9;border-color:#bad9c7;color:#22603b}
+.mapa-impacto__visor{height:460px;position:relative;min-height:0;background:radial-gradient(ellipse at 20% 15%,#f7fafc 0%,#eef3f7 65%,#e8eef4 100%)}
+.mapa-impacto__visor .react-flow{height:100%;width:100%;background:transparent}
+.mapa-impacto__visor .react-flow__node{cursor:grab;line-height:1.4;white-space:normal;overflow-wrap:anywhere;transition:opacity .15s,box-shadow .15s}
+.mapa-impacto__visor .react-flow__node:active{cursor:grabbing}
+.mapa-impacto__visor .react-flow__node:hover{filter:brightness(.985)}
+.mapa-impacto__visor .react-flow__node:focus-visible{outline:3px solid #d6a15e;outline-offset:2px}
+.mapa-impacto__visor .react-flow__controls{box-shadow:0 4px 14px #1c33441b;border:1px solid #cbd8df;border-radius:.55rem;overflow:hidden}
+.mapa-impacto__visor .react-flow__minimap{background:#ffffffed;border:1px solid #cfdae4;border-radius:.6rem;box-shadow:0 4px 12px #2136491a}
+.mapa-impacto__leyenda{display:flex;gap:.5rem 1rem;flex-wrap:wrap;align-items:center;padding:.55rem .8rem;border-top:1px solid #e1e8ee;background:#fff;font-size:.7rem;color:#516779}
+.mapa-impacto__leyenda span{display:flex;align-items:center;gap:.35rem}
+.mapa-impacto__leyenda i{display:inline-block;width:9px;height:9px;flex:0 0 auto;border-radius:3px}
+.mapa-impacto__coincidencias,.mapa-impacto__limite{margin:0;padding:.5rem .8rem;background:#f8fafc;border-top:1px solid #e3e9f0;color:#596f7b;font-size:.72rem;line-height:1.45}
+.mapa-impacto__detalle{display:flex;flex-direction:column;gap:.7rem;min-width:0;min-height:310px;padding:.9rem;border:1px solid #dae5df;border-radius:.9rem;background:#fff;box-shadow:0 8px 20px #203a2c0b}
+.mapa-impacto__detalle-titulo{display:flex;justify-content:space-between;align-items:center;gap:.45rem}
+.mapa-impacto__detalle-titulo h2{font-size:.96rem;color:#2a5a3b;margin:0}
+.mapa-impacto__detalle-titulo button{padding:.35rem .5rem;font-size:.72rem}
+.mapa-impacto__detalle>strong{font-size:1.06rem;color:#254d36;overflow-wrap:anywhere}
+.mapa-impacto__detalle p{margin:0;color:#5f7267;font-size:.8rem;line-height:1.6;overflow-wrap:anywhere}
+.mapa-impacto__estado{width:fit-content;border-radius:999px;padding:.27rem .6rem;background:#e6f2e9;color:#27603d;font-size:.72rem;font-weight:750}
+.mapa-impacto__enlace-foto{display:grid;gap:.4rem;color:#285e44;font-size:.8rem}
+.mapa-impacto__enlace-foto img{width:100%;max-height:240px;object-fit:contain;border-radius:.6rem;background:#f5f8f5}
+.mapa-impacto__galeria{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.5rem}
+.mapa-impacto__galeria a{min-width:0;display:block;overflow:hidden;border:1px solid #d8e4dc;border-radius:.55rem;background:#f5f8f6}
+.mapa-impacto__galeria img{display:block;width:100%;height:85px;object-fit:cover}
+.mapa-impacto__atajos{display:grid;gap:.4rem}
+.mapa-impacto__atajos button{text-align:left;font-size:.76rem;font-weight:650}
+.mapa-impacto__nota{color:#687b70;margin:0;font-size:.74rem;line-height:1.5}
+.mapa-impacto__error{padding:.8rem;border:1px solid #e8bead;border-radius:.65rem;background:#fff3ef;color:#90483a}
+.mapa-impacto__vacio{color:#667c70}
+.mapa-impacto__barra-mapa button:focus-visible,.mapa-impacto__barra-mapa input:focus-visible,.mapa-impacto__herramientas input:focus-visible,.mapa-impacto__herramientas select:focus-visible,.mapa-impacto__galeria a:focus-visible{outline:3px solid #d4a358;outline-offset:2px}
+@media(max-width:1150px){.mapa-impacto__espacio{grid-template-columns:minmax(0,1fr)}.mapa-impacto__detalle{min-height:150px}}
+@media(max-width:660px){.mapa-impacto__barra-mapa{align-items:stretch}.mapa-impacto__niveles{flex:1 1 100%}.mapa-impacto__niveles button{flex:1;white-space:normal}.mapa-impacto__buscar-nodo{max-width:none}.mapa-impacto__acciones-mapa{flex:1 1 100%}.mapa-impacto__acciones-mapa button{flex:1;white-space:normal}.mapa-impacto__visor{height:380px}.mapa-impacto__visor .react-flow__minimap{display:none}.mapa-impacto__modo{white-space:normal}}
+
+/* GridStack controla los paneles exteriores; React Flow solo los nodos del diagrama. */
+.mapa-impacto__espacio-grid{min-width:0;display:grid;gap:.45rem}
+.mapa-impacto__layout-tools{display:flex;align-items:center;justify-content:space-between;gap:.7rem;flex-wrap:wrap;color:#647482;font-size:.73rem}
+.mapa-impacto__layout-tools button{font:inherit;font-size:.74rem;font-weight:700;border:1px solid #d5e1e8;border-radius:.55rem;background:#fff;color:#36566a;padding:.48rem .7rem;cursor:pointer}
+.mapa-impacto__grid{min-width:0}
+.mapa-impacto__panel-grid{display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden;border-radius:.85rem;background:#fff;border:1px solid #d3dee7;box-shadow:0 7px 20px #17314412}
+.mapa-impacto__panel-arrastre{display:flex;justify-content:space-between;align-items:center;gap:.5rem;flex:0 0 auto;padding:.6rem .85rem;border-bottom:1px solid #dce5eb;background:#f8fafc;color:#3a5767;cursor:grab;user-select:none;font-size:.79rem}
+.mapa-impacto__panel-arrastre:active{cursor:grabbing}
+.mapa-impacto__panel-arrastre span{font-size:1.15rem;color:#9aaab8}
+.mapa-impacto__panel-cuerpo{min-width:0;min-height:0;flex:1;display:flex;flex-direction:column;overflow:auto}
+.mapa-impacto__panel-cuerpo>.mapa-impacto__lienzo{height:100%;flex:1;border:0;border-radius:0;box-shadow:none}
+.mapa-impacto__panel-cuerpo>.mapa-impacto__detalle{flex:1;min-height:0;border:0;border-radius:0;box-shadow:none;overflow:auto}
+.mapa-impacto__panel-cuerpo .mapa-impacto__visor{height:auto;flex:1;min-height:220px}
+.mapa-impacto__grid .grid-stack-item-content{inset:0}
+.mapa-impacto__grid .ui-resizable-handle{z-index:12}
+.mapa-impacto__foto-privada{display:grid;gap:.55rem;min-width:0}
+.mapa-impacto__foto-privada img{display:block;max-width:100%;width:100%;max-height:255px;object-fit:contain;background:#f3f6f8;border:1px solid #d9e5df;border-radius:.6rem}
+.mapa-impacto__foto-privada button{border:1px solid #bed7ca;background:#eaf5ee;color:#245e3d;border-radius:.55rem;cursor:pointer;padding:.5rem .65rem;font:inherit;font-size:.75rem;font-weight:700}
+.mapa-impacto__foto-privada button:disabled{opacity:.6;cursor:wait}
+.mapa-impacto__foto-estado{display:flex;align-items:center;justify-content:center;min-height:95px;padding:.5rem;border:1px dashed #cbd9db;border-radius:.55rem;background:#f4f7fa;color:#627887;font-size:.74rem;text-align:center;overflow-wrap:anywhere}
+.mapa-impacto__foto-privada small{font-size:.72rem;color:#9a5046}
+.mapa-impacto__foto-privada--compacta img{height:100px;object-fit:cover}
+.mapa-impacto__foto-privada--compacta button{font-size:.69rem;padding:.4rem}
+.mapa-impacto__foto-privada--compacta .mapa-impacto__foto-estado{min-height:90px}
+.mapa-impacto__layout-tools button:focus-visible,.mapa-impacto__foto-privada button:focus-visible{outline:3px solid #dbad65;outline-offset:2px}
+@media(max-width:1100px){.mapa-impacto__layout-tools span{display:none}}
+@media(max-width:850px){
+ .mapa-impacto__panel-arrastre{cursor:default}
+ .mapa-impacto__grid .grid-stack-item-content{min-height:0}
+ .mapa-impacto__layout-tools{display:none}
+}
+
+/* Visor de fotografías montado en document.body para no quedar cortado por GridStack. */
+.mapa-impacto__visor-modal{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;padding:clamp(12px,3vw,32px);box-sizing:border-box;background:rgba(13,27,35,.82);backdrop-filter:blur(5px)}
+.mapa-impacto__visor-modal-contenido{width:min(100%,1100px);max-height:calc(100dvh - 24px);display:flex;flex-direction:column;overflow:hidden;background:#fff;border-radius:1rem;box-shadow:0 20px 65px #0007}
+.mapa-impacto__visor-modal-cabecera{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:.85rem 1.15rem;background:#f8fafb;border-bottom:1px solid #dce6eb}
+.mapa-impacto__visor-modal-cabecera h2{margin:0;min-width:0;color:#254e39;font-size:clamp(.9rem,2vw,1.1rem);overflow-wrap:anywhere}
+.mapa-impacto__visor-modal-cabecera button{flex:none;border:1px solid #cbdcd3;border-radius:.6rem;background:#fff;color:#285942;font:inherit;font-weight:700;font-size:.85rem;padding:.55rem .75rem;cursor:pointer}
+.mapa-impacto__visor-modal-cabecera button:focus-visible{outline:3px solid #d6a15e;outline-offset:2px}
+.mapa-impacto__visor-modal-imagen{display:flex;align-items:center;justify-content:center;flex:1;min-height:180px;padding:1rem;overflow:auto;background:#192833}
+.mapa-impacto__visor-modal-imagen img{display:block;max-width:100%;max-height:calc(100dvh - 130px);width:auto;height:auto;object-fit:contain;border-radius:.35rem}
+.mapa-impacto__visor-modal-imagen p{margin:0;color:#f2f5f8;font-size:.9rem;text-align:center}
+@media(max-width:600px){.mapa-impacto__visor-modal{padding:8px}.mapa-impacto__visor-modal-cabecera{padding:.65rem .75rem}.mapa-impacto__visor-modal-imagen{padding:.45rem}}
+
+/* Iconografía minimalista con Lucide React en los nodos. */
+.mapa-impacto__nodo-contenido{display:flex;align-items:center;gap:.65rem;min-width:0;text-align:left}
+.mapa-impacto__nodo-icono{display:flex;align-items:center;justify-content:center;flex:0 0 34px;width:34px;height:34px;border-radius:10px}
+.mapa-impacto__nodo-textos{display:flex;min-width:0;flex-direction:column;gap:3px}
+.mapa-impacto__nodo-titulo{display:block;color:#233d4b;font-size:.83rem;font-weight:750;line-height:1.35;overflow-wrap:anywhere}
+.mapa-impacto__nodo-subtitulo{display:block;color:#697d89;font-size:.69rem;font-weight:500;line-height:1.3;overflow-wrap:anywhere}
+
+/* Evidencias agrupadas: una sola conexión por avance y galería flotante. */
+.mapa-impacto__abrir-galeria{width:fit-content;align-self:flex-start;border:1px solid #b9cfe5!important;background:#edf5fc!important;color:#2b5d8c!important}
+.mapa-impacto__galeria-flotante{position:fixed;inset:0;z-index:9500;display:flex;align-items:center;justify-content:center;box-sizing:border-box;padding:clamp(10px,3vw,26px);background:rgba(13,27,35,.75);backdrop-filter:blur(4px)}
+.mapa-impacto__galeria-flotante-panel{width:min(100%,970px);max-height:calc(100dvh - 28px);display:flex;flex-direction:column;overflow:hidden;border-radius:1rem;background:#fff;box-shadow:0 22px 70px #0006}
+.mapa-impacto__galeria-flotante-cabecera{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1rem 1.15rem;border-bottom:1px solid #dce6ec;background:#f8fafc}
+.mapa-impacto__galeria-flotante-cabecera h2{display:flex;align-items:center;gap:.55rem;margin:0;color:#254d39;font-size:1.05rem}
+.mapa-impacto__galeria-flotante-cabecera p{margin:.3rem 0 0;color:#687d89;font-size:.8rem}
+.mapa-impacto__galeria-flotante-cabecera button{display:flex;align-items:center;gap:.4rem;flex:none;border:1px solid #cddbe2;border-radius:.55rem;background:white;color:#345363;font:inherit;font-size:.81rem;font-weight:700;padding:.55rem .75rem;cursor:pointer}
+.mapa-impacto__galeria-flotante-lista{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,195px),1fr));gap:.8rem;padding:1rem;overflow:auto;min-height:0}
+.mapa-impacto__galeria-flotante-item{display:grid;align-content:start;gap:.55rem;min-width:0;padding:.75rem;border:1px solid #dce6ea;border-radius:.8rem;background:#fafcfd}
+.mapa-impacto__galeria-flotante-indice{color:#526d7c;font-size:.76rem;font-weight:750}
+.mapa-impacto__galeria-flotante-item .mapa-impacto__foto-privada--compacta img{height:140px;object-fit:cover}
+.mapa-impacto__galeria-flotante button:focus-visible{outline:3px solid #d7a863;outline-offset:2px}
+@media(max-width:600px){.mapa-impacto__galeria-flotante{padding:8px}.mapa-impacto__galeria-flotante-cabecera{padding:.7rem}.mapa-impacto__galeria-flotante-lista{padding:.65rem;gap:.6rem}}
+
+/* Avances descriptivos: jerarquía entre trabajo realizado y datos de revisión. */
+.mapa-impacto__nodo-resumen{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;line-clamp:3;overflow:hidden;font-size:.75rem;font-weight:550;color:#3d5967;line-height:1.4;overflow-wrap:anywhere}
+.mapa-impacto__nodo-metadatos{display:flex;align-items:center;gap:.3rem .55rem;flex-wrap:wrap;margin-top:.3rem;color:#647783;font-size:.67rem;line-height:1.4}
+.mapa-impacto__nodo-estado{display:inline-flex;padding:.17rem .4rem;border-radius:999px;background:#e7f2e9;color:#296741;font-weight:750}
+.mapa-impacto__metricas-avance{display:flex;flex-wrap:wrap;gap:.45rem}
+.mapa-impacto__metricas-avance span{padding:.45rem .6rem;border:1px solid #d8e5dd;background:#f7faf7;border-radius:.55rem;color:#486655;font-size:.75rem}
+
+/* Filtros independientes para seleccionar comunidad y proyecto sin estados ambiguos. */
+.mapa-impacto__herramientas label{min-width:min(100%,175px)}
+.mapa-impacto__herramientas label:nth-child(2){flex:1.25}
+.mapa-impacto__herramientas label:nth-child(3){flex:1.45}
+@media(max-width:760px){.mapa-impacto__herramientas label{flex:1 1 100%}}
