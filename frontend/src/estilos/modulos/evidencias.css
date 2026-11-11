@@ -93,3 +93,7 @@
 .evidencias-centro__historial li{display:grid;gap:.12rem;padding:.48rem .65rem;border-left:3px solid #8fbaa0;background:#fff;border-radius:.3rem}
 .evidencias-centro__historial strong{color:#416551;font-size:.73rem;text-transform:capitalize}
 .evidencias-centro__historial span{color:#6c7e72;font-size:.69rem}
+
+.evidencias-centro__limpiar-filtros{display:flex;align-items:end;justify-content:flex-end;grid-column:1/-1}
+.evidencias-centro__limpiar-filtros button{display:inline-flex;align-items:center;justify-content:center;gap:.45rem;border:1px solid #cbded1;border-radius:.55rem;background:#f5f9f6;color:#315943;padding:.57rem .8rem;font:inherit;font-size:.77rem;font-weight:750;cursor:pointer}
+.evidencias-centro__limpiar-filtros button:disabled{opacity:.5;cursor:not-allowed}
