@@ -98,6 +98,9 @@ proyectosRouter.get(rutaEvidencias, async (req, res) => {
 
 proyectosRouter.post(rutaEvidencias + '/preparar', requirePermission('evidencias.gestionar'), async (req, res) => {
   const { proyectoId, actividadId, avanceId } = req.params;
+  if (typeof proyectoId !== 'string' || typeof actividadId !== 'string' || typeof avanceId !== 'string') {
+    res.status(400).json({ message: 'La ubicación del avance no es válida.' }); return;
+  }
   const mime = typeof req.body?.tipoMime === 'string' ? req.body.tipoMime.toLowerCase().trim() : '';
   if (!tiposFoto.includes(mime) || !r2Disponible()) {
     res.status(r2Disponible() ? 400 : 503).json({ message: r2Disponible()
@@ -120,6 +123,9 @@ proyectosRouter.post(rutaEvidencias + '/preparar', requirePermission('evidencias
 
 proyectosRouter.post(rutaEvidencias + '/confirmar', requirePermission('evidencias.gestionar'), async (req, res) => {
   const { proyectoId, actividadId, avanceId } = req.params;
+  if (typeof proyectoId !== 'string' || typeof actividadId !== 'string' || typeof avanceId !== 'string') {
+    res.status(400).json({ message: 'La ubicación del avance no es válida.' }); return;
+  }
   const clave = req.body?.clave;
   const mime = req.body?.tipoMime;
   const titulo = typeof req.body?.titulo === 'string' ? req.body.titulo.trim() : '';
