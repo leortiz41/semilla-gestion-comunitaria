@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Archive, BadgeCheck, Camera, ChevronRight, ClipboardCheck, Clock3,
   FileSearch, Filter, FolderOpen, Image as ImageIcon, RefreshCcw,
-  Search, ShieldCheck, TriangleAlert, UserRound,
+  Search, ShieldCheck, TriangleAlert, UserRound, RotateCcw,
 } from 'lucide-react';
 import {
   obtenerActividadesProyecto, obtenerIndiceFotografias,
@@ -169,6 +169,17 @@ export default function PaginaEvidencias({
             <option value="sin">Sin fotografías</option>
           </select>
         </label>
+        <div className="evidencias-centro__limpiar-filtros">
+          <button type="button" onClick={() => {
+            setBusqueda('');
+            setComunidad('');
+            setProyecto('');
+            setEstado('');
+            setRespaldo('todos');
+          }} disabled={!busqueda && !comunidad && !proyecto && !estado && respaldo === 'todos'}>
+            <RotateCcw size={16} aria-hidden="true" /> Limpiar filtros
+          </button>
+        </div>
       </div>
 
       {error && <p className="evidencias-explorador__error" role="alert">{error}</p>}
