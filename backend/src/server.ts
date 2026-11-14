@@ -12,7 +12,7 @@ import { usuariosRouter } from './routes/usuarios.routes.js';
 import { proyectosRouter } from './routes/proyectos.routes.js';
 import { mapaImpactoRouter } from './routes/mapa-impacto.routes.js';
 import { plataformaRouter } from './routes/plataforma.routes.js';
-import { bootstrapSuperadminRouter } from './routes/bootstrap-superadmin.routes.js';
+import { inicializacionSuperadministradorRouter } from './routes/inicializacion-superadministrador.routes.js';
 
 const app = express();
 const port = Number(process.env.PORT ?? 3000);
@@ -27,7 +27,7 @@ app.use(cors({
 app.use(express.json({ limit: '1mb' }));
 
 app.use('/api/auth', authRouter);
-app.use('/api/bootstrap-superadmin', bootstrapSuperadminRouter);
+app.use('/api/inicializacion-superadministrador', inicializacionSuperadministradorRouter);
 app.use('/api/comunidades', comunidadesRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/zonas', zonasRouter);

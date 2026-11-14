@@ -1,12 +1,12 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import {
-  inicializarSuperadmin,
-  obtenerEstadoBootstrapSuperadmin,
+  inicializarSuperadministrador,
+  obtenerEstadoInicializacionSuperadministrador,
 } from '../../lib/api';
 
 const correoInicial = 'leortiz41@gmail.com';
 
-export default function AsistenteSuperadminInicial({
+export default function AsistenteSuperadministradorInicial({
   alVolver,
   alCompletar,
 }: {
@@ -22,7 +22,7 @@ export default function AsistenteSuperadminInicial({
 
   useEffect(() => {
     let vigente = true;
-    obtenerEstadoBootstrapSuperadmin().then(
+    obtenerEstadoInicializacionSuperadministrador().then(
       ({ disponible: habilitado }) => { if (vigente) setDisponible(habilitado); },
       () => { if (vigente) setDisponible(false); },
     );
@@ -40,7 +40,7 @@ export default function AsistenteSuperadminInicial({
     setProcesando(true);
     setError('');
     try {
-      const resultado = await inicializarSuperadmin(secretoInstalacion, contrasena);
+      const resultado = await inicializarSuperadministrador(secretoInstalacion, contrasena);
       setSecretoInstalacion('');
       setContrasena('');
       setConfirmacion('');
@@ -53,15 +53,15 @@ export default function AsistenteSuperadminInicial({
   }
 
   return (
-    <section className="auth-layout" aria-labelledby="titulo-bootstrap">
+    <section className="auth-layout" aria-labelledby="titulo-inicializacion">
       <div className="auth-copy">
         <p className="eyebrow">Configuración única</p>
-        <h1 className="auth-title" id="titulo-bootstrap">Activa el acceso de plataforma</h1>
+        <h1 className="auth-title" id="titulo-inicializacion">Activa el acceso de plataforma</h1>
         <p>
           Este asistente crea una sola cuenta global y se desactiva inmediatamente después.
           No crea organizaciones ni modifica cuentas existentes.
         </p>
-        <ol className="bootstrap-steps">
+        <ol className="inicializacion-steps">
           <li><strong>Verificá el secreto de instalación</strong><span>Se configuró fuera del repositorio en el servicio de despliegue.</span></li>
           <li><strong>Definí la contraseña</strong><span>Debe tener 12 caracteres, mayúsculas, minúsculas y números.</span></li>
           <li><strong>Ingresá a Semilla</strong><span>Luego podrás administrar organizaciones desde Superadministración.</span></li>
@@ -71,7 +71,7 @@ export default function AsistenteSuperadminInicial({
         </button>
       </div>
 
-      <form className="auth-card bootstrap-card" onSubmit={(evento) => void completar(evento)}>
+      <form className="auth-card inicializacion-card" onSubmit={(evento) => void completar(evento)}>
         <div>
           <p className="eyebrow">Paso final</p>
           <h2>Cuenta inicial</h2>
@@ -86,7 +86,7 @@ export default function AsistenteSuperadminInicial({
         {error && <div className="notice error" role="alert">{error}</div>}
 
         {disponible && <>
-          <div className="bootstrap-account" aria-label="Cuenta que se creará">
+          <div className="inicializacion-account" aria-label="Cuenta que se creará">
             <span>Cuenta SUPERADMINISTRADOR</span>
             <strong>{correoInicial}</strong>
           </div>
