@@ -604,7 +604,7 @@ export async function subirFotoAvance(
       method: 'PUT', headers: { 'Content-Type': preparacion.tipoMime }, body: foto,
     });
   } catch {
-    throw new Error('No se pudo conectar con R2. Verificá CORS para el origen local, conexión y firma temporal.');
+    throw new Error('El navegador no pudo completar la carga en R2. Revisá el resultado de la solicitud PUT en Network; podría ser un rechazo de firma o permisos.');
   }
   if (!carga.ok) {
     throw new Error(`R2 rechazó la fotografía (HTTP ${carga.status}). Verificá las credenciales, el bucket y la firma de carga.`);
