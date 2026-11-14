@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import {
-  crearCuentaPlataforma, crearOrganizacionPlataforma, obtenerCuentasPlataforma,
+  cambiarRolesCuentaPlataforma, crearCuentaPlataforma, crearOrganizacionPlataforma, obtenerCuentasPlataforma,
   obtenerOrganizacionesPlataforma, type CuentaOrganizacion, type OrganizacionPlataforma,
 } from '../../lib/api';
 import '../../estilos/modulos/cuentasOrganizacion.css';
@@ -22,6 +22,8 @@ export default function PaginaPlataforma({ token }: { token: string }) {
   const [emailContacto, setEmailContacto] = useState('');
   const [correo, setCorreo] = useState('');
   const [roles, setRoles] = useState<string[]>(['ADMINISTRADOR']);
+  const [edicionId, setEdicionId] = useState<string | null>(null);
+  const [rolesEdicion, setRolesEdicion] = useState<string[]>([]);
   const [credencial, setCredencial] = useState<{ email: string; temporal: string } | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const [error, setError] = useState('');
@@ -83,6 +85,21 @@ export default function PaginaPlataforma({ token }: { token: string }) {
       setVersion((v) => v + 1);
     } catch (fallo) {
       setError(fallo instanceof Error ? fallo.message : 'No fue posible crear la cuenta.');
+    } finally { setOcupado(false); }
+  }
+
+  async function guardarRoles(cuenta: CuentaOrganizacion) {
+    if (!organizacionId || !rolesEdicion.length || ocupado) return;
+    setOcupado(true); setError(''); setMensaje('');
+    try {
+      const respuesta = await cambiarRolesCuentaPlataforma(token, organizacionId, cuenta.id, rolesEdicion);
+      setCuentas((actual) => actual.map((item) => item.id === cuenta.id
+        ? { ...item, roles: respuesta.roles } : item));
+      setEdicionId(null);
+      setMensaje('Roles guardados. El usuario debe volver a iniciar sesión para actualizar sus permisos.');
+      setVersion((v) => v + 1);
+    } catch (fallo) {
+      setError(fallo instanceof Error ? fallo.message : 'No fue posible guardar los roles.');
     } finally { setOcupado(false); }
   }
 
@@ -166,6 +183,38 @@ export default function PaginaPlataforma({ token }: { token: string }) {
               <strong>{cuenta.email}</strong>
               <small>{cuenta.activo ? 'Activa' : 'Inactiva'} · {cuenta.roles.join(', ') || 'Sin roles'}</small>
             </div>
+            {!cuenta.roles.includes('SUPERADMINISTRADOR') && cuenta.activo && (
+              edicionId === cuenta.id ? (
+                <div className="cuentas-org__editor">
+                  <fieldset disabled={ocupado}>
+                    <legend>Editar perfiles de la cuenta</legend>
+                    <div className="cuentas-org__roles">
+                      {perfiles.map((rol) => (
+                        <label key={rol.codigo}>
+                          <input type="checkbox" checked={rolesEdicion.includes(rol.codigo)}
+                            onChange={() => setRolesEdicion((actual) => actual.includes(rol.codigo)
+                              ? actual.filter((r) => r !== rol.codigo)
+                              : rol.codigo === 'DONANTE' ? ['DONANTE']
+                              : [...actual.filter((r) => r !== 'DONANTE'), rol.codigo])} />
+                          {rol.etiqueta}
+                        </label>
+                      ))}
+                    </div>
+                  </fieldset>
+                  <div className="cuentas-org__acciones">
+                    <button type="button" disabled={ocupado || !rolesEdicion.length}
+                      onClick={() => void guardarRoles(cuenta)}>Guardar perfiles</button>
+                    <button type="button" className="cuentas-org__secundario"
+                      onClick={() => setEdicionId(null)}>Cancelar</button>
+                  </div>
+                </div>
+              ) : (
+                <button type="button" className="cuentas-org__secundario" disabled={ocupado}
+                  onClick={() => { setEdicionId(cuenta.id); setRolesEdicion(cuenta.roles); }}>
+                  Editar perfiles
+                </button>
+              )
+            )}
           </div>
         ))}
       </div>
