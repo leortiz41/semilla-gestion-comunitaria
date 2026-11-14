@@ -33,22 +33,15 @@ Los middlewares disponibles son:
 - `requireRole(...)`
 - `requirePermission(...)`
 
-## Primer administrador
+## Cuenta inicial de plataforma
 
-Definir localmente, sin subir secretos a Git:
+La única cuenta global se inicializa desde la pantalla **Configurar la cuenta inicial de plataforma**; no existe un comando de bootstrap para usuarios. La cuenta está fijada a `leortiz41@gmail.com` y el backend solo acepta el flujo cuando se cumplen estos requisitos:
 
-```env
-SEMILLA_ADMIN_EMAIL=administrador@dominio.org
-SEMILLA_ADMIN_PASSWORD=UnaClaveTemporalSegura123
-```
+- Se aplicaron las migraciones `024_superadministracion_plataforma.sql` y `025_bootstrap_superadministrador_unico.sql` en el entorno validado.
+- El servicio backend tiene `SEMILLA_BOOTSTRAP_SECRET` (mínimo 32 caracteres) configurado como secreto de despliegue, fuera de Git y del frontend.
+- `SEMILLA_BOOTSTRAP_ORGANIZACION_SLUG` identifica una organización activa para la relación técnica de la cuenta; no le concede permisos operativos tenant.
 
-Ejecutar:
-
-```bash
-npm run auth:create-admin
-```
-
-El administrador queda obligado a cambiar su contraseña en el primer flujo de acceso.
+La creación usa una fila bloqueada en PostgreSQL, por lo que solo una solicitud puede completarse. Cinco secretos incorrectos bloquean el asistente durante 15 minutos; una vez creada la cuenta, el estado queda consumido y las repeticiones devuelven un rechazo. El secreto no se registra ni se devuelve. Tras completar el flujo, eliminar `SEMILLA_BOOTSTRAP_SECRET` del servicio backend como defensa adicional.
 
 ## Roles y permisos
 
@@ -67,5 +60,7 @@ La migración es idempotente y puede ejecutarse nuevamente sin duplicar relacion
 - `REFRESH_TOKEN_EXPIRES_IN_DAYS`: duración máxima del refresh token.
 - `REFRESH_COOKIE_NAME`: nombre de la cookie HttpOnly.
 - `FRONTEND_URL`: uno o más orígenes permitidos por CORS, separados por coma.
+- `SEMILLA_BOOTSTRAP_SECRET`: secreto temporal, exclusivo del backend, para habilitar el asistente inicial.
+- `SEMILLA_BOOTSTRAP_ORGANIZACION_SLUG`: organización de identidad para el superadministrador inicial.
 
 En producción las cookies se emiten con `Secure` y `SameSite=None` para permitir frontend y API en dominios HTTPS diferentes (Vercel / Render).

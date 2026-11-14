@@ -9,7 +9,6 @@
     "start": "node dist/server.js",
     "db:test": "tsx src/scripts/test-database.ts",
     "auth:create-admin": "tsx src/scripts/create-admin.ts",
-    "auth:create-superadmin": "tsx src/scripts/create-superadmin.ts",
     "prisma:generate": "prisma generate",
     "prisma:pull": "prisma db pull",
     "prisma:studio": "prisma studio",

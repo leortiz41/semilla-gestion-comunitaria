@@ -16,12 +16,14 @@ import PaginaPerfilSeguridad from './modulos/perfil/PaginaPerfilSeguridad';
 import PaginaProyectos from './modulos/proyectos/PaginaProyectos';
 import PaginaUsuarios from './modulos/usuarios/PaginaUsuarios';
 import PaginaPlataforma from './modulos/usuarios/PaginaPlataforma';
+import AsistenteSuperadminInicial from './modulos/autenticacion/AsistenteSuperadminInicial';
 import type { SeccionAdministrativa, SubseccionComunidades } from './tipos/navegacion';
 import {
   cambiarContrasena,
   cerrarSesion,
   iniciarSesion,
   renovarSesion,
+  obtenerEstadoBootstrapSuperadmin,
   type UsuarioSesion,
 } from './lib/api';
 
@@ -40,7 +42,7 @@ const pillars = [
   },
 ];
 
-type Vista = 'inicio' | 'login' | 'sesion';
+type Vista = 'inicio' | 'login' | 'bootstrap' | 'sesion';
 
 function App() {
   const [vista, setVista] = useState<Vista>('inicio');
@@ -57,6 +59,7 @@ function App() {
   const [contrasenaActual, setContrasenaActual] = useState('');
   const [contrasenaNueva, setContrasenaNueva] = useState('');
   const [confirmacionContrasena, setConfirmacionContrasena] = useState('');
+  const [bootstrapDisponible, setBootstrapDisponible] = useState<boolean | null>(null);
 
   useEffect(() => {
     let activo = true;
@@ -79,6 +82,16 @@ function App() {
       activo = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (vista !== 'login') return;
+    let activo = true;
+    obtenerEstadoBootstrapSuperadmin().then(
+      ({ disponible }) => { if (activo) setBootstrapDisponible(disponible); },
+      () => { if (activo) setBootstrapDisponible(false); },
+    );
+    return () => { activo = false; };
+  }, [vista]);
 
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -136,11 +149,21 @@ function App() {
       setEmail('');
       setPassword('');
       setMostrarCambioClave(false);
+      setBootstrapDisponible(null);
       setSeccionAdministrativa('dashboard');
       setSubseccionComunidades('listado');
       setVista('inicio');
       setProcesando(false);
     }
+  }
+
+  function handleBootstrapCompletado(correo: string) {
+    setEmail(correo);
+    setPassword('');
+    setBootstrapDisponible(false);
+    setVista('login');
+    setMensaje('La cuenta SUPERADMINISTRADOR fue creada. Inicia sesión para continuar.');
+    setError(null);
   }
 
   async function handleCambioContrasena(event: FormEvent<HTMLFormElement>) {
@@ -367,11 +390,26 @@ function App() {
               {procesando ? 'Validando…' : 'Entrar'}
             </button>
 
+            {bootstrapDisponible && (
+              <button className="text-button bootstrap-link" type="button" onClick={() => {
+                setError(null); setMensaje(null); setVista('bootstrap');
+              }}>
+                Configurar la cuenta inicial de plataforma
+              </button>
+            )}
+
             <p className="form-help">
               La sesión utiliza un JWT de acceso y un refresh token protegido mediante cookie HttpOnly.
             </p>
           </form>
         </section>
+      )}
+
+      {vista === 'bootstrap' && (
+        <AsistenteSuperadminInicial
+          alVolver={() => { setError(null); setVista('login'); }}
+          alCompletar={handleBootstrapCompletado}
+        />
       )}
 
       {vista === 'sesion' && usuario && (

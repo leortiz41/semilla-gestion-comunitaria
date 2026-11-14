@@ -111,6 +111,20 @@ export function renovarSesion(): Promise<SesionResponse> {
   });
 }
 
+export function obtenerEstadoBootstrapSuperadmin(): Promise<{ disponible: boolean }> {
+  return request<{ disponible: boolean }>('/bootstrap-superadmin/estado');
+}
+
+export function inicializarSuperadmin(
+  secretoInstalacion: string,
+  contrasena: string,
+): Promise<{ email: string }> {
+  return request<{ email: string }>('/bootstrap-superadmin', {
+    method: 'POST',
+    body: JSON.stringify({ secretoInstalacion, contrasena }),
+  });
+}
+
 export function obtenerUsuario(accessToken: string): Promise<{ usuario: UsuarioSesion }> {
   return request<{ usuario: UsuarioSesion }>('/auth/me', {
     headers: {
