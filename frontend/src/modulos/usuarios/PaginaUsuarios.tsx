@@ -1,4 +1,5 @@
 import PanelAccesoDonantes from './PanelAccesoDonantes';
+import PanelCuentasOrganizacion from './PanelCuentasOrganizacion';
 import { useEffect, useState } from 'react';
 import { obtenerRoles, type RolCatalogo } from '../../lib/api';
 import '../../estilos/modulos/paginaModuloBase.css';
@@ -34,7 +35,7 @@ function PaginaUsuarios({ tokenAcceso, puedeVer, puedeGestionarAcceso }: { token
         <p className="pagina-modulo__etiqueta">Usuarios · Administración de acceso</p>
         <h1 id="titulo-usuarios" className="pagina-modulo__titulo">Roles y permisos</h1>
         <p className="pagina-modulo__descripcion">
-          Consultá las responsabilidades de cada rol y los permisos configurados en Semilla.
+          Administrá cuentas de tu organización y consultá los permisos de los perfiles configurados en Semilla.
           La disponibilidad de cada acción depende del módulo y de las reglas de tu organización.
         </p>
       </div>
@@ -47,6 +48,11 @@ function PaginaUsuarios({ tokenAcceso, puedeVer, puedeGestionarAcceso }: { token
             </button>
           </div>
         ) : roles === null ? <p role="status">Cargando roles…</p> : (
+          <>
+          {puedeGestionarAcceso && (
+            <PanelCuentasOrganizacion token={tokenAcceso}
+              rolesActivos={roles.filter((rol) => rol.activo).map((rol) => rol.nombre)} />
+          )}
           <div className="roles-panel">
             {perfiles.map((perfil) => {
               const rol = roles.find((item) => item.nombre === perfil.codigo);
@@ -83,6 +89,7 @@ function PaginaUsuarios({ tokenAcceso, puedeVer, puedeGestionarAcceso }: { token
               );
             })}
           </div>
+          </>
         )}
     </section>
   );
