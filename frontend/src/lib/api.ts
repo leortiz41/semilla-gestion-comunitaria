@@ -401,6 +401,37 @@ export function obtenerRoles(tokenAcceso: string) {
   });
 }
 
+
+export interface CuentaOrganizacion {
+  id: string;
+  email: string;
+  activo: boolean;
+  debeCambiarContrasena: boolean;
+  roles: string[];
+}
+
+export function obtenerCuentasOrganizacion(token: string) {
+  return request<{ cuentas: CuentaOrganizacion[] }>('/usuarios/cuentas', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function crearCuentaOrganizacion(token: string, email: string, roles: string[]) {
+  return request<{ cuenta: CuentaOrganizacion; contrasenaTemporal: string }>('/usuarios/cuentas', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ email, roles }),
+  });
+}
+
+export function cambiarRolesCuenta(token: string, usuarioId: string, roles: string[]) {
+  return request<{ roles: string[] }>(`/usuarios/cuentas/${usuarioId}/roles`, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ roles }),
+  });
+}
+
 export interface ProyectoDonante {
   id: string;
   nombre: string;
