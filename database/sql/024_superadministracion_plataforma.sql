@@ -7,10 +7,10 @@ VALUES ('SUPERADMINISTRADOR', 'Administración global de organizaciones y acceso
 ON CONFLICT (nombre) DO UPDATE
 SET descripcion = EXCLUDED.descripcion, activo = TRUE;
 
-INSERT INTO permisos (codigo, descripcion)
+INSERT INTO permisos (codigo, modulo, descripcion)
 VALUES
-  ('plataforma.organizaciones.gestionar', 'Registrar y consultar organizaciones de la plataforma'),
-  ('plataforma.usuarios.gestionar', 'Gestionar las cuentas administradoras iniciales de organizaciones')
+  ('plataforma.organizaciones.gestionar', 'plataforma', 'Registrar y consultar organizaciones de la plataforma'),
+  ('plataforma.usuarios.gestionar', 'plataforma', 'Gestionar las cuentas administradoras iniciales de organizaciones')
 ON CONFLICT (codigo) DO NOTHING;
 
 INSERT INTO roles_permisos (rol_id, permiso_id)
