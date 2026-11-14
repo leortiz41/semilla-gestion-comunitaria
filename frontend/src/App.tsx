@@ -234,6 +234,7 @@ function App() {
             tokenAcceso={accessToken}
             puedeVer={usuario.permisos.includes('usuarios.ver')}
             puedeGestionarAcceso={Boolean(puedeGestionarDonantes)}
+            puedeGestionarCuentas={Boolean(usuario.roles.includes('ADMINISTRADOR') && usuario.permisos.includes('usuarios.gestionar'))}
 
           />
         ) : null;
