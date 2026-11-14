@@ -22,6 +22,9 @@ const superadminActual: RequestHandler = async (req, res, next) => {
   if (!databasePool || !req.auth) {
     res.status(503).json({ message: 'Gestión de plataforma no disponible.' }); return;
   }
+  if (req.auth.debeCambiarContrasena) {
+    res.status(403).json({ message: 'Cambiá tu contraseña antes de administrar la plataforma.' }); return;
+  }
   if (!req.auth.roles.includes('SUPERADMINISTRADOR')) {
     res.status(403).json({ message: 'Acceso reservado al superadministrador.' }); return;
   }
