@@ -15,6 +15,7 @@ import PaginaPagos from './modulos/pagos/PaginaPagos';
 import PaginaPerfilSeguridad from './modulos/perfil/PaginaPerfilSeguridad';
 import PaginaProyectos from './modulos/proyectos/PaginaProyectos';
 import PaginaUsuarios from './modulos/usuarios/PaginaUsuarios';
+import PaginaPlataforma from './modulos/usuarios/PaginaPlataforma';
 import type { SeccionAdministrativa, SubseccionComunidades } from './tipos/navegacion';
 import {
   cambiarContrasena,
@@ -66,7 +67,7 @@ function App() {
         setAccessToken(sesion.accessToken);
         setUsuario(sesion.usuario);
         setVista('sesion');
-        setSeccionAdministrativa('dashboard');
+        setSeccionAdministrativa(sesion.usuario.roles.includes('SUPERADMINISTRADOR') ? 'plataforma' : 'dashboard');
         setSubseccionComunidades('listado');
         setMostrarCambioClave(sesion.usuario.debeCambiarContrasena);
       })
@@ -90,7 +91,7 @@ function App() {
       setAccessToken(sesion.accessToken);
       setUsuario(sesion.usuario);
       setVista('sesion');
-      setSeccionAdministrativa('dashboard');
+      setSeccionAdministrativa(sesion.usuario.roles.includes('SUPERADMINISTRADOR') ? 'plataforma' : 'dashboard');
       setSubseccionComunidades('listado');
       setPassword('');
       setMostrarCambioClave(sesion.usuario.debeCambiarContrasena);
@@ -178,11 +179,13 @@ function App() {
     }
   }
 
+  const esSuperadministrador = usuario?.roles.includes('SUPERADMINISTRADOR') ?? false;
   const esDonante = usuario?.roles.some((rol) => rol === 'DONANTE' || rol === 'CONSULTA') ?? false;
   const puedeGestionarDonantes = usuario?.roles.includes('ADMINISTRADOR') &&
     ['usuarios.gestionar', 'proyectos.gestionar', 'evidencias.gestionar']
       .every((permiso) => usuario.permisos.includes(permiso));
-  const seccionVisible = esDonante && !['proyectos', 'evidencias', 'perfil'].includes(seccionAdministrativa)
+  const seccionVisible = esSuperadministrador && seccionAdministrativa !== 'perfil' ? 'plataforma' :
+    esDonante && !['proyectos', 'evidencias', 'perfil'].includes(seccionAdministrativa)
     ? 'proyectos'
     : seccionAdministrativa;
 
@@ -228,6 +231,8 @@ function App() {
         return <PaginaPagos />;
       case 'donantes':
         return puedeGestionarDonantes && accessToken ? <PaginaDonantes token={accessToken} /> : null;
+      case 'plataforma':
+        return esSuperadministrador && accessToken ? <PaginaPlataforma token={accessToken} /> : null;
       case 'usuarios':
         return usuario && accessToken ? (
           <PaginaUsuarios
@@ -375,6 +380,7 @@ function App() {
             <BarraLateral
               seccionActiva={seccionVisible === 'perfil' ? undefined : seccionVisible}
               esDonante={esDonante}
+              esSuperadministrador={esSuperadministrador}
               puedeGestionarDonantes={Boolean(puedeGestionarDonantes)}
               subseccionComunidades={subseccionComunidades}
               alCambiarSeccion={setSeccionAdministrativa}
