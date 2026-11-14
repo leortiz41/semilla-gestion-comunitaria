@@ -7,7 +7,7 @@
 - Perfiles disponibles: ADMINISTRADOR, COORDINADOR, CAMPO, FINANZAS y DONANTE. DONANTE es exclusivo.
 - La API valida el rol de administrador activo y filtra por el `organizacion_id` de la sesión; se auditan altas y modificaciones.
 - Las nuevas credenciales temporales aparecen una sola vez y fuerzan cambio de contraseña al entrar.
-- **No existe todavía un módulo visual de administración global de organizaciones ni un editor de roles personalizados o permisos.** Estas funciones deben implementarse aparte con control de SUPERADMINISTRADOR, aislamiento, auditoría y modelo de roles por organización. No conceder a un administrador tenant la facultad de crear organizaciones o alterar permisos globales.
+- **La consola global de Superadministración ya está implementada en develop**, pero requiere aplicar la migración 024 y crear la primera cuenta de plataforma antes de utilizarla. Los perfiles disponibles son los cinco roles operativos existentes; todavía no hay edición de permisos o roles personalizados. Un administrador tenant no puede crear organizaciones ni adquirir el rol SUPERADMINISTRADOR.
 
 ## Primer administrador de producción
 
@@ -33,8 +33,32 @@ Verificar desde Vercel que puede iniciar sesión y que el cambio inicial de cont
 
 ## Acceso de otras organizaciones
 
-Las organizaciones diferentes requieren provisión explícita del tenant y su primer administrador a través de un procedimiento controlado, todavía **no disponible visualmente**. Cada usuario se relaciona con una organización; la pantalla de Usuarios solo lista y administra cuentas de esa organización. La implementación futura de un panel global debe usar autorización independiente de `usuarios.gestionar`, roles propios de plataforma y alcance seguro, no permitir cambiar el tenant del token desde el frontend.
+El SUPERADMINISTRADOR utiliza **Superadministración** para registrar organizaciones y crear cuentas en el tenant seleccionado, incluidas cuentas ADMINISTRADOR, COORDINADOR, CAMPO, FINANZAS y DONANTE. También puede cambiar los perfiles de cuentas tenant, con la restricción de conservar al menos un administrador por organización. Cada administrador operativo conserva la gestión restringida a su organización en **Usuarios**. El rol global no obtiene automáticamente permisos sobre los datos de comunidades, proyectos o evidencias. No es posible crear roles personalizados desde la interfaz.
 
 ## Flujo de publicación
 
 `develop → CI → PR → main → Render/Vercel → pruebas`. No fusionar cambios sin revisar requisitos de seguridad y entorno de producción.
+
+## Activación del rol SUPERADMINISTRADOR
+
+**No ejecutar directamente en producción antes de validar la migración y autorizar el bootstrap.**
+
+1. Revisar y aplicar `database/sql/024_superadministracion_plataforma.sql` en Neon development, y comprobar existencia de rol y dos permisos de plataforma.
+2. Ejecutar las pruebas CI de backend y frontend; validar autenticación y bloqueo de rutas globales para ADMINISTRADOR, COORDINADOR y usuarios sin sesión.
+3. Configurar, únicamente en la ejecución privada del bootstrap:
+   - `DATABASE_URL`: conexión de Neon development para las pruebas; luego Neon production al activar oficialmente.
+   - `SEMILLA_SUPERADMIN_EMAIL`: correo exclusivo de la cuenta global.
+   - `SEMILLA_SUPERADMIN_PASSWORD`: contraseña provisional segura, con requisitos scrypt.
+   - `SEMILLA_SUPERADMIN_ORGANIZACION_SLUG`: organización de identidad existente; por ejemplo, `ministerio-sal-y-luz`.
+4. Ejecutar `npm run auth:create-superadmin` desde backend. Solo admite crear el primer superadministrador y rechaza un segundo bootstrap.
+5. Iniciar sesión, cambiar obligatoriamente la contraseña y abrir el menú **Superadministración**.
+6. Registrar nuevas organizaciones y crear sus primeras cuentas con rol ADMINISTRADOR. Compartir credenciales temporales por canal seguro.
+7. Una vez que la migración se haya probado, aplicarla en Neon production antes de publicar la versión de backend que usa las rutas de plataforma.
+
+**Control de seguridad**:
+- El usuario global sigue vinculado a una organización de identidad debido al esquema actual de `usuarios`; esa relación no concede acceso automático a datos tenant.
+- API `/api/plataforma` comprueba en PostgreSQL, en cada petición, que la cuenta siga activa y posea el rol global activo.
+- Las cuentas SUPERADMINISTRADOR no aparecen ni pueden modificarse desde el panel de usuarios tenant.
+- `/api/plataforma/organizaciones` permite consultar y crear organizaciones; `/api/plataforma/organizaciones/:id/cuentas` permite consultar, crear y gestionar roles de cuentas tenant.
+- La contraseña temporal se muestra una sola vez. No guardar `SEMILLA_SUPERADMIN_PASSWORD` en repositorio o variables persistentes de Render.
+- Aplicar cambios con PR: `develop → CI → main → despliegue`; al activar producción, verificar autenticación y aislamiento de organizaciones.
