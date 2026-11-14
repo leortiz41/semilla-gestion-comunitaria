@@ -1,8 +1,6 @@
 import { Router } from 'express';
 import { randomBytes } from 'node:crypto';
 import { hashPassword } from '../security/password.js';
-import { requireRole } from '../middleware/auth.middleware.js';
-
 import { databasePool } from '../config/database.js';
 import { authenticateAccessToken, requirePermission, requireRole } from '../middleware/auth.middleware.js';
 
