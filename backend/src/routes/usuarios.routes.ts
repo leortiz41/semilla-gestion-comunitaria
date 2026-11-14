@@ -42,7 +42,7 @@ const perfilesAsignables = ['ADMINISTRADOR', 'COORDINADOR', 'CAMPO', 'FINANZAS',
 const validarRoles = (valor: unknown): string[] | null => {
   if (!Array.isArray(valor) || !valor.length || valor.length > perfilesAsignables.length ||
       !valor.every((rol) => typeof rol === 'string' && perfilesAsignables.includes(rol)) ||
-      new Set(valor).size !== valor.length) return null;
+      new Set(valor).size !== valor.length || (valor.includes('DONANTE') && valor.length !== 1)) return null;
   return valor as string[];
 };
 const validarEmail = (valor: unknown) => typeof valor === 'string' &&
@@ -157,11 +157,12 @@ usuariosRouter.put('/cuentas/:usuarioId/roles', authenticateAccessToken,
       if (!org.rows.length || !usuario.rows.length) {
         await client.query('ROLLBACK'); res.status(404).json({ message: 'Usuario no encontrado en tu organización.' }); return;
       }
-      const [admin, actuales, rolesActivos] = await Promise.all([
-        verificarAdministradorActual(req.auth!.sub, req.auth!.organizacionId),
-        client.query(`SELECT r.nombre FROM usuarios_roles ur JOIN roles r ON r.id=ur.rol_id WHERE ur.usuario_id=$1`, [usuarioId]),
-        obtenerRolesActivos(roles, client),
-      ]);
+      const admin = await verificarAdministradorActual(req.auth!.sub, req.auth!.organizacionId);
+      const actuales = await client.query(
+        `SELECT r.nombre FROM usuarios_roles ur JOIN roles r ON r.id=ur.rol_id WHERE ur.usuario_id=$1`,
+        [usuarioId],
+      );
+      const rolesActivos = await obtenerRolesActivos(roles, client);
       if (!admin) {
         await client.query('ROLLBACK'); res.status(403).json({ message: 'Administración no autorizada.' }); return;
       }
