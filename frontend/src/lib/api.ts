@@ -111,6 +111,20 @@ export function renovarSesion(): Promise<SesionResponse> {
   });
 }
 
+export function obtenerEstadoInicializacionSuperadministrador(): Promise<{ disponible: boolean }> {
+  return request<{ disponible: boolean }>('/inicializacion-superadministrador/estado');
+}
+
+export function inicializarSuperadministrador(
+  secretoInstalacion: string,
+  contrasena: string,
+): Promise<{ email: string }> {
+  return request<{ email: string }>('/inicializacion-superadministrador', {
+    method: 'POST',
+    body: JSON.stringify({ secretoInstalacion, contrasena }),
+  });
+}
+
 export function obtenerUsuario(accessToken: string): Promise<{ usuario: UsuarioSesion }> {
   return request<{ usuario: UsuarioSesion }>('/auth/me', {
     headers: {
@@ -401,6 +415,82 @@ export function obtenerRoles(tokenAcceso: string) {
   });
 }
 
+
+export interface CuentaOrganizacion {
+  id: string;
+  email: string;
+  activo: boolean;
+  debeCambiarContrasena: boolean;
+  roles: string[];
+}
+
+export function obtenerCuentasOrganizacion(token: string) {
+  return request<{ cuentas: CuentaOrganizacion[] }>('/usuarios/cuentas', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function crearCuentaOrganizacion(token: string, email: string, roles: string[]) {
+  return request<{ cuenta: CuentaOrganizacion; contrasenaTemporal: string }>('/usuarios/cuentas', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ email, roles }),
+  });
+}
+
+export function cambiarRolesCuenta(token: string, usuarioId: string, roles: string[]) {
+  return request<{ roles: string[] }>(`/usuarios/cuentas/${usuarioId}/roles`, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ roles }),
+  });
+}
+
+
+export interface OrganizacionPlataforma {
+  id: string;
+  nombre: string;
+  slug: string;
+  activo: boolean;
+  emailContacto: string | null;
+  cantidadUsuarios: number;
+  cantidadAdministradores: number;
+}
+export function obtenerOrganizacionesPlataforma(token: string) {
+  return request<{ organizaciones: OrganizacionPlataforma[] }>('/plataforma/organizaciones', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+export function crearOrganizacionPlataforma(token: string, datos: { nombre: string; slug: string; emailContacto: string }) {
+  return request<{ organizacion: OrganizacionPlataforma }>('/plataforma/organizaciones', {
+    method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify(datos),
+  });
+}
+export function obtenerCuentasPlataforma(token: string, organizacionId: string) {
+  return request<{ cuentas: CuentaOrganizacion[] }>(`/plataforma/organizaciones/${organizacionId}/cuentas`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+export function crearCuentaPlataforma(token: string, organizacionId: string, email: string, roles: string[]) {
+  return request<{ cuenta: CuentaOrganizacion; contrasenaTemporal: string }>(
+    `/plataforma/organizaciones/${organizacionId}/cuentas`, {
+      method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify({ email, roles }),
+    });
+}
+
+export function reemitirCredencialTemporalPlataforma(token: string, organizacionId: string, usuarioId: string) {
+  return request<{ cuenta: CuentaOrganizacion; contrasenaTemporal: string }>(
+    `/plataforma/organizaciones/${organizacionId}/cuentas/${usuarioId}/credencial-temporal`, {
+      method: 'POST', headers: { Authorization: `Bearer ${token}` },
+    });
+}
+
+export function cambiarRolesCuentaPlataforma(token: string, organizacionId: string, usuarioId: string, roles: string[]) {
+  return request<{ roles: string[] }>(`/plataforma/organizaciones/${organizacionId}/cuentas/${usuarioId}/roles`, {
+    method: 'PUT', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify({ roles }),
+  });
+}
+
 export interface ProyectoDonante {
   id: string;
   nombre: string;
@@ -604,7 +694,7 @@ export async function subirFotoAvance(
       method: 'PUT', headers: { 'Content-Type': preparacion.tipoMime }, body: foto,
     });
   } catch {
-    throw new Error('No se pudo conectar con R2. Verificá CORS para el origen local, conexión y firma temporal.');
+    throw new Error('El navegador no pudo completar la carga en R2. Revisá el resultado de la solicitud PUT en Network; podría ser un rechazo de firma o permisos.');
   }
   if (!carga.ok) {
     throw new Error(`R2 rechazó la fotografía (HTTP ${carga.status}). Verificá las credenciales, el bucket y la firma de carga.`);

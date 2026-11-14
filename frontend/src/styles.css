@@ -382,6 +382,83 @@ textarea:focus-visible {
   line-height: 1.55;
 }
 
+.inicializacion-link {
+  justify-self: start;
+  margin-top: -4px;
+  font-size: 0.85rem;
+}
+
+.inicializacion-card {
+  align-self: start;
+}
+
+.inicializacion-account {
+  display: grid;
+  gap: 4px;
+  padding: 13px 15px;
+  border: 1px solid #cfe5cd;
+  border-radius: 12px;
+  background: #e8f4e7;
+}
+
+.inicializacion-account span {
+  color: #526154;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.inicializacion-account strong {
+  color: #315c37;
+  overflow-wrap: anywhere;
+}
+
+.inicializacion-steps {
+  display: grid;
+  gap: 16px;
+  max-width: 600px;
+  margin: 28px 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: inicializacion-step;
+}
+
+.inicializacion-steps li {
+  position: relative;
+  display: grid;
+  gap: 3px;
+  min-height: 44px;
+  padding-left: 58px;
+  color: #526154;
+}
+
+.inicializacion-steps li::before {
+  content: counter(inicializacion-step);
+  counter-increment: inicializacion-step;
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 50%;
+  color: #315c37;
+  background: #e8f4e7;
+  font-size: 0.85rem;
+  font-weight: 850;
+}
+
+.inicializacion-steps strong {
+  color: #315c37;
+}
+
+.inicializacion-steps span {
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
 .notice {
   padding: 13px 15px;
   border-radius: 12px;

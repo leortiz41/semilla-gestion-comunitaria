@@ -8,6 +8,7 @@ export type SeccionAdministrativa =
   | 'pagos'
   | 'donantes'
   | 'usuarios'
+  | 'plataforma'
   | 'auditoria'
   | 'perfil';
 

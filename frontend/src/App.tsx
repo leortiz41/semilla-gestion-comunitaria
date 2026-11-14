@@ -15,12 +15,15 @@ import PaginaPagos from './modulos/pagos/PaginaPagos';
 import PaginaPerfilSeguridad from './modulos/perfil/PaginaPerfilSeguridad';
 import PaginaProyectos from './modulos/proyectos/PaginaProyectos';
 import PaginaUsuarios from './modulos/usuarios/PaginaUsuarios';
+import PaginaPlataforma from './modulos/usuarios/PaginaPlataforma';
+import AsistenteSuperadministradorInicial from './modulos/autenticacion/AsistenteSuperadministradorInicial';
 import type { SeccionAdministrativa, SubseccionComunidades } from './tipos/navegacion';
 import {
   cambiarContrasena,
   cerrarSesion,
   iniciarSesion,
   renovarSesion,
+  obtenerEstadoInicializacionSuperadministrador,
   type UsuarioSesion,
 } from './lib/api';
 
@@ -39,7 +42,7 @@ const pillars = [
   },
 ];
 
-type Vista = 'inicio' | 'login' | 'sesion';
+type Vista = 'inicio' | 'login' | 'inicializacion' | 'sesion';
 
 function App() {
   const [vista, setVista] = useState<Vista>('inicio');
@@ -56,6 +59,7 @@ function App() {
   const [contrasenaActual, setContrasenaActual] = useState('');
   const [contrasenaNueva, setContrasenaNueva] = useState('');
   const [confirmacionContrasena, setConfirmacionContrasena] = useState('');
+  const [inicializacionDisponible, setInicializacionDisponible] = useState<boolean | null>(null);
 
   useEffect(() => {
     let activo = true;
@@ -66,7 +70,7 @@ function App() {
         setAccessToken(sesion.accessToken);
         setUsuario(sesion.usuario);
         setVista('sesion');
-        setSeccionAdministrativa('dashboard');
+        setSeccionAdministrativa(sesion.usuario.roles.includes('SUPERADMINISTRADOR') ? 'plataforma' : 'dashboard');
         setSubseccionComunidades('listado');
         setMostrarCambioClave(sesion.usuario.debeCambiarContrasena);
       })
@@ -79,6 +83,16 @@ function App() {
     };
   }, []);
 
+  useEffect(() => {
+    if (vista !== 'login') return;
+    let activo = true;
+    obtenerEstadoInicializacionSuperadministrador().then(
+      ({ disponible }) => { if (activo) setInicializacionDisponible(disponible); },
+      () => { if (activo) setInicializacionDisponible(false); },
+    );
+    return () => { activo = false; };
+  }, [vista]);
+
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setProcesando(true);
@@ -90,7 +104,7 @@ function App() {
       setAccessToken(sesion.accessToken);
       setUsuario(sesion.usuario);
       setVista('sesion');
-      setSeccionAdministrativa('dashboard');
+      setSeccionAdministrativa(sesion.usuario.roles.includes('SUPERADMINISTRADOR') ? 'plataforma' : 'dashboard');
       setSubseccionComunidades('listado');
       setPassword('');
       setMostrarCambioClave(sesion.usuario.debeCambiarContrasena);
@@ -135,11 +149,21 @@ function App() {
       setEmail('');
       setPassword('');
       setMostrarCambioClave(false);
+      setInicializacionDisponible(null);
       setSeccionAdministrativa('dashboard');
       setSubseccionComunidades('listado');
       setVista('inicio');
       setProcesando(false);
     }
+  }
+
+  function handleInicializacionCompletado(correo: string) {
+    setEmail(correo);
+    setPassword('');
+    setInicializacionDisponible(false);
+    setVista('login');
+    setMensaje('La cuenta SUPERADMINISTRADOR fue creada. Inicia sesión para continuar.');
+    setError(null);
   }
 
   async function handleCambioContrasena(event: FormEvent<HTMLFormElement>) {
@@ -178,11 +202,13 @@ function App() {
     }
   }
 
+  const esSuperadministrador = usuario?.roles.includes('SUPERADMINISTRADOR') ?? false;
   const esDonante = usuario?.roles.some((rol) => rol === 'DONANTE' || rol === 'CONSULTA') ?? false;
   const puedeGestionarDonantes = usuario?.roles.includes('ADMINISTRADOR') &&
     ['usuarios.gestionar', 'proyectos.gestionar', 'evidencias.gestionar']
       .every((permiso) => usuario.permisos.includes(permiso));
-  const seccionVisible = esDonante && !['proyectos', 'evidencias', 'perfil'].includes(seccionAdministrativa)
+  const seccionVisible = esSuperadministrador && seccionAdministrativa !== 'perfil' ? 'plataforma' :
+    esDonante && !['proyectos', 'evidencias', 'perfil'].includes(seccionAdministrativa)
     ? 'proyectos'
     : seccionAdministrativa;
 
@@ -228,12 +254,15 @@ function App() {
         return <PaginaPagos />;
       case 'donantes':
         return puedeGestionarDonantes && accessToken ? <PaginaDonantes token={accessToken} /> : null;
+      case 'plataforma':
+        return esSuperadministrador && accessToken ? <PaginaPlataforma token={accessToken} /> : null;
       case 'usuarios':
         return usuario && accessToken ? (
           <PaginaUsuarios
             tokenAcceso={accessToken}
             puedeVer={usuario.permisos.includes('usuarios.ver')}
             puedeGestionarAcceso={Boolean(puedeGestionarDonantes)}
+            puedeGestionarCuentas={Boolean(usuario.roles.includes('ADMINISTRADOR') && usuario.permisos.includes('usuarios.gestionar'))}
 
           />
         ) : null;
@@ -361,11 +390,26 @@ function App() {
               {procesando ? 'Validando…' : 'Entrar'}
             </button>
 
+            {inicializacionDisponible && (
+              <button className="text-button inicializacion-link" type="button" onClick={() => {
+                setError(null); setMensaje(null); setVista('inicializacion');
+              }}>
+                Configurar la cuenta inicial de plataforma
+              </button>
+            )}
+
             <p className="form-help">
               La sesión utiliza un JWT de acceso y un refresh token protegido mediante cookie HttpOnly.
             </p>
           </form>
         </section>
+      )}
+
+      {vista === 'inicializacion' && (
+        <AsistenteSuperadministradorInicial
+          alVolver={() => { setError(null); setVista('login'); }}
+          alCompletar={handleInicializacionCompletado}
+        />
       )}
 
       {vista === 'sesion' && usuario && (
@@ -374,6 +418,7 @@ function App() {
             <BarraLateral
               seccionActiva={seccionVisible === 'perfil' ? undefined : seccionVisible}
               esDonante={esDonante}
+              esSuperadministrador={esSuperadministrador}
               puedeGestionarDonantes={Boolean(puedeGestionarDonantes)}
               subseccionComunidades={subseccionComunidades}
               alCambiarSeccion={setSeccionAdministrativa}
