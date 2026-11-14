@@ -464,6 +464,12 @@ export function crearCuentaPlataforma(token: string, organizacionId: string, ema
     });
 }
 
+export function cambiarRolesCuentaPlataforma(token: string, organizacionId: string, usuarioId: string, roles: string[]) {
+  return request<{ roles: string[] }>(`/plataforma/organizaciones/${organizacionId}/cuentas/${usuarioId}/roles`, {
+    method: 'PUT', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify({ roles }),
+  });
+}
+
 export interface ProyectoDonante {
   id: string;
   nombre: string;
