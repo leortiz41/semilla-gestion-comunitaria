@@ -3,9 +3,13 @@
 ## Alcance
 
 - Un ADMINISTRADOR gestiona exclusivamente las cuentas de su propia organización desde **Usuarios → Cuentas de la organización**.
-- Un SUPERADMINISTRADOR gestiona organizaciones y sus primeras cuentas desde **Superadministración**. No obtiene permisos automáticos sobre comunidades, proyectos ni evidencias de otras organizaciones.
+- Un SUPERADMINISTRADOR gestiona organizaciones y las credenciales temporales de sus cuentas ADMINISTRADOR desde **Superadministración**. No obtiene permisos automáticos sobre comunidades, proyectos ni evidencias de otras organizaciones.
 - Los perfiles asignables son ADMINISTRADOR, COORDINADOR, CAMPO, FINANZAS y DONANTE; DONANTE es exclusivo. Los roles personalizados no forman parte de este alcance.
 - Las cuentas tenant nuevas reciben una contraseña temporal que se muestra una sola vez y exige cambio en el primer acceso.
+
+### Credenciales temporales por organización
+
+En **Superadministración → Gestionar cuentas por organización**, el panel **Credenciales temporales de administradores** identifica cada organización mediante su UUID (su identificador tenant) y lista únicamente sus cuentas ADMINISTRADOR activas. Una contraseña temporal anterior nunca puede volver a consultarse: el superadministrador puede **reemitir** una nueva, con confirmación explícita. Esta acción sustituye el hash anterior, marca el cambio obligatorio de contraseña, revoca los tokens de actualización de la cuenta y registra `PLATAFORMA_REEMITIR_CREDENCIAL_TEMPORAL` sin guardar la contraseña en la auditoría.
 
 ## Asistente visual del único SUPERADMINISTRADOR
 

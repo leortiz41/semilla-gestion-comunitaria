@@ -3,6 +3,10 @@ import { Router, type RequestHandler } from 'express';
 import { databasePool } from '../config/database.js';
 import { hashPassword } from '../security/password.js';
 import { authenticateAccessToken } from '../middleware/auth.middleware.js';
+import {
+  ErrorCredencialTemporal,
+  reemitirCredencialTemporalAdministrador,
+} from '../services/credenciales-temporales.service.js';
 
 export const plataformaRouter = Router();
 const rolesPermitidos = ['ADMINISTRADOR', 'COORDINADOR', 'FINANZAS', 'CAMPO', 'DONANTE'];
@@ -150,6 +154,30 @@ plataformaRouter.post('/organizaciones/:organizacionId/cuentas',async (req,res) 
     console.error('Error creando cuenta desde plataforma:',errorHttp(error));
     res.status(500).json({message:'No fue posible crear la cuenta.'});
   } finally {client.release();}
+});
+
+// Nunca se recupera una contraseña anterior: se invalida y se emite una nueva,
+// limitada al administrador de la organización indicada por su identificador.
+plataformaRouter.post('/organizaciones/:organizacionId/cuentas/:usuarioId/credencial-temporal', async (req, res) => {
+  const { organizacionId, usuarioId } = req.params;
+  if (!esUuid(organizacionId) || !esUuid(usuarioId)) {
+    res.status(400).json({ message: 'Organización o cuenta inválida.' }); return;
+  }
+
+  try {
+    const respuesta = await reemitirCredencialTemporalAdministrador(
+      { organizacionId, usuarioId, superadministradorId: req.auth!.sub },
+      databasePool!,
+    );
+    res.set('Cache-Control', 'no-store');
+    res.status(201).json(respuesta);
+  } catch (error) {
+    if (error instanceof ErrorCredencialTemporal) {
+      res.status(error.codigoEstado).json({ message: error.message }); return;
+    }
+    console.error('Error reemitiendo credencial temporal:', errorHttp(error));
+    res.status(500).json({ message: 'No fue posible emitir una nueva credencial temporal.' });
+  }
 });
 
 plataformaRouter.put('/organizaciones/:organizacionId/cuentas/:usuarioId/roles', async (req,res) => {

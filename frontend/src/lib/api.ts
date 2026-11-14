@@ -478,6 +478,13 @@ export function crearCuentaPlataforma(token: string, organizacionId: string, ema
     });
 }
 
+export function reemitirCredencialTemporalPlataforma(token: string, organizacionId: string, usuarioId: string) {
+  return request<{ cuenta: CuentaOrganizacion; contrasenaTemporal: string }>(
+    `/plataforma/organizaciones/${organizacionId}/cuentas/${usuarioId}/credencial-temporal`, {
+      method: 'POST', headers: { Authorization: `Bearer ${token}` },
+    });
+}
+
 export function cambiarRolesCuentaPlataforma(token: string, organizacionId: string, usuarioId: string, roles: string[]) {
   return request<{ roles: string[] }>(`/plataforma/organizaciones/${organizacionId}/cuentas/${usuarioId}/roles`, {
     method: 'PUT', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify({ roles }),

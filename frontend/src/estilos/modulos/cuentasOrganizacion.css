@@ -25,6 +25,14 @@
 .cuentas-org__temporal{display:grid;gap:.65rem;padding:1rem;border-radius:.65rem;border:1px solid #d8c28b;background:#fff7dd;overflow-wrap:anywhere}
 .cuentas-org__temporal code{font-size:1rem;overflow-wrap:anywhere}
 .cuentas-org__temporal>button{justify-self:start}
+.cuentas-org__credenciales{background:#f4f9f3;border-color:#bcd4c1}
+.cuentas-org__tenant{display:grid;gap:.2rem;color:#496454;font-size:.82rem;font-weight:650;overflow-wrap:anywhere}
+.cuentas-org__tenant code{padding:.25rem .4rem;border:1px solid #c7d9ca;border-radius:.35rem;background:#fff;color:#244e34;font-weight:500}
+.cuentas-org__aviso{padding:.7rem .8rem;border-left:4px solid #ce8b38;border-radius:.35rem;background:#fff9ec;color:#5b4a2d!important}
+.cuentas-org__vacio{padding:.75rem;border:1px dashed #b9ccbd;border-radius:.55rem;background:#fff}
+.cuentas-org__credencial-admin{display:flex;align-items:start;justify-content:space-between;gap:.85rem;padding:.85rem;border:1px solid #d6e3d8;border-radius:.65rem;background:#fff;flex-wrap:wrap}
+.cuentas-org__confirmacion{display:grid;gap:.6rem;max-width:34rem;padding:.75rem;border-radius:.55rem;background:#fff7dd;border:1px solid #dfc77f}
+.cuentas-org__confirmacion p{color:#564728}
 .cuentas-org__error{padding:.75rem;border:1px solid #e2b7b7;border-radius:.6rem;background:#fff2f0;color:#a33232!important}
 .cuentas-org__mensaje{color:#28623a!important}
 @media(max-width:600px){.cuentas-org{padding:.8rem}.cuentas-org__formulario{padding:.8rem}.cuentas-org__cuenta{display:grid}}

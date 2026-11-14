@@ -3,6 +3,7 @@ import {
   cambiarRolesCuentaPlataforma, crearCuentaPlataforma, crearOrganizacionPlataforma, obtenerCuentasPlataforma,
   obtenerOrganizacionesPlataforma, type CuentaOrganizacion, type OrganizacionPlataforma,
 } from '../../lib/api';
+import PanelCredencialesTemporales from './PanelCredencialesTemporales';
 import '../../estilos/modulos/cuentasOrganizacion.css';
 
 const perfiles = [
@@ -24,7 +25,7 @@ export default function PaginaPlataforma({ token }: { token: string }) {
   const [roles, setRoles] = useState<string[]>(['ADMINISTRADOR']);
   const [edicionId, setEdicionId] = useState<string | null>(null);
   const [rolesEdicion, setRolesEdicion] = useState<string[]>([]);
-  const [credencial, setCredencial] = useState<{ email: string; temporal: string } | null>(null);
+  const [credencial, setCredencial] = useState<{ email: string; temporal: string; titulo: string } | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
@@ -81,7 +82,11 @@ export default function PaginaPlataforma({ token }: { token: string }) {
     try {
       const respuesta = await crearCuentaPlataforma(token, organizacionId, correo, roles);
       setCorreo(''); setRoles(['ADMINISTRADOR']);
-      setCredencial({ email: respuesta.cuenta.email, temporal: respuesta.contrasenaTemporal });
+      setCredencial({
+        email: respuesta.cuenta.email,
+        temporal: respuesta.contrasenaTemporal,
+        titulo: 'Cuenta creada',
+      });
       setVersion((v) => v + 1);
     } catch (fallo) {
       setError(fallo instanceof Error ? fallo.message : 'No fue posible crear la cuenta.');
@@ -146,6 +151,21 @@ export default function PaginaPlataforma({ token }: { token: string }) {
         </label>
         {seleccionada && <p>{seleccionada.cantidadUsuarios} usuarios · {seleccionada.cantidadAdministradores} administradores</p>}
         {seleccionada && (
+          <PanelCredencialesTemporales
+            token={token}
+            organizacion={seleccionada}
+            cuentas={cuentas}
+            bloqueado={ocupado}
+            hayCredencialVisible={Boolean(credencial)}
+            alEmitir={({ email, temporal }) => {
+              setCredencial({ email, temporal, titulo: 'Nueva credencial emitida' });
+              setMensaje('La contraseña anterior fue reemplazada. Compartí la nueva credencial solo por un canal seguro.');
+            }}
+            alActualizar={() => setVersion((v) => v + 1)}
+            alError={setError}
+          />
+        )}
+        {seleccionada && (
           <form className="cuentas-org__formulario" onSubmit={(e) => void registrarCuenta(e)}>
             <h3>Nueva cuenta</h3>
             <label>Correo del usuario
@@ -171,7 +191,7 @@ export default function PaginaPlataforma({ token }: { token: string }) {
           </form>
         )}
         {credencial && <div className="cuentas-org__temporal" role="status">
-          <strong>Cuenta creada: {credencial.email}</strong>
+          <strong>{credencial.titulo}: {credencial.email}</strong>
           <p>Contraseña temporal visible una sola vez. Compartila únicamente por un canal seguro.</p>
           <code>{credencial.temporal}</code>
           <button type="button" onClick={() => setCredencial(null)}>Ocultar contraseña</button>
