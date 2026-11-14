@@ -13,7 +13,7 @@ const perfiles = [
   { codigo: 'DONANTE', titulo: 'Donante', proposito: 'Consulta proyectos autorizados, su avance de ejecución y las evidencias relacionadas.' },
 ];
 
-function PaginaUsuarios({ tokenAcceso, puedeVer, puedeGestionarAcceso }: { tokenAcceso: string; puedeVer: boolean; puedeGestionarAcceso: boolean }) {
+function PaginaUsuarios({ tokenAcceso, puedeVer, puedeGestionarAcceso, puedeGestionarCuentas }: { tokenAcceso: string; puedeVer: boolean; puedeGestionarAcceso: boolean; puedeGestionarCuentas: boolean }) {
   const [roles, setRoles] = useState<RolCatalogo[] | null>(null);
   const [error, setError] = useState('');
   const [intento, setIntento] = useState(0);
@@ -49,7 +49,7 @@ function PaginaUsuarios({ tokenAcceso, puedeVer, puedeGestionarAcceso }: { token
           </div>
         ) : roles === null ? <p role="status">Cargando roles…</p> : (
           <>
-          {puedeGestionarAcceso && (
+          {puedeGestionarCuentas && (
             <PanelCuentasOrganizacion token={tokenAcceso}
               rolesActivos={roles.filter((rol) => rol.activo).map((rol) => rol.nombre)} />
           )}
