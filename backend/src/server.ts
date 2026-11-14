@@ -11,6 +11,7 @@ import { zonasRouter } from './routes/zonas.routes.js';
 import { usuariosRouter } from './routes/usuarios.routes.js';
 import { proyectosRouter } from './routes/proyectos.routes.js';
 import { mapaImpactoRouter } from './routes/mapa-impacto.routes.js';
+import { plataformaRouter } from './routes/plataforma.routes.js';
 
 const app = express();
 const port = Number(process.env.PORT ?? 3000);
@@ -29,6 +30,7 @@ app.use('/api/comunidades', comunidadesRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/zonas', zonasRouter);
 app.use('/api/usuarios', usuariosRouter);
+app.use('/api/plataforma', plataformaRouter);
 app.use('/api/donantes', donantesRouter);
 app.use('/api/proyectos', proyectosRouter);
 app.use('/api/mapa-impacto', mapaImpactoRouter);
