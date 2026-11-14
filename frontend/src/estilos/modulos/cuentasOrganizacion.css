@@ -5,7 +5,7 @@
 .cuentas-org p{margin:.3rem 0 0;color:#607166}
 .cuentas-org__formulario{display:grid;gap:.85rem;padding:1rem;background:#f7faf6;border:1px solid #dce8de;border-radius:.8rem}
 .cuentas-org__formulario>label{display:grid;gap:.35rem;font-weight:600}
-.cuentas-org input[type=email]{width:100%;max-width:34rem;min-height:40px;padding:.65rem;border:1px solid #b4ccba;border-radius:.55rem;background:#fff}
+.cuentas-org input[type=email],.cuentas-org input[type=text],.cuentas-org select{width:100%;max-width:34rem;min-height:40px;padding:.65rem;border:1px solid #b4ccba;border-radius:.55rem;background:#fff}
 .cuentas-org fieldset{min-width:0;border:1px solid #cbdccc;border-radius:.65rem;padding:.75rem}
 .cuentas-org legend{font-weight:600;padding:0 .3rem}
 .cuentas-org__roles{display:flex;gap:.5rem 1rem;flex-wrap:wrap}
