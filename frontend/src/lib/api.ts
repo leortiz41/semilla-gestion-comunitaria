@@ -432,6 +432,38 @@ export function cambiarRolesCuenta(token: string, usuarioId: string, roles: stri
   });
 }
 
+
+export interface OrganizacionPlataforma {
+  id: string;
+  nombre: string;
+  slug: string;
+  activo: boolean;
+  emailContacto: string | null;
+  cantidadUsuarios: number;
+  cantidadAdministradores: number;
+}
+export function obtenerOrganizacionesPlataforma(token: string) {
+  return request<{ organizaciones: OrganizacionPlataforma[] }>('/plataforma/organizaciones', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+export function crearOrganizacionPlataforma(token: string, datos: { nombre: string; slug: string; emailContacto: string }) {
+  return request<{ organizacion: OrganizacionPlataforma }>('/plataforma/organizaciones', {
+    method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify(datos),
+  });
+}
+export function obtenerCuentasPlataforma(token: string, organizacionId: string) {
+  return request<{ cuentas: CuentaOrganizacion[] }>(`/plataforma/organizaciones/${organizacionId}/cuentas`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+export function crearCuentaPlataforma(token: string, organizacionId: string, email: string, roles: string[]) {
+  return request<{ cuenta: CuentaOrganizacion; contrasenaTemporal: string }>(
+    `/plataforma/organizaciones/${organizacionId}/cuentas`, {
+      method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify({ email, roles }),
+    });
+}
+
 export interface ProyectoDonante {
   id: string;
   nombre: string;
