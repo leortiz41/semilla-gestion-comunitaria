@@ -73,7 +73,10 @@ usuariosRouter.get('/cuentas', authenticateAccessToken, requireRole('ADMINISTRAD
            COALESCE(array_agg(r.nombre ORDER BY r.nombre) FILTER (WHERE r.id IS NOT NULL), '{}'::text[]) AS roles
          FROM usuarios u LEFT JOIN usuarios_roles ur ON ur.usuario_id=u.id
          LEFT JOIN roles r ON r.id=ur.rol_id
-         WHERE u.organizacion_id=$1 GROUP BY u.id
+         WHERE u.organizacion_id=$1 AND NOT EXISTS (
+           SELECT 1 FROM usuarios_roles upr JOIN roles rpr ON rpr.id=upr.rol_id
+           WHERE upr.usuario_id=u.id AND rpr.nombre='SUPERADMINISTRADOR'
+         ) GROUP BY u.id
          ORDER BY u.email LIMIT 500`,
         [req.auth!.organizacionId],
       );
@@ -156,6 +159,16 @@ usuariosRouter.put('/cuentas/:usuarioId/roles', authenticateAccessToken,
         [usuarioId, req.auth!.organizacionId]);
       if (!org.rows.length || !usuario.rows.length) {
         await client.query('ROLLBACK'); res.status(404).json({ message: 'Usuario no encontrado en tu organización.' }); return;
+      }
+      const cuentaPlataforma = await client.query(
+        `SELECT 1 FROM usuarios_roles upr JOIN roles rpr ON rpr.id=upr.rol_id
+         WHERE upr.usuario_id=$1 AND rpr.nombre='SUPERADMINISTRADOR' LIMIT 1`,
+        [usuarioId],
+      );
+      if (cuentaPlataforma.rows.length) {
+        await client.query('ROLLBACK');
+        res.status(403).json({ message: 'Las cuentas de plataforma no pueden administrarse desde una organización.' });
+        return;
       }
       const admin = await verificarAdministradorActual(req.auth!.sub, req.auth!.organizacionId);
       const actuales = await client.query(
