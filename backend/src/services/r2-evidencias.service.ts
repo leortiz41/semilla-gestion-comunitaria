@@ -17,21 +17,27 @@ export function firmarObjetoR2(
   metodo: 'PUT' | 'GET' | 'HEAD',
   mime?: string,
   segundos = 300,
+  ahora: Date = new Date(),
 ): string {
   if (!r2Disponible()) throw new Error('Almacenamiento R2 no configurado.');
+  if (!clave || clave.startsWith('/') || !Number.isInteger(segundos) || segundos < 1 || segundos > 604800 ||
+      Number.isNaN(ahora.getTime())) throw new Error('Parámetros de firma R2 inválidos.');
   const account = process.env.R2_ACCOUNT_ID!;
   const bucket = process.env.R2_BUCKET!;
-  const endpoint = new URL('https://' + account + '.r2.cloudflarestorage.com');
-  const fecha = new Date();
+  // R2 documenta las URLs prefirmadas en formato virtual-hosted (bucket.account.r2...).
+  // Firmar exactamente el host y la ruta que recibirá el navegador evita divergencias SigV4.
+  const endpoint = new URL('https://' + bucket + '.' + account + '.r2.cloudflarestorage.com');
+  const fecha = ahora;
   const amzDate = fecha.toISOString().replace(/[:-]|\.\d{3}/g, '');
   const date = amzDate.slice(0, 8);
   const region = 'auto';
   const scope = date + '/' + region + '/s3/aws4_request';
   const host = endpoint.host;
-  const path = '/' + encode(bucket) + '/' + clave.split('/').map(encode).join('/');
+  const path = '/' + clave.split('/').map(encode).join('/');
   const signedHeaders = mime ? 'content-type;host' : 'host';
   const query = new URLSearchParams({
     'X-Amz-Algorithm': 'AWS4-HMAC-SHA256',
+    'X-Amz-Content-Sha256': 'UNSIGNED-PAYLOAD',
     'X-Amz-Credential': process.env.R2_ACCESS_KEY_ID! + '/' + scope,
     'X-Amz-Date': amzDate,
     'X-Amz-Expires': String(segundos),
