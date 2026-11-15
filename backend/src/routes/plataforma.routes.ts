@@ -166,7 +166,7 @@ plataformaRouter.post('/organizaciones/:organizacionId/cuentas/:usuarioId/creden
 
   try {
     const respuesta = await reemitirCredencialTemporalAdministrador(
-      { organizacionId, usuarioId, superadministradorId: req.auth!.sub },
+      { organizacionId, usuarioId, superadministradorId: req.auth!.sub, permitirOtrosRoles: true },
       databasePool!,
     );
     res.set('Cache-Control', 'no-store');
