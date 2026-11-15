@@ -3,6 +3,7 @@ import { randomBytes } from 'node:crypto';
 import { hashPassword } from '../security/password.js';
 import { databasePool } from '../config/database.js';
 import { authenticateAccessToken, requirePermission, requireRole } from '../middleware/auth.middleware.js';
+import { ErrorCredencialTemporal, reemitirCredencialTemporalAdministrador } from '../services/credenciales-temporales.service.js';
 
 export const usuariosRouter = Router();
 
@@ -135,6 +136,39 @@ usuariosRouter.post('/cuentas', authenticateAccessToken, requireRole('ADMINISTRA
       }
       console.error('Error creando usuario de la organización:', error);
       res.status(500).json({ message: 'No fue posible crear la cuenta.' });
+    }
+  });
+
+// Los administradores reemiten una contraseña temporal solo para cuentas de su organización.
+usuariosRouter.post('/cuentas/:usuarioId/credencial-temporal', authenticateAccessToken,
+  requireRole('ADMINISTRADOR'), requirePermission('usuarios.gestionar'), async (req, res) => {
+    const usuarioId=req.params.usuarioId;
+    if (typeof usuarioId !== 'string' || !/^[0-9a-f-]{36}$/i.test(usuarioId)) {
+      res.status(400).json({message:'Cuenta inválida.'});return;
+    }
+    if (!databasePool) {res.status(503).json({message:'Gestión de cuentas no disponible.'});return;}
+    if (req.auth!.debeCambiarContrasena) {
+      res.status(403).json({message:'Cambiá tu contraseña temporal antes de gestionar cuentas.'});return;
+    }
+    if (usuarioId===req.auth!.sub) {
+      res.status(409).json({message:'Para cambiar tu propia contraseña usá Mi perfil → Seguridad.'});return;
+    }
+    try {
+      if (!await verificarAdministradorActual(req.auth!.sub, req.auth!.organizacionId)) {
+        res.status(403).json({message:'Administración no autorizada.'});return;
+      }
+      const respuesta=await reemitirCredencialTemporalAdministrador(
+        {organizacionId:req.auth!.organizacionId,usuarioId,superadministradorId:req.auth!.sub,permitirOtrosRoles:true},
+        databasePool,
+      );
+      res.set('Cache-Control','no-store');
+      res.status(201).json(respuesta);
+    } catch(error) {
+      if (error instanceof ErrorCredencialTemporal) {
+        res.status(error.codigoEstado).json({message:error.message});return;
+      }
+      console.error('Error emitiendo credencial temporal de organización:',error);
+      res.status(500).json({message:'No fue posible emitir una credencial temporal.'});
     }
   });
 
