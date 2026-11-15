@@ -75,7 +75,7 @@ export default function PanelCuentasOrganizacion({
   async function guardarCorreo(cuenta: CuentaOrganizacion) {
     if (guardando) return;
     const nuevo = correoEdicion.trim().toLowerCase();
-    if (!nuevo || nuevo.length > 150 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(nuevo)) {
+    if (!nuevo || nuevo.length > 150 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nuevo)) {
       setError('Ingresá un correo electrónico válido.'); return;
     }
     setGuardando(true); setError(''); setMensaje('');
