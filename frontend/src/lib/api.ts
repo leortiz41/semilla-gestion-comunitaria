@@ -438,6 +438,13 @@ export function crearCuentaOrganizacion(token: string, email: string, roles: str
   });
 }
 
+export function reemitirCredencialTemporalCuenta(token: string, usuarioId: string) {
+  return request<{ cuenta: CuentaOrganizacion; contrasenaTemporal: string }>(
+    `/usuarios/cuentas/${usuarioId}/credencial-temporal`, {
+      method: 'POST', headers: { Authorization: `Bearer ${token}` },
+    });
+}
+
 export function cambiarCorreoCuenta(token: string, usuarioId: string, email: string) {
   return request<{ email: string }>(`/usuarios/cuentas/${usuarioId}/email`, {
     method: 'PUT', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify({ email }),
