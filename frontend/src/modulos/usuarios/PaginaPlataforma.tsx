@@ -113,7 +113,7 @@ export default function PaginaPlataforma({ token }: { token: string }) {
   async function guardarCorreo(cuenta: CuentaOrganizacion) {
     if (!organizacionId || ocupado) return;
     const nuevo=correoEdicion.trim().toLowerCase();
-    if (!nuevo || nuevo.length>150 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(nuevo)) {
+    if (!nuevo || nuevo.length>150 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nuevo)) {
       setError('Ingresá un correo electrónico válido.');return;
     }
     setOcupado(true);setError('');setMensaje('');
