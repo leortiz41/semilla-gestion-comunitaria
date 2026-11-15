@@ -101,6 +101,83 @@ plataformaRouter.post('/organizaciones', async (req, res) => {
   } finally { client.release(); }
 });
 
+// Desactivar un tenant suspende su acceso sin borrar sus datos; reactivar lo restaura.
+plataformaRouter.patch('/organizaciones/:organizacionId/estado', async (req,res) => {
+  const organizacionId=req.params.organizacionId;
+  const activo=req.body?.activo;
+  if (!esUuid(organizacionId) || typeof activo!=='boolean') {
+    res.status(400).json({message:'Organización o estado inválido.'});return;
+  }
+  const client=await databasePool!.connect();
+  try {
+    await client.query('BEGIN');
+    const org=await client.query('SELECT id,activo FROM organizaciones WHERE id=$1 FOR UPDATE',[organizacionId]);
+    if(!org.rows.length) {
+      await client.query('ROLLBACK');res.status(404).json({message:'Organización no encontrada.'});return;
+    }
+    if (!activo) {
+      const propia=await client.query('SELECT 1 FROM usuarios WHERE id=$1 AND organizacion_id=$2',[req.auth!.sub,organizacionId]);
+      if(propia.rows.length) {
+        await client.query('ROLLBACK');res.status(409).json({message:'No podés desactivar la organización asociada a tu cuenta global.'});return;
+      }
+    }
+    if (org.rows[0].activo!==activo) {
+      await client.query('UPDATE organizaciones SET activo=$1 WHERE id=$2',[activo,organizacionId]);
+      if(!activo) {
+        await client.query(`UPDATE tokens_refresco SET revocado_en=COALESCE(revocado_en,NOW())
+          WHERE usuario_id IN (SELECT id FROM usuarios WHERE organizacion_id=$1)`,[organizacionId]);
+      }
+      await client.query(`INSERT INTO bitacora_auditoria(usuario_id,accion,nombre_entidad,entidad_id,valores_anteriores,valores_nuevos)
+        VALUES($1,'PLATAFORMA_CAMBIAR_ESTADO_ORGANIZACION','organizaciones',$2,$3::jsonb,$4::jsonb)`,
+        [req.auth!.sub,organizacionId,JSON.stringify({activo:org.rows[0].activo}),JSON.stringify({activo})]);
+    }
+    await client.query('COMMIT');
+    res.set('Cache-Control','no-store');res.json({id:organizacionId,activo});
+  } catch(error) {
+    await client.query('ROLLBACK');
+    console.error('Error actualizando estado de organización:',errorHttp(error));
+    res.status(500).json({message:'No se pudo modificar el estado de la organización.'});
+  } finally {client.release();}
+});
+
+// Suspender una cuenta conserva su historial, documentos y roles asignados.
+plataformaRouter.patch('/organizaciones/:organizacionId/cuentas/:usuarioId/estado', async (req,res) => {
+  const {organizacionId,usuarioId}=req.params;
+  const activo=req.body?.activo;
+  if(!esUuid(organizacionId)||!esUuid(usuarioId)||typeof activo!=='boolean') {
+    res.status(400).json({message:'Organización, usuario o estado inválidos.'});return;
+  }
+  const client=await databasePool!.connect();
+  try {
+    await client.query('BEGIN');
+    const org=await client.query('SELECT id,activo FROM organizaciones WHERE id=$1 FOR UPDATE',[organizacionId]);
+    const usuario=await client.query('SELECT id,activo FROM usuarios WHERE id=$1 AND organizacion_id=$2 FOR UPDATE',[usuarioId,organizacionId]);
+    if(!org.rows.length||!usuario.rows.length) {
+      await client.query('ROLLBACK');res.status(404).json({message:'Cuenta u organización no encontrada.'});return;
+    }
+    const global=await client.query(`SELECT 1 FROM usuarios_roles ur JOIN roles r ON r.id=ur.rol_id
+      WHERE ur.usuario_id=$1 AND r.nombre='SUPERADMINISTRADOR' LIMIT 1`,[usuarioId]);
+    if(global.rows.length||usuarioId===req.auth!.sub) {
+      await client.query('ROLLBACK');res.status(403).json({message:'No se puede cambiar el estado de una cuenta global desde este módulo.'});return;
+    }
+    if(usuario.rows[0].activo!==activo) {
+      await client.query('UPDATE usuarios SET activo=$1,actualizado_en=NOW() WHERE id=$2',[activo,usuarioId]);
+      if(!activo) {
+        await client.query('UPDATE tokens_refresco SET revocado_en=COALESCE(revocado_en,NOW()) WHERE usuario_id=$1',[usuarioId]);
+      }
+      await client.query(`INSERT INTO bitacora_auditoria(usuario_id,accion,nombre_entidad,entidad_id,valores_anteriores,valores_nuevos)
+        VALUES($1,'PLATAFORMA_CAMBIAR_ESTADO_CUENTA','usuarios',$2,$3::jsonb,$4::jsonb)`,
+        [req.auth!.sub,usuarioId,JSON.stringify({organizacionId,activo:usuario.rows[0].activo}),JSON.stringify({organizacionId,activo})]);
+    }
+    await client.query('COMMIT');
+    res.set('Cache-Control','no-store');res.json({id:usuarioId,activo});
+  } catch(error) {
+    await client.query('ROLLBACK');
+    console.error('Error actualizando estado de cuenta:',errorHttp(error));
+    res.status(500).json({message:'No se pudo modificar el estado de la cuenta.'});
+  } finally {client.release();}
+});
+
 plataformaRouter.get('/organizaciones/:organizacionId/cuentas', async (req,res) => {
   if (!esUuid(req.params.organizacionId)) { res.status(400).json({message:'Organización inválida.'});return; }
   try {
