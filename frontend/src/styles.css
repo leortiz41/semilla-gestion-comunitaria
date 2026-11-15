@@ -388,6 +388,10 @@ textarea:focus-visible {
   font-size: 0.85rem;
 }
 
+.inicializacion-ayuda {
+  margin-top: -8px;
+}
+
 .inicializacion-card {
   align-self: start;
 }

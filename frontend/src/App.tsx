@@ -390,12 +390,15 @@ function App() {
               {procesando ? 'Validando…' : 'Entrar'}
             </button>
 
-            {inicializacionDisponible && (
-              <button className="text-button inicializacion-link" type="button" onClick={() => {
-                setError(null); setMensaje(null); setVista('inicializacion');
-              }}>
-                Configurar la cuenta inicial de plataforma
-              </button>
+            <button className="text-button inicializacion-link" type="button" onClick={() => {
+              setError(null); setMensaje(null); setVista('inicializacion');
+            }}>
+              Configurar la cuenta inicial de plataforma
+            </button>
+            {inicializacionDisponible === false && (
+              <p className="form-help inicializacion-ayuda" role="status">
+                El asistente todavía requiere configuración del entorno de desarrollo.
+              </p>
             )}
 
             <p className="form-help">
