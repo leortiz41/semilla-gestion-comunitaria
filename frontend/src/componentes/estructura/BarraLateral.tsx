@@ -63,7 +63,7 @@ function BarraLateral({
         <ul className="barra-lateral__lista">
            {opcionesNavegacion.filter(({ clave }) =>
             esSuperadministrador ? clave === 'plataforma' : esDonante
-              ? clave === 'proyectos' || clave === 'evidencias'
+              ? clave === 'proyectos' || clave === 'evidencias' || clave === 'mapa-impacto'
               : clave !== 'plataforma' && (clave !== 'donantes' || puedeGestionarDonantes)
           ).map((opcion) => {
             const estaActiva = seccionActiva === opcion.clave;
