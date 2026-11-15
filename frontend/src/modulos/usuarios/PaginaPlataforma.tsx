@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import {
-  cambiarRolesCuentaPlataforma, crearCuentaPlataforma, crearOrganizacionPlataforma, obtenerCuentasPlataforma,
+  cambiarCorreoCuentaPlataforma, cambiarRolesCuentaPlataforma, crearCuentaPlataforma, crearOrganizacionPlataforma, obtenerCuentasPlataforma,
   obtenerOrganizacionesPlataforma, type CuentaOrganizacion, type OrganizacionPlataforma,
 } from '../../lib/api';
 import PanelCredencialesTemporales from './PanelCredencialesTemporales';
@@ -25,6 +25,8 @@ export default function PaginaPlataforma({ token }: { token: string }) {
   const [roles, setRoles] = useState<string[]>(['ADMINISTRADOR']);
   const [edicionId, setEdicionId] = useState<string | null>(null);
   const [rolesEdicion, setRolesEdicion] = useState<string[]>([]);
+  const [edicionCorreo, setEdicionCorreo] = useState<string | null>(null);
+  const [correoEdicion, setCorreoEdicion] = useState('');
   const [credencial, setCredencial] = useState<{ email: string; temporal: string; titulo: string } | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const [error, setError] = useState('');
@@ -108,6 +110,24 @@ export default function PaginaPlataforma({ token }: { token: string }) {
     } finally { setOcupado(false); }
   }
 
+  async function guardarCorreo(cuenta: CuentaOrganizacion) {
+    if (!organizacionId || ocupado) return;
+    const nuevo=correoEdicion.trim().toLowerCase();
+    if (!nuevo || nuevo.length>150 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(nuevo)) {
+      setError('Ingresá un correo electrónico válido.');return;
+    }
+    setOcupado(true);setError('');setMensaje('');
+    try {
+      const {email}=await cambiarCorreoCuentaPlataforma(token,organizacionId,cuenta.id,nuevo);
+      setCuentas((actual)=>actual.map((item)=>item.id===cuenta.id?{...item,email}:item)
+        .sort((a,b)=>a.email.localeCompare(b.email)));
+      setEdicionCorreo(null);setCorreoEdicion('');
+      setMensaje('Correo actualizado. Las sesiones anteriores del usuario se revocaron.');
+    } catch(fallo) {
+      setError(fallo instanceof Error?fallo.message:'No fue posible actualizar el correo.');
+    } finally {setOcupado(false);}
+  }
+
   const seleccionada = organizaciones.find((o) => o.id === organizacionId);
   return (
     <section className="pagina-modulo cuentas-org" aria-labelledby="titulo-plataforma">
@@ -143,7 +163,7 @@ export default function PaginaPlataforma({ token }: { token: string }) {
         </div>
         <label>Organización
           <select value={organizacionId} disabled={ocupado}
-            onChange={(e) => { setOrganizacionId(e.target.value); setError(''); setMensaje(''); }}>
+            onChange={(e) => { setOrganizacionId(e.target.value); setEdicionId(null); setEdicionCorreo(null); setError(''); setMensaje(''); }}>
             <option value="">Seleccioná una organización</option>
             {organizaciones.map((o) =>
               <option value={o.id} key={o.id}>{o.nombre}{!o.activo ? ' (inactiva)' : ''}</option>)}
@@ -203,6 +223,19 @@ export default function PaginaPlataforma({ token }: { token: string }) {
               <strong>{cuenta.email}</strong>
               <small>{cuenta.activo ? 'Activa' : 'Inactiva'} · {cuenta.roles.join(', ') || 'Sin roles'}</small>
             </div>
+            {edicionCorreo === cuenta.id && (
+              <form className="cuentas-org__editor" onSubmit={(e)=>{e.preventDefault();void guardarCorreo(cuenta);}}>
+                <label>Correo electrónico corregido
+                  <input type="email" required maxLength={150} value={correoEdicion} disabled={ocupado}
+                    onChange={(e)=>setCorreoEdicion(e.target.value)} />
+                </label>
+                <div className="cuentas-org__acciones">
+                  <button type="submit" disabled={ocupado}>Guardar correo</button>
+                  <button type="button" className="cuentas-org__secundario" disabled={ocupado}
+                    onClick={()=>setEdicionCorreo(null)}>Cancelar</button>
+                </div>
+              </form>
+            )}
             {!cuenta.roles.includes('SUPERADMINISTRADOR') && cuenta.activo && (
               edicionId === cuenta.id ? (
                 <div className="cuentas-org__editor">
@@ -229,10 +262,16 @@ export default function PaginaPlataforma({ token }: { token: string }) {
                   </div>
                 </div>
               ) : (
-                <button type="button" className="cuentas-org__secundario" disabled={ocupado}
-                  onClick={() => { setEdicionId(cuenta.id); setRolesEdicion(cuenta.roles); }}>
-                  Editar perfiles
-                </button>
+                <div className="cuentas-org__acciones">
+                  <button type="button" className="cuentas-org__secundario" disabled={ocupado || edicionCorreo===cuenta.id}
+                    onClick={() => { setEdicionId(cuenta.id); setEdicionCorreo(null); setRolesEdicion(cuenta.roles); }}>
+                    Editar perfiles
+                  </button>
+                  <button type="button" className="cuentas-org__secundario" disabled={ocupado || edicionCorreo===cuenta.id}
+                    onClick={() => { setEdicionCorreo(cuenta.id); setCorreoEdicion(cuenta.email); setEdicionId(null); }}>
+                    Editar correo
+                  </button>
+                </div>
               )
             )}
           </div>
