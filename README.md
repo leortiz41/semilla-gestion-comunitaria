@@ -96,6 +96,14 @@ semilla-gestion-comunitaria/
 - Etiqueta de entrega: `semana-3`
 - El modelo distingue las 29 tablas existentes de las ampliaciones pendientes.
 
+### Semana 5 - MVP en manos de usuarios
+
+- [Guion de pruebas y observaciones preliminares](docs/pruebas-usuarios.md).
+- [Bitácora - Semana 5](docs/bitacora/semana-5.md).
+- Organizaciones piloto: **Corazón para Honduras**, **Ministerio Sal y Luz** y **Glow International**.
+- Pruebas previstas con **3 a 5 personas reales**; resultados y decisión de hipótesis pendientes de registrar.
+- Mejoras planificadas en los issues [#42](https://github.com/leortiz41/semilla-gestion-comunitaria/issues/42), [#43](https://github.com/leortiz41/semilla-gestion-comunitaria/issues/43), [#44](https://github.com/leortiz41/semilla-gestion-comunitaria/issues/44) y [#45](https://github.com/leortiz41/semilla-gestion-comunitaria/issues/45).
+
 ## Flujo de ramas
 
 - `main`: producción y entregas estables.
