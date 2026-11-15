@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import {
-  cambiarCorreoCuentaPlataforma, cambiarRolesCuentaPlataforma, crearCuentaPlataforma, crearOrganizacionPlataforma, obtenerCuentasPlataforma,
+  cambiarCorreoCuentaPlataforma, cambiarRolesCuentaPlataforma, cambiarEstadoOrganizacionPlataforma, cambiarEstadoCuentaPlataforma, crearCuentaPlataforma, crearOrganizacionPlataforma, obtenerCuentasPlataforma,
   obtenerOrganizacionesPlataforma, type CuentaOrganizacion, type OrganizacionPlataforma,
 } from '../../lib/api';
 import PanelCredencialesTemporales from './PanelCredencialesTemporales';
@@ -32,6 +32,9 @@ export default function PaginaPlataforma({ token }: { token: string }) {
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
   const [version, setVersion] = useState(0);
+  const [filtroRol, setFiltroRol] = useState('TODOS');
+  const [filtroEstado, setFiltroEstado] = useState('TODOS');
+  const [confirmacion, setConfirmacion] = useState<{tipo:'organizacion'|'cuenta';id:string;nombre:string;activo:boolean}|null>(null);
 
   useEffect(() => {
     let vigente = true;
@@ -128,6 +131,34 @@ export default function PaginaPlataforma({ token }: { token: string }) {
     } finally {setOcupado(false);}
   }
 
+  async function cambiarEstadoConfirmado() {
+    if (!confirmacion || ocupado || !organizacionId) return;
+    setOcupado(true);setError('');setMensaje('');
+    try {
+      if(confirmacion.tipo==='organizacion') {
+        await cambiarEstadoOrganizacionPlataforma(token,confirmacion.id,confirmacion.activo);
+        setOrganizaciones((actual)=>actual.map((o)=>o.id===confirmacion.id?{...o,activo:confirmacion.activo}:o));
+        setMensaje(confirmacion.activo?'Organización reactivada.':'Organización desactivada: sus cuentas no podrán iniciar nuevas sesiones.');
+      } else {
+        await cambiarEstadoCuentaPlataforma(token,organizacionId,confirmacion.id,confirmacion.activo);
+        setCuentas((actual)=>actual.map((u)=>u.id===confirmacion.id?{...u,activo:confirmacion.activo}:u));
+        setMensaje(confirmacion.activo?'Cuenta activada.':'Cuenta desactivada.');
+      }
+      setConfirmacion(null);
+      setVersion((v)=>v+1);
+    } catch(fallo) {
+      setError(fallo instanceof Error?fallo.message:'No fue posible modificar el estado.');
+    } finally {setOcupado(false);}
+  }
+
+  const cuentasFiltradas=cuentas.filter((cuenta)=>
+    (filtroRol==='TODOS'||cuenta.roles.includes(filtroRol)) &&
+    (filtroEstado==='TODOS'||(filtroEstado==='ACTIVOS' ? cuenta.activo : !cuenta.activo))
+  );
+  const resumenRoles=perfiles.map((perfil)=>({
+    ...perfil,total:cuentas.filter((cuenta)=>cuenta.roles.includes(perfil.codigo)).length,
+  }));
+
   const seleccionada = organizaciones.find((o) => o.id === organizacionId);
   return (
     <section className="pagina-modulo cuentas-org" aria-labelledby="titulo-plataforma">
@@ -163,13 +194,60 @@ export default function PaginaPlataforma({ token }: { token: string }) {
         </div>
         <label>Organización
           <select value={organizacionId} disabled={ocupado}
-            onChange={(e) => { setOrganizacionId(e.target.value); setEdicionId(null); setEdicionCorreo(null); setError(''); setMensaje(''); }}>
+            onChange={(e) => { setOrganizacionId(e.target.value); setEdicionId(null); setEdicionCorreo(null); setFiltroRol('TODOS'); setFiltroEstado('TODOS'); setConfirmacion(null); setError(''); setMensaje(''); }}>
             <option value="">Seleccioná una organización</option>
             {organizaciones.map((o) =>
               <option value={o.id} key={o.id}>{o.nombre}{!o.activo ? ' (inactiva)' : ''}</option>)}
           </select>
         </label>
-        {seleccionada && <p>{seleccionada.cantidadUsuarios} usuarios · {seleccionada.cantidadAdministradores} administradores</p>}
+        {seleccionada && (
+          <div className="cuentas-org__formulario">
+            <p><strong>{seleccionada.nombre}</strong> · Tenant ID: <code>{seleccionada.id}</code> ·
+              {seleccionada.cantidadUsuarios} usuarios · {seleccionada.cantidadAdministradores} administradores ·
+              {seleccionada.activo?' Organización activa':' Organización inactiva'}</p>
+            <button type="button" className="cuentas-org__secundario" disabled={ocupado}
+              onClick={()=>setConfirmacion({tipo:'organizacion',id:seleccionada.id,nombre:seleccionada.nombre,activo:!seleccionada.activo})}>
+              {seleccionada.activo?'Desactivar organización':'Reactivar organización'}
+            </button>
+          </div>
+        )}
+        {confirmacion && (
+          <div className="cuentas-org__confirmacion" role="alert">
+            <p><strong>{confirmacion.activo?'Confirmar activación':'Confirmar desactivación'}:</strong> {confirmacion.nombre}.</p>
+            {!confirmacion.activo && <p>Se revocarán las sesiones renovables. No se eliminarán datos, cuentas ni roles.</p>}
+            <div className="cuentas-org__acciones">
+              <button type="button" disabled={ocupado} onClick={()=>void cambiarEstadoConfirmado()}>
+                {ocupado?'Procesando…':confirmacion.activo?'Sí, activar':'Sí, desactivar'}
+              </button>
+              <button type="button" className="cuentas-org__secundario" disabled={ocupado}
+                onClick={()=>setConfirmacion(null)}>Cancelar</button>
+            </div>
+          </div>
+        )}
+        {seleccionada && (
+          <section className="cuentas-org__formulario" aria-label="Roles y cuentas de la organización">
+            <h3>Roles asociados a {seleccionada.nombre}</h3>
+            <p>Se muestran las asignaciones de usuarios de esta organización, no los roles globales de otras organizaciones.</p>
+            <div className="cuentas-org__roles">
+              {resumenRoles.map((rol)=><span key={rol.codigo}>{rol.etiqueta}: <strong>{rol.total}</strong></span>)}
+            </div>
+            <div className="cuentas-org__acciones">
+              <label>Filtrar por rol
+                <select value={filtroRol} onChange={(e)=>setFiltroRol(e.target.value)}>
+                  <option value="TODOS">Todos los roles</option>
+                  {perfiles.map((rol)=><option key={rol.codigo} value={rol.codigo}>{rol.etiqueta}</option>)}
+                </select>
+              </label>
+              <label>Filtrar por estado
+                <select value={filtroEstado} onChange={(e)=>setFiltroEstado(e.target.value)}>
+                  <option value="TODOS">Todos los estados</option>
+                  <option value="ACTIVOS">Activos</option>
+                  <option value="INACTIVOS">Inactivos</option>
+                </select>
+              </label>
+            </div>
+          </section>
+        )}
         {seleccionada && (
           <PanelCredencialesTemporales
             token={token}
@@ -216,13 +294,20 @@ export default function PaginaPlataforma({ token }: { token: string }) {
           <code>{credencial.temporal}</code>
           <button type="button" onClick={() => setCredencial(null)}>Ocultar contraseña</button>
         </div>}
-        <h3>Usuarios registrados ({cuentas.length})</h3>
-        {cuentas.map((cuenta) => (
+        <h3>Usuarios de la organización ({cuentasFiltradas.length} de {cuentas.length})</h3>
+        {cuentasFiltradas.length===0 && <p>No hay usuarios para los filtros seleccionados.</p>}
+        {cuentasFiltradas.map((cuenta) => (
           <div className="cuentas-org__cuenta" key={cuenta.id}>
             <div className="cuentas-org__identidad">
               <strong>{cuenta.email}</strong>
               <small>{cuenta.activo ? 'Activa' : 'Inactiva'} · {cuenta.roles.join(', ') || 'Sin roles'}</small>
             </div>
+            {!cuenta.roles.includes('SUPERADMINISTRADOR') && (
+              <button type="button" className="cuentas-org__secundario" disabled={ocupado}
+                onClick={()=>setConfirmacion({tipo:'cuenta',id:cuenta.id,nombre:cuenta.email,activo:!cuenta.activo})}>
+                {cuenta.activo?'Desactivar cuenta':'Activar cuenta'}
+              </button>
+            )}
             {edicionCorreo === cuenta.id && (
               <form className="cuentas-org__editor" onSubmit={(e)=>{e.preventDefault();void guardarCorreo(cuenta);}}>
                 <label>Correo electrónico corregido
