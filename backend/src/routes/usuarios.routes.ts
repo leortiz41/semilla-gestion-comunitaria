@@ -3,6 +3,7 @@ import { randomBytes } from 'node:crypto';
 import { hashPassword } from '../security/password.js';
 import { databasePool } from '../config/database.js';
 import { authenticateAccessToken, requirePermission, requireRole } from '../middleware/auth.middleware.js';
+import { ErrorCredencialTemporal, reemitirCredencialTemporalAdministrador } from '../services/credenciales-temporales.service.js';
 
 export const usuariosRouter = Router();
 
@@ -136,6 +137,95 @@ usuariosRouter.post('/cuentas', authenticateAccessToken, requireRole('ADMINISTRA
       console.error('Error creando usuario de la organización:', error);
       res.status(500).json({ message: 'No fue posible crear la cuenta.' });
     }
+  });
+
+// Los administradores reemiten una contraseña temporal solo para cuentas de su organización.
+usuariosRouter.post('/cuentas/:usuarioId/credencial-temporal', authenticateAccessToken,
+  requireRole('ADMINISTRADOR'), requirePermission('usuarios.gestionar'), async (req, res) => {
+    const usuarioId=req.params.usuarioId;
+    if (typeof usuarioId !== 'string' || !/^[0-9a-f-]{36}$/i.test(usuarioId)) {
+      res.status(400).json({message:'Cuenta inválida.'});return;
+    }
+    if (!databasePool) {res.status(503).json({message:'Gestión de cuentas no disponible.'});return;}
+    if (req.auth!.debeCambiarContrasena) {
+      res.status(403).json({message:'Cambiá tu contraseña temporal antes de gestionar cuentas.'});return;
+    }
+    if (usuarioId===req.auth!.sub) {
+      res.status(409).json({message:'Para cambiar tu propia contraseña usá Mi perfil → Seguridad.'});return;
+    }
+    try {
+      if (!await verificarAdministradorActual(req.auth!.sub, req.auth!.organizacionId)) {
+        res.status(403).json({message:'Administración no autorizada.'});return;
+      }
+      const respuesta=await reemitirCredencialTemporalAdministrador(
+        {organizacionId:req.auth!.organizacionId,usuarioId,superadministradorId:req.auth!.sub,permitirOtrosRoles:true},
+        databasePool,
+      );
+      res.set('Cache-Control','no-store');
+      res.status(201).json(respuesta);
+    } catch(error) {
+      if (error instanceof ErrorCredencialTemporal) {
+        res.status(error.codigoEstado).json({message:error.message});return;
+      }
+      console.error('Error emitiendo credencial temporal de organización:',error);
+      res.status(500).json({message:'No fue posible emitir una credencial temporal.'});
+    }
+  });
+
+// La corrección del correo no modifica roles ni credenciales.
+usuariosRouter.put('/cuentas/:usuarioId/email', authenticateAccessToken,
+  requireRole('ADMINISTRADOR'), requirePermission('usuarios.gestionar'), async (req, res) => {
+    const usuarioId = req.params.usuarioId;
+    const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+    if (typeof usuarioId !== 'string' || !/^[0-9a-f-]{36}$/i.test(usuarioId) || !validarEmail(email)) {
+      res.status(400).json({ message: 'Usuario o correo electrónico inválido.' }); return;
+    }
+    if (!databasePool) { res.status(503).json({ message: 'Gestión de cuentas no disponible.' }); return; }
+    const client = await databasePool.connect();
+    try {
+      await client.query('BEGIN');
+      const org = await client.query('SELECT id FROM organizaciones WHERE id=$1 AND activo FOR UPDATE',
+        [req.auth!.organizacionId]);
+      const admin = await client.query(`SELECT 1 FROM usuarios u
+        JOIN usuarios_roles ur ON ur.usuario_id=u.id
+        JOIN roles r ON r.id=ur.rol_id AND r.nombre='ADMINISTRADOR' AND r.activo
+        WHERE u.id=$1 AND u.organizacion_id=$2 AND u.activo LIMIT 1`,
+        [req.auth!.sub, req.auth!.organizacionId]);
+      if (!org.rows.length || !admin.rows.length) {
+        await client.query('ROLLBACK');
+        res.status(403).json({ message: 'Administración no autorizada.' }); return;
+      }
+      const cuenta = await client.query('SELECT id,email FROM usuarios WHERE id=$1 AND organizacion_id=$2 AND activo FOR UPDATE',
+        [usuarioId, req.auth!.organizacionId]);
+      if (!cuenta.rows.length) {
+        await client.query('ROLLBACK');
+        res.status(404).json({ message: 'Usuario no encontrado en tu organización.' }); return;
+      }
+      const esPlataforma = await client.query(`SELECT 1 FROM usuarios_roles ur
+        JOIN roles r ON r.id=ur.rol_id WHERE ur.usuario_id=$1 AND r.nombre='SUPERADMINISTRADOR' LIMIT 1`, [usuarioId]);
+      if (esPlataforma.rows.length) {
+        await client.query('ROLLBACK');
+        res.status(403).json({ message: 'La cuenta global no puede modificarse desde una organización.' }); return;
+      }
+      const anterior = cuenta.rows[0].email as string;
+      if (anterior === email) {
+        await client.query('COMMIT'); res.json({ email }); return;
+      }
+      await client.query('UPDATE usuarios SET email=$1, actualizado_en=NOW() WHERE id=$2', [email, usuarioId]);
+      await client.query('UPDATE tokens_refresco SET revocado_en=COALESCE(revocado_en,NOW()) WHERE usuario_id=$1', [usuarioId]);
+      await client.query(`INSERT INTO bitacora_auditoria (usuario_id,accion,nombre_entidad,entidad_id,valores_anteriores,valores_nuevos)
+        VALUES ($1,'CAMBIAR_EMAIL_USUARIO','usuarios',$2,$3::jsonb,$4::jsonb)`,
+        [req.auth!.sub,usuarioId,JSON.stringify({email:anterior}),JSON.stringify({email})]);
+      await client.query('COMMIT');
+      res.set('Cache-Control','no-store'); res.json({ email });
+    } catch (error) {
+      await client.query('ROLLBACK');
+      if ((error as {code?:string}).code === '23505') {
+        res.status(409).json({ message: 'El correo ya está registrado en otra cuenta.' }); return;
+      }
+      console.error('Error cambiando correo de cuenta:', error);
+      res.status(500).json({ message: 'No fue posible actualizar el correo.' });
+    } finally { client.release(); }
   });
 
 usuariosRouter.put('/cuentas/:usuarioId/roles', authenticateAccessToken,

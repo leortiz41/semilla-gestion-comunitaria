@@ -438,6 +438,19 @@ export function crearCuentaOrganizacion(token: string, email: string, roles: str
   });
 }
 
+export function reemitirCredencialTemporalCuenta(token: string, usuarioId: string) {
+  return request<{ cuenta: CuentaOrganizacion; contrasenaTemporal: string }>(
+    `/usuarios/cuentas/${usuarioId}/credencial-temporal`, {
+      method: 'POST', headers: { Authorization: `Bearer ${token}` },
+    });
+}
+
+export function cambiarCorreoCuenta(token: string, usuarioId: string, email: string) {
+  return request<{ email: string }>(`/usuarios/cuentas/${usuarioId}/email`, {
+    method: 'PUT', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify({ email }),
+  });
+}
+
 export function cambiarRolesCuenta(token: string, usuarioId: string, roles: string[]) {
   return request<{ roles: string[] }>(`/usuarios/cuentas/${usuarioId}/roles`, {
     method: 'PUT',
@@ -483,6 +496,12 @@ export function reemitirCredencialTemporalPlataforma(token: string, organizacion
     `/plataforma/organizaciones/${organizacionId}/cuentas/${usuarioId}/credencial-temporal`, {
       method: 'POST', headers: { Authorization: `Bearer ${token}` },
     });
+}
+
+export function cambiarCorreoCuentaPlataforma(token: string, organizacionId: string, usuarioId: string, email: string) {
+  return request<{ email: string }>(`/plataforma/organizaciones/${organizacionId}/cuentas/${usuarioId}/email`, {
+    method: 'PUT', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify({ email }),
+  });
 }
 
 export function cambiarRolesCuentaPlataforma(token: string, organizacionId: string, usuarioId: string, roles: string[]) {

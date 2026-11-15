@@ -37,7 +37,7 @@ export function generarContrasenaTemporal(): string {
 }
 
 export async function reemitirCredencialTemporalAdministrador(
-  entrada: { organizacionId: string; usuarioId: string; superadministradorId: string },
+  entrada: { organizacionId: string; usuarioId: string; superadministradorId: string; permitirOtrosRoles?: boolean },
   conexiones: ConjuntoConexionesCredencialesTemporales,
 ): Promise<{ cuenta: CuentaConCredencialTemporal; contrasenaTemporal: string }> {
   const contrasenaTemporal = generarContrasenaTemporal();
@@ -65,7 +65,7 @@ export async function reemitirCredencialTemporalAdministrador(
       [entrada.usuarioId, entrada.organizacionId],
     );
     if (!usuario.rows.length || !usuario.rows[0].activo) {
-      throw new ErrorCredencialTemporal(404, 'La cuenta administradora no existe o está inactiva.');
+      throw new ErrorCredencialTemporal(404, 'La cuenta no existe o está inactiva.');
     }
 
     const roles = await cliente.query<{ nombre: string }>(
@@ -80,7 +80,7 @@ export async function reemitirCredencialTemporalAdministrador(
     if (perfiles.includes('SUPERADMINISTRADOR')) {
       throw new ErrorCredencialTemporal(403, 'La cuenta de superadministración no se gestiona desde las organizaciones.');
     }
-    if (!perfiles.includes('ADMINISTRADOR')) {
+    if (!entrada.permitirOtrosRoles && !perfiles.includes('ADMINISTRADOR')) {
       throw new ErrorCredencialTemporal(409, 'Solo se pueden reemitir credenciales para administradores de la organización.');
     }
 
@@ -101,11 +101,12 @@ export async function reemitirCredencialTemporalAdministrador(
     await cliente.query(
       `INSERT INTO bitacora_auditoria
         (usuario_id, accion, nombre_entidad, entidad_id, valores_nuevos)
-       VALUES ($1, 'PLATAFORMA_REEMITIR_CREDENCIAL_TEMPORAL', 'usuarios', $2, $3::jsonb)`,
+       VALUES ($1, $4, 'usuarios', $2, $3::jsonb)`,
       [
         entrada.superadministradorId,
         entrada.usuarioId,
         JSON.stringify({ organizacionId: entrada.organizacionId, email: usuario.rows[0].email }),
+        entrada.permitirOtrosRoles ? 'REEMITIR_CREDENCIAL_TEMPORAL' : 'PLATAFORMA_REEMITIR_CREDENCIAL_TEMPORAL',
       ],
     );
 

@@ -166,7 +166,7 @@ plataformaRouter.post('/organizaciones/:organizacionId/cuentas/:usuarioId/creden
 
   try {
     const respuesta = await reemitirCredencialTemporalAdministrador(
-      { organizacionId, usuarioId, superadministradorId: req.auth!.sub },
+      { organizacionId, usuarioId, superadministradorId: req.auth!.sub, permitirOtrosRoles: true },
       databasePool!,
     );
     res.set('Cache-Control', 'no-store');
@@ -178,6 +178,44 @@ plataformaRouter.post('/organizaciones/:organizacionId/cuentas/:usuarioId/creden
     console.error('Error reemitiendo credencial temporal:', errorHttp(error));
     res.status(500).json({ message: 'No fue posible emitir una nueva credencial temporal.' });
   }
+});
+
+// El superadministrador puede corregir correos de cuentas de organizaciones, nunca el suyo.
+plataformaRouter.put('/organizaciones/:organizacionId/cuentas/:usuarioId/email', async (req,res) => {
+  const { organizacionId, usuarioId } = req.params;
+  const email=typeof req.body?.email==='string'?req.body.email.trim().toLowerCase():'';
+  if (!esUuid(organizacionId) || !esUuid(usuarioId) || !esCorreo(email)) {
+    res.status(400).json({message:'Organización, usuario o correo inválidos.'});return;
+  }
+  const client=await databasePool!.connect();
+  try {
+    await client.query('BEGIN');
+    const org=await client.query('SELECT id FROM organizaciones WHERE id=$1 AND activo FOR UPDATE',[organizacionId]);
+    const usuario=await client.query(
+      'SELECT id,email FROM usuarios WHERE id=$1 AND organizacion_id=$2 AND activo FOR UPDATE',[usuarioId,organizacionId]);
+    if (!org.rows.length || !usuario.rows.length) {
+      await client.query('ROLLBACK');res.status(404).json({message:'La cuenta o su organización no están activas.'});return;
+    }
+    const roles=await client.query(`SELECT 1 FROM usuarios_roles ur JOIN roles r ON r.id=ur.rol_id
+      WHERE ur.usuario_id=$1 AND r.nombre='SUPERADMINISTRADOR' LIMIT 1`,[usuarioId]);
+    if (roles.rows.length) {
+      await client.query('ROLLBACK');res.status(403).json({message:'La cuenta global no admite edición desde este módulo.'});return;
+    }
+    const anterior=usuario.rows[0].email as string;
+    if (anterior===email) { await client.query('COMMIT');res.json({email});return; }
+    await client.query('UPDATE usuarios SET email=$1,actualizado_en=NOW() WHERE id=$2',[email,usuarioId]);
+    await client.query('UPDATE tokens_refresco SET revocado_en=COALESCE(revocado_en,NOW()) WHERE usuario_id=$1',[usuarioId]);
+    await client.query(`INSERT INTO bitacora_auditoria(usuario_id,accion,nombre_entidad,entidad_id,valores_anteriores,valores_nuevos)
+      VALUES($1,'PLATAFORMA_CAMBIAR_EMAIL','usuarios',$2,$3::jsonb,$4::jsonb)`,
+      [req.auth!.sub,usuarioId,JSON.stringify({organizacionId,email:anterior}),JSON.stringify({organizacionId,email})]);
+    await client.query('COMMIT');
+    res.set('Cache-Control','no-store');res.json({email});
+  } catch(error) {
+    await client.query('ROLLBACK');
+    if(nombreError(error)) {res.status(409).json({message:'El correo ya está registrado en otra cuenta.'});return;}
+    console.error('Error cambiando correo desde plataforma:',errorHttp(error));
+    res.status(500).json({message:'No fue posible actualizar el correo.'});
+  } finally {client.release();}
 });
 
 plataformaRouter.put('/organizaciones/:organizacionId/cuentas/:usuarioId/roles', async (req,res) => {

@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import {
-  cambiarRolesCuenta, crearCuentaOrganizacion, obtenerCuentasOrganizacion,
+  cambiarCorreoCuenta, cambiarRolesCuenta, crearCuentaOrganizacion, obtenerCuentasOrganizacion,
+  reemitirCredencialTemporalCuenta,
   type CuentaOrganizacion,
 } from '../../lib/api';
 import '../../estilos/modulos/cuentasOrganizacion.css';
@@ -21,6 +22,9 @@ export default function PanelCuentasOrganizacion({
   const [seleccion, setSeleccion] = useState<string[]>(['CAMPO']);
   const [edicion, setEdicion] = useState<string | null>(null);
   const [rolesEdicion, setRolesEdicion] = useState<string[]>([]);
+  const [edicionCorreo, setEdicionCorreo] = useState<string | null>(null);
+  const [correoEdicion, setCorreoEdicion] = useState('');
+  const [confirmandoReemision, setConfirmandoReemision] = useState<string | null>(null);
   const [temporal, setTemporal] = useState<{ correo: string; clave: string } | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
@@ -66,6 +70,39 @@ export default function PanelCuentasOrganizacion({
     } catch (fallo) {
       setError(fallo instanceof Error ? fallo.message : 'No se pudieron actualizar los roles.');
     } finally { setGuardando(false); }
+  }
+
+  async function guardarCorreo(cuenta: CuentaOrganizacion) {
+    if (guardando) return;
+    const nuevo = correoEdicion.trim().toLowerCase();
+    if (!nuevo || nuevo.length > 150 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nuevo)) {
+      setError('Ingresá un correo electrónico válido.'); return;
+    }
+    setGuardando(true); setError(''); setMensaje('');
+    try {
+      const { email } = await cambiarCorreoCuenta(token, cuenta.id, nuevo);
+      setCuentas((actual) => actual?.map((item) => item.id === cuenta.id
+        ? { ...item, email } : item).sort((a,b) => a.email.localeCompare(b.email)) ?? null);
+      setEdicionCorreo(null); setCorreoEdicion('');
+      setMensaje('Correo actualizado. Si el usuario tenía una sesión abierta, debe ingresar nuevamente.');
+    } catch (fallo) {
+      setError(fallo instanceof Error ? fallo.message : 'No se pudo actualizar el correo.');
+    } finally { setGuardando(false); }
+  }
+
+  async function reemitir(cuenta: CuentaOrganizacion) {
+    if (guardando || temporal) return;
+    setGuardando(true);setError('');setMensaje('');
+    try {
+      const respuesta=await reemitirCredencialTemporalCuenta(token, cuenta.id);
+      setTemporal({correo:respuesta.cuenta.email,clave:respuesta.contrasenaTemporal});
+      setCuentas((actual)=>actual?.map((item)=>item.id===cuenta.id
+        ? {...item,debeCambiarContrasena:true}:item)??null);
+      setConfirmandoReemision(null);
+      setMensaje('Contraseña anterior reemplazada. Entregá la nueva por un canal seguro.');
+    } catch(fallo) {
+      setError(fallo instanceof Error?fallo.message:'No fue posible emitir una credencial temporal.');
+    } finally {setGuardando(false);}
   }
 
   return (
@@ -119,6 +156,30 @@ export default function PanelCuentasOrganizacion({
               <strong>{cuenta.email}</strong>
               <small>{cuenta.activo ? 'Cuenta activa' : 'Cuenta inactiva'} · {cuenta.roles.join(', ') || 'Sin roles'}</small>
             </div>
+            {confirmandoReemision === cuenta.id && (
+              <div className="cuentas-org__confirmacion" role="alert">
+                <p>¿Generar una nueva contraseña temporal para {cuenta.email}? La anterior dejará de funcionar.</p>
+                <div className="cuentas-org__acciones">
+                  <button type="button" disabled={guardando || Boolean(temporal)}
+                    onClick={()=>void reemitir(cuenta)}>Sí, generar nueva credencial</button>
+                  <button type="button" className="cuentas-org__secundario" disabled={guardando}
+                    onClick={()=>setConfirmandoReemision(null)}>Cancelar</button>
+                </div>
+              </div>
+            )}
+            {edicionCorreo === cuenta.id && (
+              <form className="cuentas-org__editor" onSubmit={(e) => { e.preventDefault(); void guardarCorreo(cuenta); }}>
+                <label>Correo electrónico corregido
+                  <input type="email" required maxLength={150} value={correoEdicion} disabled={guardando}
+                    onChange={(e) => setCorreoEdicion(e.target.value)} />
+                </label>
+                <div className="cuentas-org__acciones">
+                  <button type="submit" disabled={guardando}>Guardar correo</button>
+                  <button type="button" className="cuentas-org__secundario" disabled={guardando}
+                    onClick={() => setEdicionCorreo(null)}>Cancelar</button>
+                </div>
+              </form>
+            )}
             {edicion === cuenta.id ? (
               <div className="cuentas-org__editor">
                 <fieldset disabled={guardando}>
@@ -141,10 +202,23 @@ export default function PanelCuentasOrganizacion({
                 </div>
               </div>
             ) : (
-              <button type="button" className="cuentas-org__secundario" disabled={guardando || !cuenta.activo}
-                onClick={() => { setEdicion(cuenta.id); setRolesEdicion(cuenta.roles); }}>
-                Editar roles
-              </button>
+              <div className="cuentas-org__acciones">
+                <button type="button" className="cuentas-org__secundario"
+                  disabled={guardando || !cuenta.activo || edicionCorreo === cuenta.id}
+                  onClick={() => { setEdicion(cuenta.id); setEdicionCorreo(null); setRolesEdicion(cuenta.roles); }}>
+                  Editar roles
+                </button>
+                <button type="button" className="cuentas-org__secundario"
+                  disabled={guardando || !cuenta.activo || edicionCorreo === cuenta.id}
+                  onClick={() => { setEdicionCorreo(cuenta.id); setCorreoEdicion(cuenta.email); setEdicion(null); }}>
+                  Editar correo
+                </button>
+                <button type="button" className="cuentas-org__secundario"
+                  disabled={guardando || !cuenta.activo || Boolean(temporal) || edicionCorreo === cuenta.id}
+                  onClick={()=>{setConfirmandoReemision(cuenta.id);setEdicion(null);setEdicionCorreo(null);}}>
+                  Reemitir contraseña temporal
+                </button>
+              </div>
             )}
           </article>
         ))}
