@@ -11,6 +11,8 @@
 
 En **Superadministración → Gestionar cuentas por organización**, el panel **Credenciales temporales de administradores** identifica cada organización mediante su UUID (su identificador tenant) y lista únicamente sus cuentas ADMINISTRADOR activas. Una contraseña temporal anterior nunca puede volver a consultarse: el superadministrador puede **reemitir** una nueva, con confirmación explícita. Esta acción sustituye el hash anterior, marca el cambio obligatorio de contraseña, revoca los tokens de actualización de la cuenta y registra `PLATAFORMA_REEMITIR_CREDENCIAL_TEMPORAL` sin guardar la contraseña en la auditoría.
 
+La ruta directa de la interfaz es **`/superadministracion`**. Con una sesión SUPERADMINISTRADOR activa abre el módulo de plataforma; sin sesión, muestra el inicio de sesión. Los endpoints `/api/plataforma/*` siguen verificando el rol en el servidor y no exponen información a otras cuentas.
+
 ## Asistente visual del único SUPERADMINISTRADOR
 
 La cuenta inicial está fijada a **leortiz41@gmail.com**. No hay un comando para crearla ni un campo para cambiar ese correo en la aplicación.

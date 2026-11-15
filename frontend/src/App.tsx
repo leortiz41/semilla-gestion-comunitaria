@@ -43,9 +43,26 @@ const pillars = [
 ];
 
 type Vista = 'inicio' | 'login' | 'inicializacion' | 'sesion';
+const RUTA_SUPERADMINISTRACION = '/superadministracion';
+
+function esRutaSuperadministracion(): boolean {
+  return window.location.pathname.replace(/\/+$/, '') === RUTA_SUPERADMINISTRACION;
+}
+
+function mostrarRutaSuperadministracion(): void {
+  if (!esRutaSuperadministracion()) {
+    window.history.replaceState({}, '', RUTA_SUPERADMINISTRACION);
+  }
+}
+
+function mostrarRutaInicio(): void {
+  if (window.location.pathname !== '/') {
+    window.history.replaceState({}, '', '/');
+  }
+}
 
 function App() {
-  const [vista, setVista] = useState<Vista>('inicio');
+  const [vista, setVista] = useState<Vista>(() => esRutaSuperadministracion() ? 'login' : 'inicio');
   const [seccionAdministrativa, setSeccionAdministrativa] = useState<SeccionAdministrativa>('dashboard');
   const [subseccionComunidades, setSubseccionComunidades] = useState<SubseccionComunidades>('listado');
   const [email, setEmail] = useState('');
@@ -70,7 +87,10 @@ function App() {
         setAccessToken(sesion.accessToken);
         setUsuario(sesion.usuario);
         setVista('sesion');
-        setSeccionAdministrativa(sesion.usuario.roles.includes('SUPERADMINISTRADOR') ? 'plataforma' : 'dashboard');
+        const esSuperadministrador = sesion.usuario.roles.includes('SUPERADMINISTRADOR');
+        setSeccionAdministrativa(esSuperadministrador ? 'plataforma' : 'dashboard');
+        if (esSuperadministrador) mostrarRutaSuperadministracion();
+        else if (esRutaSuperadministracion()) mostrarRutaInicio();
         setSubseccionComunidades('listado');
         setMostrarCambioClave(sesion.usuario.debeCambiarContrasena);
       })
@@ -104,7 +124,10 @@ function App() {
       setAccessToken(sesion.accessToken);
       setUsuario(sesion.usuario);
       setVista('sesion');
-      setSeccionAdministrativa(sesion.usuario.roles.includes('SUPERADMINISTRADOR') ? 'plataforma' : 'dashboard');
+      const esSuperadministrador = sesion.usuario.roles.includes('SUPERADMINISTRADOR');
+      setSeccionAdministrativa(esSuperadministrador ? 'plataforma' : 'dashboard');
+      if (esSuperadministrador) mostrarRutaSuperadministracion();
+      else if (esRutaSuperadministracion()) mostrarRutaInicio();
       setSubseccionComunidades('listado');
       setPassword('');
       setMostrarCambioClave(sesion.usuario.debeCambiarContrasena);
@@ -153,6 +176,7 @@ function App() {
       setSeccionAdministrativa('dashboard');
       setSubseccionComunidades('listado');
       setVista('inicio');
+      mostrarRutaInicio();
       setProcesando(false);
     }
   }
@@ -348,7 +372,7 @@ function App() {
             <p>
               Inicia sesión para validar tu identidad, rol y permisos contra el backend y Neon PostgreSQL.
             </p>
-            <button className="text-button" type="button" onClick={() => setVista('inicio')}>
+            <button className="text-button" type="button" onClick={() => { setVista('inicio'); mostrarRutaInicio(); }}>
               ← Volver al inicio
             </button>
           </div>
