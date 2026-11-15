@@ -460,7 +460,27 @@ function App() {
               alCerrarSesion={handleLogout}
             />
           )}
-          contenido={renderizarSeccionAdministrativa()}
+          contenido={(
+            <>
+              {usuario.debeCambiarContrasena && (
+                <div className="notice warning" role="alert">
+                  <strong>Estás utilizando una contraseña temporal.</strong>
+                  <p>Por seguridad, cambiá tu contraseña desde Mi perfil → Seguridad para proteger tu cuenta.</p>
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={() => {
+                      setSeccionAdministrativa('perfil');
+                      setMostrarCambioClave(true);
+                    }}
+                  >
+                    Cambiar mi contraseña
+                  </button>
+                </div>
+              )}
+              {renderizarSeccionAdministrativa()}
+            </>
+          )}
         />
       )}
 
