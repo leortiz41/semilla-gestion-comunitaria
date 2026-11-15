@@ -47,7 +47,7 @@ function estilo(tipo: TipoNodo, seleccionado: boolean, coincide: boolean): Node[
 }
 
 export default function MapaReactFlow({
-  datos, usuarioId, seleccion, seleccionar, posicionesIniciales, onGuardar,
+  datos, usuarioId, seleccion, seleccionar, posicionesIniciales, onGuardar, soloLectura = false,
 }: {
   datos: DetalleImpacto;
   usuarioId: string;
@@ -55,6 +55,7 @@ export default function MapaReactFlow({
   seleccionar: (tipo: string, id: string) => void;
   posicionesIniciales?: PosicionesNodosMapa;
   onGuardar?: (posiciones: PosicionesNodosMapa) => void;
+  soloLectura?: boolean;
 }) {
   // Mostrar solo los primeros niveles evita que la vista inicial se reduzca a nodos diminutos.
   const [nivel, setNivel] = useState<NivelMapa>('resumen');
@@ -116,7 +117,7 @@ export default function MapaReactFlow({
         },
         style: estilo(tipo, seleccionado, coincide),
         className: 'mapa-impacto__nodo',
-        draggable: edicionVisual, selectable: true, connectable: false,
+        draggable: !soloLectura && edicionVisual, selectable: true, connectable: false,
       });
     };
     const unir = (origen: string, destino: string) => edges.push({
@@ -175,7 +176,7 @@ export default function MapaReactFlow({
     const omitidos = datos.actividades.length - actividades.length +
       datos.avances.length - avances.length + datos.evidencias.length - evidencias.length;
     return { nodes, edges, omitidos, encontrados };
-  }, [datos, nivel, actividadesAbiertas, avancesAbiertos, busquedaNodo, seleccion, posiciones, edicionVisual]);
+  }, [datos, nivel, actividadesAbiertas, avancesAbiertos, busquedaNodo, seleccion, posiciones, edicionVisual, soloLectura]);
 
   const ajustarVista = useCallback(() => {
     if (instancia) void instancia.fitView({ padding: 0.2, duration: 400, maxZoom: 1.05 });
@@ -279,23 +280,24 @@ export default function MapaReactFlow({
             placeholder="Buscar nodo…" aria-label="Buscar nodo del mapa" />
         </label>
         <div className="mapa-impacto__acciones-mapa">
-          <button type="button" className={edicionVisual ? 'mapa-impacto__modo-activo' : ''}
+          {!soloLectura && <button type="button" className={edicionVisual ? 'mapa-impacto__modo-activo' : ''}
             aria-pressed={edicionVisual} onClick={() => setEdicionVisual((valor) => !valor)}>
             {edicionVisual ? 'Mover nodos: activo' : 'Mover nodos: inactivo'}
-          </button>
+          </button>}
           <button type="button" className="mapa-impacto__centrar" onClick={ajustarVista}>Centrar</button>
           <button type="button" aria-pressed={mostrarMinimapa}
             onClick={() => setMostrarMinimapa((actual) => !actual)}>
             {mostrarMinimapa ? 'Ocultar minimapa' : 'Mostrar minimapa'}
           </button>
-          <button type="button" onClick={restablecerDisposicion}>Restablecer posiciones</button>
+          {!soloLectura && <button type="button" onClick={restablecerDisposicion}>Restablecer posiciones</button>}
         </div>
       </div>
       <div className="mapa-impacto__visor">
         <ReactFlow nodes={nodes} edges={edges}
           onInit={setInstancia} onNodeClick={alSeleccionar}
-          onNodesChange={cambiarPosiciones} onNodeDragStop={guardarPosiciones}
-          nodesDraggable={edicionVisual} nodesConnectable={false}
+          onNodesChange={soloLectura ? undefined : cambiarPosiciones}
+          onNodeDragStop={soloLectura ? undefined : guardarPosiciones}
+          nodesDraggable={!soloLectura && edicionVisual} nodesConnectable={false}
           fitView fitViewOptions={{ padding: 0.2, maxZoom: 1.05 }}
           minZoom={0.12} maxZoom={2}
           proOptions={{ hideAttribution: false }}>
