@@ -94,6 +94,98 @@ donantesRouter.get(
   },
 );
 
+
+// Mapa del donante: las asignaciones se comprueban contra proyectos_donantes
+// y la organización de su sesión en cada solicitud. Nunca usa la ruta institucional.
+donantesRouter.get(
+  '/mapa/proyectos/:proyectoId',
+  authenticateAccessToken,
+  requireRole('DONANTE'),
+  requirePermission('proyectos.ver'),
+  async (req, res) => {
+    const proyectoId = req.params.proyectoId;
+    const acceso = req.auth;
+    if (!esUuid(proyectoId)) {
+      res.status(400).json({ message: 'Proyecto inválido.' });
+      return;
+    }
+    if (!databasePool || !acceso) {
+      res.status(503).json({ message: 'Mapa de avances no disponible.' });
+      return;
+    }
+    try {
+      const { rows: proyectos } = await databasePool.query(
+        `SELECT p.id, p.nombre, p.descripcion, p.estado, p.tipo,
+                c.id AS "comunidadId", c.nombre AS comunidad
+           FROM proyectos_donantes pd
+           JOIN usuarios u ON u.id = pd.usuario_id AND u.activo
+           JOIN proyectos p ON p.id = pd.proyecto_id
+           JOIN comunidades c ON c.id = p.comunidad_id
+          WHERE pd.usuario_id = $1 AND pd.proyecto_id = $2
+            AND u.organizacion_id = $3 AND c.organizacion_id = $3
+            AND EXISTS (SELECT 1 FROM usuarios_roles ur
+                         JOIN roles r ON r.id = ur.rol_id
+                         WHERE ur.usuario_id = u.id
+                           AND r.nombre = 'DONANTE' AND r.activo)
+          LIMIT 1`,
+        [acceso.sub, proyectoId, acceso.organizacionId],
+      );
+      if (!proyectos.length) {
+        res.status(404).json({ message: 'Proyecto no disponible para tu cuenta.' });
+        return;
+      }
+      const [actividades, avances, evidencias] = await Promise.all([
+        databasePool.query(
+          `SELECT a.id, a.nombre, a.descripcion, a.estado
+             FROM actividades_programadas a
+            WHERE a.proyecto_id = $1
+            ORDER BY a.fecha_inicio NULLS LAST, a.nombre, a.id LIMIT 100`,
+          [proyectoId],
+        ),
+        databasePool.query(
+          `SELECT av.id, av.actividad_id AS "actividadId",
+                  av.fecha_avance::text AS fecha,
+                  av.comentarios AS descripcion,
+                  NULL::text AS observaciones,
+                  av.cantidad_reportada::float8 AS "cantidadReportada",
+                  av.porcentaje_avance::float8 AS "porcentajeAvance",
+                  av.estado_revision AS estado
+             FROM avances_proyecto av
+            WHERE av.proyecto_id = $1 AND av.estado_revision = 'VALIDADO'
+            ORDER BY av.fecha_avance DESC, av.creado_en DESC, av.id DESC LIMIT 500`,
+          [proyectoId],
+        ),
+        databasePool.query(
+          `SELECT e.id, e.avance_proyecto_id AS "avanceId",
+                  e.titulo, e.descripcion, e.tipo_mime AS "tipoMime",
+                  e.archivo_url AS url
+             FROM evidencias e
+             JOIN avances_proyecto av ON av.id = e.avance_proyecto_id
+                AND av.proyecto_id = e.proyecto_id
+            WHERE e.proyecto_id = $1
+              AND av.estado_revision = 'VALIDADO'
+              AND e.visible_para_donantes = TRUE
+              AND e.solicitud_pago_id IS NULL
+              AND e.tipo_mime IN ('image/jpeg', 'image/png', 'image/webp')
+              AND e.archivo_url LIKE 'https://%'
+            ORDER BY e.creado_en DESC, e.id DESC LIMIT 1000`,
+          [proyectoId],
+        ),
+      ]);
+      res.set('Cache-Control', 'no-store');
+      res.json({
+        proyecto: proyectos[0],
+        actividades: actividades.rows,
+        avances: avances.rows,
+        evidencias: evidencias.rows,
+      });
+    } catch (error) {
+      console.error('Error consultando mapa del donante:', error);
+      res.status(500).json({ message: 'No fue posible consultar el mapa del donante.' });
+    }
+  },
+);
+
 const administracionDonantes = Router();
 
 administracionDonantes.use(
