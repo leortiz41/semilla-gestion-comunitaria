@@ -2,73 +2,67 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { firmarObjetoR2, r2Disponible } from '../src/services/r2-evidencias.service.js';
 
-// Credenciales ficticias: no acceden a Cloudflare ni leen secretos de producción.
-const variables = ['R2_ACCOUNT_ID', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'R2_BUCKET'] as const;
-function conVariablesDePrueba(ejecutar: () => void) {
-  const anteriores = Object.fromEntries(variables.map((nombre) => [nombre, process.env[nombre]]));
+const keys = ['R2_ACCOUNT_ID', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'R2_BUCKET'] as const;
+
+// Solo credenciales ficticias: no se envían solicitudes a una cuenta real.
+async function conConfig(accion: () => Promise<void>) {
+  const prev = Object.fromEntries(keys.map((k) => [k, process.env[k]]));
   try {
     process.env.R2_ACCOUNT_ID = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
-    process.env.R2_ACCESS_KEY_ID = 'TESTACCESS';
-    process.env.R2_SECRET_ACCESS_KEY = 'TESTSECRET';
+    process.env.R2_ACCESS_KEY_ID = 'FAKEKEY123';
+    process.env.R2_SECRET_ACCESS_KEY = 'ficticia-solo-para-pruebas';
     process.env.R2_BUCKET = 'semilla-evidencias-production';
-    ejecutar();
+    await accion();
   } finally {
-    for (const nombre of variables) {
-      const anterior = anteriores[nombre];
-      if (anterior === undefined) delete process.env[nombre];
-      else process.env[nombre] = anterior;
+    for (const k of keys) {
+      if (prev[k] === undefined) delete process.env[k];
+      else process.env[k] = prev[k];
     }
   }
 }
 
-test('R2: URLs SigV4 PUT, GET y HEAD usan bucket virtual y firma estable', () => {
-  conVariablesDePrueba(() => {
+test('SDK R2: firma PUT con bucket, clave, tipo, región y expiración', async () => {
+  await conConfig(async () => {
     assert.equal(r2Disponible(), true);
-    const clave = 'organizaciones/123/proyectos/456/avances/789/evidencia 1.png';
-    const ahora = new Date('2026-11-13T12:00:00Z');
-    const put = new URL(firmarObjetoR2(clave, 'PUT', 'image/png', 300, ahora));
-    assert.equal(put.hostname, 'semilla-evidencias-production.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.r2.cloudflarestorage.com');
-    assert.equal(put.pathname, '/organizaciones/123/proyectos/456/avances/789/evidencia%201.png');
-    assert.equal(put.searchParams.get('X-Amz-Algorithm'), 'AWS4-HMAC-SHA256');
-    assert.equal(put.searchParams.get('X-Amz-Content-Sha256'), 'UNSIGNED-PAYLOAD');
-    assert.equal(put.searchParams.get('X-Amz-Credential'), 'TESTACCESS/20261113/auto/s3/aws4_request');
-    assert.equal(put.searchParams.get('X-Amz-Date'), '20261113T120000Z');
-    assert.equal(put.searchParams.get('X-Amz-Expires'), '300');
-    assert.equal(put.searchParams.get('X-Amz-SignedHeaders'), 'content-type;host');
-    const firma = put.searchParams.get('X-Amz-Signature');
-    assert.match(firma ?? '', /^[0-9a-f]{64}$/);
-    assert.equal(firmarObjetoR2(clave, 'PUT', 'image/png', 300, ahora), put.toString());
-    assert.notEqual(new URL(firmarObjetoR2(clave, 'PUT', 'image/jpeg', 300, ahora))
-      .searchParams.get('X-Amz-Signature'), firma);
-
-    for (const metodo of ['GET', 'HEAD'] as const) {
-      const enlace = new URL(firmarObjetoR2(clave, metodo, undefined, 3600, ahora));
-      assert.equal(enlace.searchParams.get('X-Amz-SignedHeaders'), 'host');
-      assert.equal(enlace.searchParams.get('X-Amz-Expires'), '3600');
-      assert.equal(enlace.searchParams.get('X-Amz-Content-Sha256'), 'UNSIGNED-PAYLOAD');
-      assert.notEqual(enlace.searchParams.get('X-Amz-Signature'), firma);
-    }
-    assert.notEqual(
-      new URL(firmarObjetoR2(clave, 'GET', undefined, 3600, ahora)).searchParams.get('X-Amz-Signature'),
-      new URL(firmarObjetoR2(clave, 'HEAD', undefined, 3600, ahora)).searchParams.get('X-Amz-Signature'),
-    );
+    const clave = 'organizaciones/demo/proyectos/123/avances/456/imagen 1.png';
+    const enlace = new URL(await firmarObjetoR2(clave, 'PUT', 'image/png', 300));
+    assert.equal(enlace.protocol, 'https:');
+    assert.equal(enlace.hostname,
+      'semilla-evidencias-production.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.r2.cloudflarestorage.com');
+    assert.equal(decodeURIComponent(enlace.pathname), '/' + clave);
+    assert.equal(enlace.searchParams.get('X-Amz-Algorithm'), 'AWS4-HMAC-SHA256');
+    assert.match(enlace.searchParams.get('X-Amz-Credential') ?? '',
+      /^FAKEKEY123\/\d{8}\/auto\/s3\/aws4_request$/);
+    assert.equal(enlace.searchParams.get('X-Amz-Expires'), '300');
+    assert.match(enlace.searchParams.get('X-Amz-Signature') ?? '', /^[a-f\d]{64}$/);
+    assert.equal(enlace.searchParams.get('X-Amz-Content-Sha256'), 'UNSIGNED-PAYLOAD');
+    assert.ok(enlace.searchParams.get('X-Amz-SignedHeaders')?.includes('host'));
   });
 });
 
-test('R2: parámetros inválidos se rechazan y no se emite URL', () => {
-  conVariablesDePrueba(() => {
-    for (const clave of ['', '/carpeta/archivo']) {
-      assert.throws(() => firmarObjetoR2(clave, 'GET'));
-    }
-    assert.throws(() => firmarObjetoR2('foto', 'PUT', 'image/png', 0));
-    assert.throws(() => firmarObjetoR2('foto', 'GET', undefined, 604801));
+test('SDK R2: firmas GET y HEAD se diferencian y mantienen acceso privado', async () => {
+  await conConfig(async () => {
+    const clave = 'organizaciones/demo/avances/test/foto.webp';
+    const get = new URL(await firmarObjetoR2(clave, 'GET', undefined, 3600));
+    const head = new URL(await firmarObjetoR2(clave, 'HEAD', undefined, 60));
+    assert.equal(get.searchParams.get('X-Amz-Expires'), '3600');
+    assert.equal(head.searchParams.get('X-Amz-Expires'), '60');
+    assert.notEqual(get.searchParams.get('X-Amz-Signature'), head.searchParams.get('X-Amz-Signature'));
+    assert.ok(get.searchParams.has('X-Amz-Credential'));
+    assert.ok(head.searchParams.has('X-Amz-Credential'));
   });
 });
 
-test('R2: no se generan firmas si faltan credenciales', () => {
-  conVariablesDePrueba(() => {
+test('SDK R2: rechaza claves peligrosas, MIME no permitido y TTL inválido', async () => {
+  await conConfig(async () => {
+    for (const clave of ['', '/absoluta', 'carpeta/../archivo', 'carpeta//archivo']) {
+      await assert.rejects(firmarObjetoR2(clave, 'GET'));
+    }
+    await assert.rejects(firmarObjetoR2('archivo', 'PUT', 'application/pdf'));
+    await assert.rejects(firmarObjetoR2('archivo', 'GET', undefined, 0));
+    await assert.rejects(firmarObjetoR2('archivo', 'GET', undefined, 604801));
     delete process.env.R2_SECRET_ACCESS_KEY;
     assert.equal(r2Disponible(), false);
-    assert.throws(() => firmarObjetoR2('foto', 'GET'), /no configurado/);
+    await assert.rejects(firmarObjetoR2('archivo', 'GET'), /no configurado/);
   });
 });

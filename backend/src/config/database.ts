@@ -1,5 +1,12 @@
-import 'dotenv/config';
+import { config as cargarEntorno } from 'dotenv';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { Pool } from 'pg';
+
+// La ruta se calcula desde este archivo para que `npm run dev` funcione igual
+// tanto desde la carpeta backend como desde la raíz del proyecto.
+const directorioConfiguracion = dirname(fileURLToPath(import.meta.url));
+cargarEntorno({ path: resolve(directorioConfiguracion, '../../.env') });
 
 const connectionString = process.env.DATABASE_URL;
 

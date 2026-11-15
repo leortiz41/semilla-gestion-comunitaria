@@ -98,13 +98,13 @@ proyectosRouter.get(rutaEvidencias, async (req, res) => {
        FROM evidencias WHERE proyecto_id=$1 AND avance_proyecto_id=$2
        ORDER BY creado_en DESC, id DESC`, [proyectoId, avanceId],
     );
-    res.json({ evidencias: rows.map((e) => ({
+    res.json({ evidencias: await Promise.all(rows.map(async (e) => ({
       id: e.id, titulo: e.titulo, descripcion: e.descripcion, tipoMime: e.tipoMime,
       creadoEn: e.creadoEn,
       url: typeof e.archivoUrl === 'string' && e.archivoUrl.startsWith('r2:') && r2Disponible()
-        ? firmarObjetoR2(e.archivoUrl.slice(3), 'GET', undefined, 3600)
+        ? await firmarObjetoR2(e.archivoUrl.slice(3), 'GET', undefined, 3600)
         : e.archivoUrl?.startsWith('https://') ? e.archivoUrl : null,
-    })) });
+    }))) });
   } catch (error) {
     console.error('Error consultando fotografías de avance:', error);
     res.status(500).json({ message: 'No fue posible consultar las fotografías.' });
@@ -129,7 +129,7 @@ proyectosRouter.post(rutaEvidencias + '/preparar', requirePermission('evidencias
       res.status(409).json({ message: 'Solo el responsable puede añadir fotografías a su avance en borrador o devuelto.' }); return;
     }
     const clave = `organizaciones/${req.auth!.organizacionId}/proyectos/${proyectoId}/avances/${avanceId}/${randomUUID()}`;
-    res.json({ clave, url: firmarObjetoR2(clave, 'PUT', mime, 300), tipoMime: mime, maxBytes: 10485760 });
+    res.json({ clave, url: await firmarObjetoR2(clave, 'PUT', mime, 300), tipoMime: mime, maxBytes: 10485760 });
   } catch (error) {
     console.error('Error preparando fotografía:', error);
     res.status(500).json({ message: 'No fue posible preparar la carga de la fotografía.' });

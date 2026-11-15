@@ -82,14 +82,14 @@ mapaImpactoRouter.get('/proyectos/:proyectoId', async (req, res) => {
     ]);
 
     // Enlaces privados: nunca devolver rutas internas R2 ni exponer claves.
-    const fotos = evidencias.rows.map((foto) => ({
+    const fotos = await Promise.all(evidencias.rows.map(async (foto) => ({
       id: foto.id, avanceId: foto.avanceId, titulo: foto.titulo,
       descripcion: foto.descripcion, tipoMime: foto.tipoMime,
       url: typeof foto.archivoUrl === 'string' && foto.archivoUrl.startsWith('r2:') && r2Disponible()
-        ? firmarObjetoR2(foto.archivoUrl.slice(3), 'GET', undefined, 3600)
+        ? await firmarObjetoR2(foto.archivoUrl.slice(3), 'GET', undefined, 3600)
         : typeof foto.archivoUrl === 'string' && foto.archivoUrl.startsWith('https://')
           ? foto.archivoUrl : null,
-    }));
+    })));
 
     res.json({
       proyecto: proyectos[0],
@@ -134,7 +134,7 @@ mapaImpactoRouter.get('/proyectos/:proyectoId/evidencias/:evidenciaId/enlace', a
         return;
       }
       res.setHeader('Cache-Control', 'no-store');
-      res.json({ url: firmarObjetoR2(archivoUrl.slice(3), 'GET', undefined, 3600) });
+      res.json({ url: await firmarObjetoR2(archivoUrl.slice(3), 'GET', undefined, 3600) });
       return;
     }
     if (archivoUrl.startsWith('https://')) {
