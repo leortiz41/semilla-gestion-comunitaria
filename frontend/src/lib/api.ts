@@ -474,6 +474,17 @@ export function obtenerOrganizacionesPlataforma(token: string) {
     headers: { Authorization: `Bearer ${token}` },
   });
 }
+export function cambiarEstadoOrganizacionPlataforma(token:string, organizacionId:string, activo:boolean) {
+  return request<{id:string;activo:boolean}>(`/plataforma/organizaciones/${organizacionId}/estado`, {
+    method:'PATCH', headers:{Authorization:`Bearer ${token}`}, body:JSON.stringify({activo}),
+  });
+}
+export function cambiarEstadoCuentaPlataforma(token:string, organizacionId:string, usuarioId:string, activo:boolean) {
+  return request<{id:string;activo:boolean}>(`/plataforma/organizaciones/${organizacionId}/cuentas/${usuarioId}/estado`, {
+    method:'PATCH', headers:{Authorization:`Bearer ${token}`}, body:JSON.stringify({activo}),
+  });
+}
+
 export function crearOrganizacionPlataforma(token: string, datos: { nombre: string; slug: string; emailContacto: string }) {
   return request<{ organizacion: OrganizacionPlataforma }>('/plataforma/organizaciones', {
     method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify(datos),
