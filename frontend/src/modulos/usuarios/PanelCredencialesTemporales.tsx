@@ -34,7 +34,6 @@ export default function PanelCredencialesTemporales({
 
   const administradores = cuentas.filter((cuenta) =>
     cuenta.activo &&
-    cuenta.roles.includes('ADMINISTRADOR') &&
     !cuenta.roles.includes('SUPERADMINISTRADOR'),
   );
 
@@ -58,7 +57,7 @@ export default function PanelCredencialesTemporales({
     <section className="cuentas-org__formulario cuentas-org__credenciales" aria-labelledby="titulo-credenciales-temporales">
       <div className="cuentas-org__encabezado">
         <div>
-          <h3 id="titulo-credenciales-temporales">Credenciales temporales de administradores</h3>
+          <h3 id="titulo-credenciales-temporales">Credenciales temporales de usuarios</h3>
           <p>Gestioná los accesos de la organización seleccionada sin revelar ni conservar contraseñas anteriores.</p>
         </div>
         <span className="cuentas-org__tenant">ID de organización: <code>{organizacion.id}</code></span>
@@ -69,9 +68,9 @@ export default function PanelCredencialesTemporales({
       </p>
 
       {administradores.length === 0 ? (
-        <p className="cuentas-org__vacio">Esta organización todavía no tiene cuentas administradoras activas.</p>
+        <p className="cuentas-org__vacio">Esta organización todavía no tiene cuentas activas.</p>
       ) : (
-        <div className="cuentas-org__listado" aria-label="Administradores de la organización">
+        <div className="cuentas-org__listado" aria-label="Usuarios de la organización">
           {administradores.map((cuenta) => {
             const confirmando = confirmandoId === cuenta.id;
             const emitiendo = emitiendoId === cuenta.id;
