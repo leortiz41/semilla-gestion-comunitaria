@@ -3,6 +3,7 @@ import { hashPassword } from '../security/password.js';
 import { Router, type RequestHandler } from 'express';
 import { esUuid } from '../domain/expediente.js';
 import { databasePool } from '../config/database.js';
+import { firmarObjetoR2, r2Disponible } from '../services/r2-evidencias.service.js';
 import { authenticateAccessToken, requirePermission, requireRole } from '../middleware/auth.middleware.js';
 
 export const donantesRouter = Router();
@@ -167,7 +168,7 @@ donantesRouter.get(
               AND e.visible_para_donantes = TRUE
               AND e.solicitud_pago_id IS NULL
               AND e.tipo_mime IN ('image/jpeg', 'image/png', 'image/webp')
-              AND e.archivo_url LIKE 'https://%'
+              AND (e.archivo_url LIKE 'https://%' OR e.archivo_url LIKE 'r2:%')
             ORDER BY e.creado_en DESC, e.id DESC LIMIT 1000`,
           [proyectoId],
         ),
@@ -177,7 +178,12 @@ donantesRouter.get(
         proyecto: proyectos[0],
         actividades: actividades.rows,
         avances: avances.rows,
-        evidencias: evidencias.rows,
+        evidencias: await Promise.all(evidencias.rows.map(async (foto) => ({
+          ...foto,
+          url: typeof foto.url === 'string' && foto.url.startsWith('r2:')
+            ? (r2Disponible() ? await firmarObjetoR2(foto.url.slice(3), 'GET', undefined, 900) : null)
+            : typeof foto.url === 'string' && foto.url.startsWith('https://') ? foto.url : null,
+        }))),
       });
     } catch (error) {
       console.error('Error consultando mapa del donante:', error);
