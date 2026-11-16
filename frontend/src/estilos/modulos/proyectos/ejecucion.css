@@ -14,3 +14,23 @@
 .actividad-avance__indicadores{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin:.25rem 0}
 .actividad-avance__indicadores .actividad-avance__estado{margin-top:0}
 .actividad-avance__fotos{display:inline-flex;align-items:center;padding:.25rem .6rem;border:1px solid #cddfc9;border-radius:999px;background:#f0f7ed;color:#366743;font-size:.73rem;font-weight:750}
+
+
+/* Progreso validado: visible sin desplazar el historial de ejecución. */
+.ejecucion-progreso{display:grid;gap:1rem;margin:1rem 0 1.35rem;padding:clamp(1.05rem,2.4vw,1.55rem);border:1px solid #bfd9be;border-radius:1rem;background:linear-gradient(125deg,#ecf6e9,#f7faf5);box-shadow:0 7px 22px #254c2b10}
+.ejecucion-progreso__encabezado{display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap}
+.ejecucion-progreso__etiqueta{color:#44754c;font-size:.77rem;letter-spacing:.04em;text-transform:uppercase;font-weight:750}
+.ejecucion-progreso__encabezado h4{margin:.35rem 0;color:#245b35;font-size:clamp(1.1rem,2vw,1.45rem)}
+.ejecucion-progreso__encabezado p{margin:0;color:#526c58}
+.ejecucion-progreso__valor{font-size:clamp(1.7rem,3.4vw,2.6rem);color:#236139;font-variant-numeric:tabular-nums;line-height:1.1}
+.ejecucion-progreso progress,.ejecucion-progreso__actividad progress{display:block;appearance:none;-webkit-appearance:none;width:100%;border:0;border-radius:999px;overflow:hidden;background:#d6e6d3}
+.ejecucion-progreso progress{height:22px}
+.ejecucion-progreso__actividad progress{height:12px}
+.ejecucion-progreso progress::-webkit-progress-bar,.ejecucion-progreso__actividad progress::-webkit-progress-bar{background:#d6e6d3;border-radius:999px}
+.ejecucion-progreso progress::-webkit-progress-value,.ejecucion-progreso__actividad progress::-webkit-progress-value{background:linear-gradient(90deg,#548d4f,#247549);border-radius:999px}
+.ejecucion-progreso progress::-moz-progress-bar,.ejecucion-progreso__actividad progress::-moz-progress-bar{background:#307b49;border-radius:999px}
+.ejecucion-progreso__pie{display:flex;flex-wrap:wrap;gap:.5rem 1.4rem;color:#45674b;font-size:.87rem}
+.ejecucion-progreso__actividad{display:grid;gap:.45rem;margin:.85rem 0 1rem;padding:.85rem 1rem;background:#f0f7ed;border-radius:.8rem}
+.ejecucion-progreso__actividad-encabezado{display:flex;justify-content:space-between;gap:.7rem;align-items:center;color:#356340;font-size:.9rem}
+.ejecucion-progreso__actividad-encabezado strong{font-size:1.12rem;font-variant-numeric:tabular-nums}
+@media(max-width:650px){.ejecucion-progreso__valor{font-size:1.8rem}.ejecucion-progreso__pie{gap:.35rem 1rem}}
