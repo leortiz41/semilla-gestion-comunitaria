@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import PaginaMapaDonante from '../mapa-impacto/PaginaMapaDonante';
 import { obtenerProyectosDonante, type ProyectoDonante } from '../../lib/api';
 import '../../estilos/modulos/paginaModuloBase.css';
 import '../../estilos/modulos/roles.css';
@@ -12,10 +13,11 @@ const estados: Record<string, string> = {
 };
 
 export default function SeguimientoDonante({
-  tokenAcceso, vista,
-}: { tokenAcceso: string; vista: 'proyectos' | 'evidencias' }) {
+  tokenAcceso, vista, usuarioId,
+}: { tokenAcceso: string; vista: 'proyectos' | 'evidencias'; usuarioId?: string }) {
   const [proyectos, setProyectos] = useState<ProyectoDonante[] | null>(null);
   const [error, setError] = useState('');
+  const [seccionEvidencias, setSeccionEvidencias] = useState<'fotografias' | 'mapa'>('fotografias');
 
   useEffect(() => {
     let vigente = true;
@@ -36,6 +38,18 @@ export default function SeguimientoDonante({
           {vista === 'proyectos' ? 'Proyectos' : 'Evidencias'}
         </h1>
       </div>
+      {vista === 'evidencias' && (
+        <div role="group" aria-label="Vistas de evidencias" className="mapa-impacto__herramientas">
+          <button type="button" aria-pressed={seccionEvidencias === 'fotografias'}
+            onClick={() => setSeccionEvidencias('fotografias')}>Fotografías</button>
+          <button type="button" aria-pressed={seccionEvidencias === 'mapa'}
+            onClick={() => setSeccionEvidencias('mapa')}>Mapa de Impacto</button>
+        </div>
+      )}
+      {vista === 'evidencias' && seccionEvidencias === 'mapa' && usuarioId ? (
+        <PaginaMapaDonante token={tokenAcceso} usuarioId={usuarioId} />
+      ) : (
+        <>
       {error && <p role="alert">{error}</p>}
       {!error && proyectos === null && <p role="status">Cargando proyectos…</p>}
       {proyectos?.length === 0 && <p>Todavía no hay proyectos autorizados para tu cuenta.</p>}
@@ -73,6 +87,8 @@ export default function SeguimientoDonante({
           </article>
         ))}
       </div>
+        </>
+      )}
     </section>
   );
 }
