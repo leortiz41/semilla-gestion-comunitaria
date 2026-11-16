@@ -10,7 +10,6 @@ import PaginaComunidades from './modulos/comunidades/PaginaComunidades';
 import PaginaDashboard from './modulos/dashboard/PaginaDashboard';
 import PaginaEvidencias from './modulos/evidencias/PaginaEvidencias';
 import PaginaMapaImpacto from './modulos/mapa-impacto/PaginaMapaImpacto';
-import PaginaMapaDonante from './modulos/mapa-impacto/PaginaMapaDonante';
 import PaginaFamilias from './modulos/familias/PaginaFamilias';
 import PaginaPagos from './modulos/pagos/PaginaPagos';
 import PaginaPerfilSeguridad from './modulos/perfil/PaginaPerfilSeguridad';
@@ -233,7 +232,7 @@ function App() {
     ['usuarios.gestionar', 'proyectos.gestionar', 'evidencias.gestionar']
       .every((permiso) => usuario.permisos.includes(permiso));
   const seccionVisible = esSuperadministrador && seccionAdministrativa !== 'perfil' ? 'plataforma' :
-    esDonante && !['proyectos', 'evidencias', 'mapa-impacto', 'perfil'].includes(seccionAdministrativa)
+    esDonante && !['proyectos', 'evidencias', 'perfil'].includes(seccionAdministrativa)
     ? 'proyectos'
     : seccionAdministrativa;
 
@@ -266,13 +265,11 @@ function App() {
             />
           ) : null;
       case 'mapa-impacto':
-        return esDonante && accessToken && usuario
-          ? <PaginaMapaDonante token={accessToken} usuarioId={usuario.id} />
-          : !esDonante && accessToken && usuario?.permisos.includes('proyectos.ver')
-            ? <PaginaMapaImpacto token={accessToken} usuarioId={usuario.id} /> : null;
+        return !esDonante && accessToken && usuario?.permisos.includes('proyectos.ver')
+          ? <PaginaMapaImpacto token={accessToken} usuarioId={usuario.id} /> : null;
       case 'evidencias':
         return esDonante && accessToken
-          ? <SeguimientoDonante tokenAcceso={accessToken} vista="evidencias" />
+          ? <SeguimientoDonante tokenAcceso={accessToken} vista="evidencias" usuarioId={usuario?.id} />
           : usuario && accessToken ? (
               <PaginaEvidencias token={accessToken} usuarioEmail={usuario.email}
                 puedeGestionar={usuario.permisos.includes('evidencias.gestionar')} />
