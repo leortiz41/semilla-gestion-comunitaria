@@ -28,6 +28,9 @@ function clienteR2() {
       endpoint: `https://${config.accountId}.r2.cloudflarestorage.com`,
       credentials: { accessKeyId: config.accessKeyId, secretAccessKey: config.secretAccessKey },
       forcePathStyle: false,
+      // Evitar CRC32 de carga vacía al firmar PUT sin disponer aún del archivo.
+      // El checksum opcional generado por defecto provoca 403 en R2 con URLs prefirmadas.
+      requestChecksumCalculation: 'WHEN_REQUIRED',
       maxAttempts: 2,
     }),
   };
