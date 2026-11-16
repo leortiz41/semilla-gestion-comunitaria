@@ -478,6 +478,14 @@ export default function DetalleProyecto({
           </>
         ) : (
           <>
+            <div className="ejecucion-progreso__actividad">
+              <div className="ejecucion-progreso__actividad-encabezado">
+                <span>Avance físico validado</span>
+                <strong>{formatoCantidad(Math.max(0, Math.min(100, actividad.porcentajeResultado)))}%</strong>
+              </div>
+              <progress value={Math.max(0, Math.min(100, actividad.porcentajeResultado))} max={100}
+                aria-label={`Avance validado de ${actividad.nombre}`} />
+            </div>
             <section className="actividad-avances" aria-label={`Historial de avances de ${actividad.nombre}`}>
               <header className="actividad-avances__encabezado"><h5>Registro de ejecución</h5><span>{actividad.avances.length}</span></header>
               {!actividad.avances.length && <p className="actividad-avances__vacio">Aún no hay avances registrados.</p>}
@@ -651,6 +659,31 @@ export default function DetalleProyecto({
             {vista === 'ejecucion' && (
               <>
                 <h3>Ejecución</h3>
+                <section className="ejecucion-progreso" aria-label="Progreso validado del proyecto">
+                  <div className="ejecucion-progreso__encabezado">
+                    <div>
+                      <span className="ejecucion-progreso__etiqueta">Seguimiento del proyecto</span>
+                      <h4>Avance general de ejecución</h4>
+                      <p>Calculado con las actividades y reportes validados.</p>
+                    </div>
+                    <strong className="ejecucion-progreso__valor">
+                      {porcentajeProyecto === null
+                        ? 'Pendiente'
+                        : `${formatoCantidad(Math.max(0, Math.min(100, porcentajeProyecto)))}%`}
+                    </strong>
+                  </div>
+                  <progress
+                    value={porcentajeProyecto === null ? 0 : Math.max(0, Math.min(100, porcentajeProyecto))}
+                    max={100}
+                    aria-label="Progreso general validado del proyecto"
+                    aria-valuetext={porcentajeProyecto === null ? 'Pendiente de ponderación' : undefined}
+                  />
+                  <div className="ejecucion-progreso__pie">
+                    <span>{actividades.length} actividades planificadas</span>
+                    <span>{actividades.filter((a) => a.estado === 'EN_PROCESO').length} en proceso</span>
+                    {porcentajeProyecto === null && <span>Definí los pesos de las actividades para obtener el porcentaje global.</span>}
+                  </div>
+                </section>
                 <p>Las cantidades son incrementales. Las estimaciones no cuantificables son acumuladas y justificadas.</p>
                 <div className="proyecto-detalle__lista proyecto-detalle__lista--ejecucion">
                   {actividades.map((actividad) => tarjetaActividad(actividad, 'ejecucion'))}
