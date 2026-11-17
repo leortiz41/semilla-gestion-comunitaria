@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import IntegrantesFamilia from './IntegrantesFamilia';
+import DocumentosFamilia from './DocumentosFamilia';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
@@ -320,12 +321,8 @@ export default function EvaluacionFamilia({
         </form>}
         <IntegrantesFamilia token={token} familiaId={familiaId}
           puedeGestionar={puedeGestionar} onActualizacion={onActualizacion} />
-        <section className="familias-documentos-aviso" aria-label="Documentación de respaldo">
-          <h3>Documentos PDF acreditativos</h3>
-          <p>El expediente documental será privado. La carga y revisión de PDF quedará
-            habilitada cuando resolvamos el rechazo de subida de Cloudflare R2;
-            no se aceptarán documentos sin confirmar su almacenamiento.</p>
-        </section>
+        <DocumentosFamilia token={token} familiaId={familiaId}
+          puedeGestionar={puedeGestionar} />
       </section>
     </div>
   );
