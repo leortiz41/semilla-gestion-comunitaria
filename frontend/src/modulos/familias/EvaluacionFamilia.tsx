@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import IntegrantesFamilia from './IntegrantesFamilia';
+import BrigadaPatrocinadoraFamilia from './BrigadaPatrocinadoraFamilia';
 import DocumentosFamilia from './DocumentosFamilia';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
@@ -210,6 +211,14 @@ export default function EvaluacionFamilia({
                 <div><dt>Riesgo</dt><dd>{p.nivelRiesgo}</dd></div>
               </dl>
               {p.observaciones && <p>{p.observaciones}</p>}
+              <p className="familias-nota"><strong>Situación de beneficio:</strong> {
+                p.estado === 'FINALIZADO' ? 'Familia beneficiada (expediente finalizado)'
+                : p.estado === 'SELECCIONADO' ? 'Familia aprobada para el apoyo'
+                : p.estado === 'DESCARTADO' ? 'No seleccionada'
+                : 'Lista de espera / en evaluación'
+              }</p>
+              <BrigadaPatrocinadoraFamilia token={token} familiaId={familiaId}
+                perfilId={p.id} puedeGestionar={puedeGestionar} />
               {p.motivoRevision && <p>Motivo de revisión: {p.motivoRevision}</p>}
               {puedeGestionar && <div className="familias-acciones">
                 {['PENDIENTE', 'EVALUADO'].includes(p.estado) && (
