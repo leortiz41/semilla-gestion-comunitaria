@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import FlujoPagos from './FlujoPagos';
 import '../../estilos/modulos/paginaModuloBase.css';
 import '../../estilos/modulos/pagos/pagos.css';
 const API=import.meta.env.VITE_API_URL||'http://localhost:3000/api';
@@ -82,16 +83,8 @@ export default function PaginaPagos({token,puedeGestionar}:{token:string;puedeGe
     <article><span>Pendientes de aprobación</span><strong>{resumen.solicitudes.filter(s=>s.estado==='SOLICITADA').length}</strong></article>
     <article><span>Total confirmado</span><strong>{dinero(resumen.pagos.filter(p=>p.estado==='CONFIRMADO').reduce((n,p)=>n+p.monto,0))}</strong></article>
    </div>
-   <p className="pagos-aviso">Consulta inicial. La autorización y el registro de desembolsos se habilitarán después de validar presupuesto, comprobantes y auditoría.</p>
-   <h2>Solicitudes de pago</h2>
-   <div className="pagos-listado">{resumen.solicitudes.map(s=><article key={s.id}><strong>{s.concepto}</strong><span>{s.proyecto}</span><span>{dinero(s.monto)} · {s.estado}</span></article>)}
-    {!resumen.solicitudes.length&&<p>No existen solicitudes registradas.</p>}</div>
-   <h2>Personal contratado</h2>
-   <div className="pagos-listado">{resumen.contratos.map(c=><article key={c.id}><strong>{c.persona}</strong><span>{c.cargo} · {c.proyecto}</span><span>{dinero(c.valor)} · {c.estado}</span></article>)}
-    {!resumen.contratos.length&&<p>No hay contratos registrados.</p>}</div>
-   <h2>Pagos registrados</h2>
-   <div className="pagos-listado">{resumen.pagos.map(p=><article key={p.id}><strong>{p.proyecto}</strong><span>{p.fecha}</span><span>{dinero(p.monto)} · {p.estado}</span></article>)}
-    {!resumen.pagos.length&&<p>No hay desembolsos registrados.</p>}</div>
+   <FlujoPagos token={token} puedeGestionar={puedeGestionar} onActualizar={()=>setVersion(n=>n+1)}/>
+
   </>}
   {vista==='proveedores'&&<>
    <div className="pagos-herramientas">
