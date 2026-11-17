@@ -55,3 +55,15 @@ Fotos del estado inicial, construcción y vivienda entregada; observaciones de v
 - **F4:** asignación de vivienda/brigada, visitas, entrega, resumen/impresión y pruebas multitenant, paso a `main`.
 
 No trasladar datos de Development a Production ni marcar documentos como aprobados por defecto.
+
+
+## Asignación de brigada y portal del donante (027)
+- El vínculo es `perfiles_familia` → `asignaciones_familias_brigadas` → `brigadas_donantes`; no se duplica la familia por cada brigada.
+- Solo pueden asignarse brigadas activas que ya patrocinan el proyecto correspondiente mediante `brigadas_donantes_proyectos`, dentro de la misma organización.
+- El expediente distingue `PENDIENTE`/`EVALUADO` (lista de espera o evaluación), `SELECCIONADO` (aprobada para apoyo), `FINALIZADO` (apoyo finalizado) y `DESCARTADO` (no seleccionada).
+- La aprobación y la entrega no se habilitan hasta cerrar la validación documental; la asignación de brigada, por sí sola, NO modifica el estado de elegibilidad.
+- En Evidencias → Mapa de Impacto, el donante recibe un **resumen agregado por brigada** sin nombres, identidades, direcciones, ingresos ni PDF familiares.
+- La cuenta DONANTE debe poseer acceso al proyecto en `proyectos_donantes` y su correo debe corresponder al correo de la ficha `donantes` de la brigada; esto es una restricción temporal. Para múltiples cuentas por brigada conviene introducir más adelante una tabla explícita cuenta–brigada y un editor de permisos.
+- La lectura es en la consulta (no hay WebSocket ni notificaciones en tiempo real); refrescar el mapa obtiene los datos actualizados de Neon Development.
+- **Pruebas pendientes**: 2 cuentas DONANTE con brigadas diferentes que financian el mismo proyecto; una familia asignada a cada una; comprobar que ambas ven solo sus conteos y no acceden a PDF, identidad ni otras brigadas.
+- Migración 027 aplicada a Development; Production permanece sin cambios.
