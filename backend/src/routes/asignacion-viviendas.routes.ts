@@ -121,9 +121,20 @@ asignacionViviendasRouter.post('/asignar', async (req,res) => {
     await client.query(
       `INSERT INTO cuentas_brigadas_donantes(usuario_id,brigada_id,asignado_por_usuario_id)
        VALUES($1,$2,$3) ON CONFLICT DO NOTHING`,[cuentaId,brigadaId,req.auth!.sub]);
+    // Quienes ya tienen acceso a esta brigada ven todos sus proyectos patrocinados.
+    // Al vincular una nueva cuenta, también obtiene los proyectos anteriores de su brigada.
     await client.query(
       `INSERT INTO proyectos_donantes(usuario_id,proyecto_id)
-       VALUES($1,$2) ON CONFLICT DO NOTHING`,[cuentaId,destino]);
+       SELECT cbd.usuario_id,bp.proyecto_id
+       FROM cuentas_brigadas_donantes cbd
+       JOIN usuarios u ON u.id=cbd.usuario_id AND u.organizacion_id=$2 AND u.activo
+       JOIN brigadas_donantes_proyectos bp ON bp.brigada_id=cbd.brigada_id
+       JOIN proyectos p ON p.id=bp.proyecto_id
+       JOIN comunidades c ON c.id=p.comunidad_id AND c.organizacion_id=$2
+       WHERE cbd.brigada_id=$1
+         AND EXISTS (SELECT 1 FROM usuarios_roles ur JOIN roles r ON r.id=ur.rol_id
+                     WHERE ur.usuario_id=u.id AND r.nombre='DONANTE' AND r.activo)
+       ON CONFLICT DO NOTHING`,[brigadaId,org]);
     await client.query(
       `INSERT INTO bitacora_auditoria(usuario_id,accion,nombre_entidad,entidad_id,valores_nuevos)
        VALUES($1,'ASIGNACION_VIVIENDA','perfiles_familia',$2,$3::jsonb)`,
