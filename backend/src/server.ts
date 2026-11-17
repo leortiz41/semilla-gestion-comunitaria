@@ -18,6 +18,7 @@ import { usuariosRouter } from './routes/usuarios.routes.js';
 import { proyectosRouter } from './routes/proyectos.routes.js';
 import { proveedoresRouter } from './routes/proveedores.routes.js';
 import { pagosRouter } from './routes/pagos.routes.js';
+import { pagosOperacionesRouter } from './routes/pagos-operaciones.routes.js';
 import { mapaImpactoRouter } from './routes/mapa-impacto.routes.js';
 import { plataformaRouter } from './routes/plataforma.routes.js';
 import { inicializacionSuperadministradorRouter } from './routes/inicializacion-superadministrador.routes.js';
@@ -50,6 +51,7 @@ app.use('/api/plataforma', plataformaRouter);
 app.use('/api/donantes', donantesRouter);
 app.use('/api/proyectos', proyectosRouter);
 app.use('/api/proveedores', proveedoresRouter);
+app.use('/api/pagos', pagosOperacionesRouter);
 app.use('/api/pagos', pagosRouter);
 app.use('/api/mapa-impacto', mapaImpactoRouter);
 
