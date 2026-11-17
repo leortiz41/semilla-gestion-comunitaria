@@ -28,7 +28,7 @@ asignacionViviendasRouter.get('/opciones', async (req, res) => {
       databasePool.query(
         `SELECT p.id,p.nombre,p.comunidad_id AS "comunidadId"
          FROM proyectos p JOIN comunidades c ON c.id=p.comunidad_id
-         WHERE c.organizacion_id=$1 AND p.estado <> 'CANCELADO'
+         WHERE c.organizacion_id=$1 AND p.estado <> 'CANCELADO' AND lower(p.tipo)='vivienda'
          ORDER BY p.nombre,p.id`, [org]),
       databasePool.query(
         `SELECT u.id,u.email FROM usuarios u WHERE u.organizacion_id=$1 AND u.activo
@@ -85,14 +85,14 @@ asignacionViviendasRouter.post('/asignar', async (req,res) => {
     if(nuevo){
       const creado=await client.query(
         `INSERT INTO proyectos(comunidad_id,nombre,tipo,estado,fecha_inicio,descripcion)
-         VALUES($1,$2,'Vivienda','PLANIFICADO',$3,'Proyecto habitacional vinculado a expediente familiar.')
+         VALUES($1,$2,'vivienda','PLANIFICADO',$3,'Proyecto habitacional vinculado a expediente familiar.')
          RETURNING id`,
         [familia.rows[0].comunidad,nombre,fechaInicio]);
       destino=creado.rows[0].id;
     }else{
       const existente=await client.query(
         `SELECT p.id FROM proyectos p JOIN comunidades c ON c.id=p.comunidad_id
-         WHERE p.id=$1 AND p.comunidad_id=$2 AND c.organizacion_id=$3 AND p.estado<>'CANCELADO'
+         WHERE p.id=$1 AND p.comunidad_id=$2 AND c.organizacion_id=$3 AND p.estado<>'CANCELADO' AND lower(p.tipo)='vivienda'
          FOR UPDATE OF p`,
         [proyectoId,familia.rows[0].comunidad,org]);
       if(!existente.rowCount){await client.query('ROLLBACK');res.status(404).json({message:'Proyecto no disponible para la comunidad.'});return;}
