@@ -9,7 +9,7 @@ pagosOperacionesRouter.use(
 );
 const gestionar=[requireRole('ADMINISTRADOR','COORDINADOR'),requirePermission('pagos.gestionar')];
 const dinero=(valor:unknown)=>typeof valor==='number'&&Number.isFinite(valor)&&valor>0&&valor<=100000000
-  &&Math.round(valor*100)===valor*100;
+  &&Math.abs(Math.round(valor*100)-valor*100)<0.000001;
 const texto=(valor:unknown,max:number)=>typeof valor==='string'&&valor.trim().length>0&&valor.trim().length<=max;
 const auditar=async(client:import('pg').PoolClient,usuarioId:string,accion:string,entidad:string,id:string,detalle:object)=>{
  await client.query(
