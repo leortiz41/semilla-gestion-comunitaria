@@ -192,6 +192,53 @@ donantesRouter.get(
   },
 );
 
+// Resumen público para la cuenta DONANTE: sin nombres ni datos personales de familias.
+// Requiere permiso del proyecto y correspondencia con la ficha de la organización donante.
+donantesRouter.get(
+  '/mapa/proyectos/:proyectoId/familias',
+  authenticateAccessToken,
+  requireRole('DONANTE'),
+  requirePermission('proyectos.ver'),
+  async (req, res) => {
+    const proyectoId = req.params.proyectoId;
+    if (!esUuid(proyectoId)) {
+      res.status(400).json({ message: 'Proyecto inválido.' }); return;
+    }
+    try {
+      if (!databasePool) { res.status(503).json({ message: 'Base de datos no disponible.' }); return; }
+      const { rows } = await databasePool.query(
+        `SELECT b.id AS "brigadaId", b.lider, d.nombre AS patrocinador,
+                count(pf.id)::int AS "familiasAsignadas",
+                count(pf.id) FILTER (WHERE pf.estado IN ('PENDIENTE','EVALUADO'))::int AS "enEspera",
+                count(pf.id) FILTER (WHERE pf.estado = 'SELECCIONADO')::int AS aprobadas,
+                count(pf.id) FILTER (WHERE pf.estado = 'FINALIZADO')::int AS beneficiadas
+         FROM usuarios u
+         JOIN proyectos_donantes pd ON pd.usuario_id=u.id AND pd.proyecto_id=$2
+         JOIN proyectos p ON p.id=pd.proyecto_id
+         JOIN comunidades c ON c.id=p.comunidad_id AND c.organizacion_id=u.organizacion_id
+         JOIN donantes d ON d.organizacion_id=u.organizacion_id AND d.activo
+           AND lower(d.correo)=lower(u.email)
+         JOIN brigadas_donantes b ON b.donante_id=d.id AND b.activo
+         JOIN brigadas_donantes_proyectos bp ON bp.brigada_id=b.id AND bp.proyecto_id=p.id
+         LEFT JOIN asignaciones_familias_brigadas afb ON afb.brigada_id=b.id
+         LEFT JOIN perfiles_familia pf ON pf.id=afb.perfil_id AND pf.proyecto_id=p.id
+         WHERE u.id=$1 AND u.organizacion_id=$3 AND u.activo
+           AND EXISTS (SELECT 1 FROM usuarios_roles ur JOIN roles r ON r.id=ur.rol_id
+                       WHERE ur.usuario_id=u.id AND r.nombre='DONANTE' AND r.activo)
+         GROUP BY b.id,b.lider,d.nombre
+         ORDER BY d.nombre,b.lider,b.id`,
+        [req.auth!.sub, proyectoId, req.auth!.organizacionId],
+      );
+      // No exponer identificaciones, direcciones, miembros ni documentos de las familias.
+      res.set('Cache-Control', 'no-store');
+      res.json({ brigadas: rows });
+    } catch (error) {
+      console.error('Error consultando resumen de familias de brigada:', error);
+      res.status(500).json({ message: 'No fue posible consultar el impacto familiar.' });
+    }
+  },
+);
+
 const administracionDonantes = Router();
 
 administracionDonantes.use(
