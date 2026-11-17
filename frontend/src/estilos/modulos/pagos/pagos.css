@@ -19,3 +19,20 @@
 .pagos-acciones-tipo{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:.55rem}
 .pagos-acciones-tipo button:last-child{background:#2e7847;color:#fff}
 .pagos-modal input:focus-visible,.pagos-modal select:focus-visible{outline:2px solid #367f51;outline-offset:2px}
+
+.pagos-flujo{display:grid;gap:1rem;margin:1.2rem 0}
+.pagos-flujo__cabecera{padding:1rem;border:1px solid #d4e5d1;background:#f5faf4;border-radius:.85rem}
+.pagos-flujo__cabecera h2{margin:0 0 .4rem}
+.pagos-flujo__cabecera p{margin:.3rem 0 1rem;color:#57715b}
+.pagos-flujo__acciones{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.7rem}
+.pagos-flujo__acciones button{border:1px solid #c8dfcb;border-radius:.65rem;background:#fff;color:#2c603e;padding:.7rem .85rem;font:inherit;cursor:pointer}
+.pagos-flujo__acciones button:first-child{background:#2d7547;color:#fff}
+.pagos-flujo__acciones button:disabled{opacity:.5;cursor:default}
+.pagos-flujo__formulario{background:#fff;border:1px solid #cddfcd;border-radius:1rem;padding:1.25rem}
+.pagos-flujo__formulario h3{margin:.1rem 0 1rem;color:#2a603d}
+.pagos-flujo__formulario form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}
+.pagos-flujo__formulario form label,.pagos-listado label{display:grid;gap:.4rem;color:#375d41;font-weight:650;font-size:.9rem}
+.pagos-flujo__formulario form input,.pagos-flujo__formulario form select,.pagos-listado label input{width:100%;min-width:0;box-sizing:border-box;padding:.75rem;border:1px solid #c9dec7;border-radius:.6rem;background:#fff;color:#284932;font:inherit}
+.pagos-flujo__formulario form .pagos-nota,.pagos-flujo__formulario form .pagos-flujo__acciones{grid-column:1/-1}
+.pagos-nota{color:#5a705f;font-size:.86rem;line-height:1.5}
+@media(max-width:680px){.pagos-flujo__formulario form{grid-template-columns:1fr}}
