@@ -95,7 +95,7 @@ export default function PaginaPagos({token,puedeGestionar}:{token:string;puedeGe
   </>}
   {vista==='proveedores'&&<>
    <div className="pagos-herramientas">
-    <label>Buscar proveedor o contratista <input value={filtro} onChange={e=>setFiltro(e.target.value)} placeholder="Nombre o especialidad"/></label>
+    <label htmlFor="pagos-buscar-proveedor">Buscar proveedor o contratista <input id="pagos-buscar-proveedor" type="search" value={filtro} onChange={e=>setFiltro(e.target.value)} placeholder="Nombre o especialidad"/></label>
     {puedeGestionar&&<button type="button" onClick={()=>abrir()}>+ Registrar proveedor o contratista</button>}
    </div>
    <div className="pagos-listado">{proveedores.filter(p=>(p.nombre+' '+(p.categoria||'')).toLowerCase().includes(filtro.toLowerCase())).map(p=>
