@@ -249,7 +249,10 @@ function App() {
           />
         );
       case 'familias':
-        return <PaginaFamilias />;
+        return !esDonante && usuario && accessToken && usuario.permisos.includes('comunidades.ver')
+          ? <PaginaFamilias token={accessToken}
+              puedeGestionar={usuario.roles.some((rol) => rol === 'ADMINISTRADOR' || rol === 'COORDINADOR') &&
+                usuario.permisos.includes('comunidades.gestionar')} /> : null;
       case 'proyectos':
         return esDonante && accessToken
           ? <SeguimientoDonante tokenAcceso={accessToken} vista="proyectos" />
