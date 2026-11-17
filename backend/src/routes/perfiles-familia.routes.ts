@@ -156,6 +156,12 @@ perfilesFamiliaRouter.post('/:familiaId/perfiles/:perfilId/revisar', ...editar, 
       motivo.length > 2000 || (estado === 'DESCARTADO' && !motivo)) {
     res.status(400).json({ message: 'Estado o motivo de revisión inválido.' }); return;
   }
+  // Selección y entrega requieren expediente documental revisado, todavía en desarrollo.
+  // Nunca aprobar familias sin comprobar PDF de identidad/tenencia/actas y trazabilidad.
+  if (estado === 'SELECCIONADO' || estado === 'FINALIZADO') {
+    res.status(409).json({ message: 'La selección y entrega requieren validación documental; esta función estará disponible al completar los PDF del expediente.' });
+    return;
+  }
   try {
     if (!databasePool) { res.status(503).json({ message: 'Base de datos no disponible.' }); return; }
     const { rows } = await databasePool.query(
