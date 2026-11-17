@@ -144,18 +144,18 @@ export default function PaginaFamilias({
       </div>
 
       <div className="familias-barra">
-        <label>Buscar familia
-          <input type="search" value={busqueda} onChange={(e) => setBusqueda(e.target.value)}
+        <label htmlFor="familias-buscar">Buscar familia
+          <input id="familias-buscar" type="search" value={busqueda} onChange={(e) => setBusqueda(e.target.value)}
             placeholder="Nombre, comunidad o número de casa" />
         </label>
-        <label>Comunidad
-          <select value={comunidad} onChange={(e) => setComunidad(e.target.value)}>
+        <label htmlFor="familias-filtrar-comunidad">Comunidad
+          <select id="familias-filtrar-comunidad" value={comunidad} onChange={(e) => setComunidad(e.target.value)}>
             <option value="">Todas</option>
             {comunidades.map((c) => <option key={c.id} value={c.id}>{c.nombre} · {c.municipio}</option>)}
           </select>
         </label>
-        <label>Estado
-          <select value={estado} onChange={(e) => setEstado(e.target.value as typeof estado)}>
+        <label htmlFor="familias-filtrar-estado">Estado
+          <select id="familias-filtrar-estado" value={estado} onChange={(e) => setEstado(e.target.value as typeof estado)}>
             <option value="activas">Activas</option>
             <option value="inactivas">Inactivas</option>
             <option value="todas">Todas</option>
