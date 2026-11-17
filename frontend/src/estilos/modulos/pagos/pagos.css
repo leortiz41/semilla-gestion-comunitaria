@@ -12,3 +12,10 @@
 .pagos-modal form{display:grid;gap:.85rem}.pagos-modal footer{display:flex;justify-content:flex-end;gap:.7rem}.pagos-modal footer button[type=submit],.pagos-herramientas button{background:#2e7847;color:white}
 .pagos-error,.pagos-aviso{padding:1rem;border-radius:.7rem;background:#f2f8ef;color:#315e3a}.pagos-error{background:#fff1ed;color:#9b3424}
 @media(max-width:680px){.pagos-indicadores{grid-template-columns:1fr}.pagos-herramientas label{width:100%}}
+
+.pagos-ayuda{display:block;color:#677e6b;font-size:.78rem;font-weight:400;line-height:1.45}
+.pagos-nuevo-tipo{display:grid;gap:.8rem;padding:1rem;background:#f2f8ef;border:1px solid #cce1ca;border-radius:.85rem}
+.pagos-nuevo-tipo h3{margin:0;color:#285d39;font-size:1.03rem}
+.pagos-acciones-tipo{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:.55rem}
+.pagos-acciones-tipo button:last-child{background:#2e7847;color:#fff}
+.pagos-modal input:focus-visible,.pagos-modal select:focus-visible{outline:2px solid #367f51;outline-offset:2px}
