@@ -5,11 +5,14 @@ import type { DetalleImpacto } from '../../servicios/mapa-impacto/servicioMapaIm
 import '../../estilos/modulos/mapa-impacto/mapaImpacto.css';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+type ResumenBrigada = { brigadaId: string; lider: string; patrocinador: string;
+  familiasAsignadas: number; enEspera: number; aprobadas: number; beneficiadas: number };
 
 export default function PaginaMapaDonante({ token, usuarioId }: { token: string; usuarioId: string }) {
   const [proyectos, setProyectos] = useState<ProyectoDonante[]>([]);
   const [proyectoId, setProyectoId] = useState('');
   const [detalle, setDetalle] = useState<DetalleImpacto | null>(null);
+  const [brigadas, setBrigadas] = useState<ResumenBrigada[]>([]);
   const [seleccion, setSeleccion] = useState<{ tipo: string; id: string } | null>(null);
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(true);
@@ -35,25 +38,34 @@ export default function PaginaMapaDonante({ token, usuarioId }: { token: string;
     setCargando(true);
     setError('');
     setDetalle(null);
+    setBrigadas([]);
     setSeleccion(null);
-    fetch(`${API}/donantes/mapa/proyectos/${encodeURIComponent(proyectoId)}`, {
-      headers: { Authorization: `Bearer ${token}` },
-      cache: 'no-store',
-    }).then(async (respuesta) => {
-      if (!respuesta.ok) throw new Error(
-        (await respuesta.json().catch(() => ({})) as { message?: string }).message
-          || 'No se pudo consultar el mapa de avances.'
-      );
-      return respuesta.json() as Promise<DetalleImpacto>;
-    }).then((datos) => {
+    Promise.all([
+      fetch(`${API}/donantes/mapa/proyectos/${encodeURIComponent(proyectoId)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: 'no-store',
+      }),
+      fetch(`${API}/donantes/mapa/proyectos/${encodeURIComponent(proyectoId)}/familias`, {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: 'no-store',
+      }),
+    ]).then(async ([respuesta, resumen]) => {
+      if (!respuesta.ok || !resumen.ok) throw new Error('No se pudo consultar el mapa y el resumen de familias patrocinadas.');
+      return Promise.all([
+        respuesta.json() as Promise<DetalleImpacto>,
+        resumen.json() as Promise<{ brigadas: ResumenBrigada[] }>,
+      ]);
+    }).then(([datos, resultado]) => {
       if (!activo) return;
       if (datos.proyecto.id !== proyectoId) throw new Error('El proyecto no coincide con la selección.');
       setDetalle(datos);
+      setBrigadas(resultado.brigadas);
       setSeleccion({ tipo: 'proyecto', id: datos.proyecto.id });
     }).catch((e: Error) => { if (activo) setError(e.message); })
       .finally(() => { if (activo) setCargando(false); });
     return () => { activo = false; };
   }, [token, proyectoId]);
+
 
   const seleccionado = seleccion?.tipo === 'actividad'
     ? detalle?.actividades.find((a) => a.id === seleccion.id)?.nombre
@@ -85,6 +97,18 @@ export default function PaginaMapaDonante({ token, usuarioId }: { token: string;
       {!cargando && !error && !proyectos.length && <p>Tu cuenta todavía no tiene proyectos autorizados.</p>}
       {detalle && !cargando && (
         <>
+          <section className="mapa-impacto__leyenda" aria-label="Impacto familiar de brigadas">
+            <h3>Familias patrocinadas por tu brigada</h3>
+            <p>Resumen actualizado al consultar el mapa; no se muestran datos personales ni documentos de las familias.</p>
+            {!brigadas.length && <p>No existen brigadas vinculadas a esta cuenta y proyecto.</p>}
+            {brigadas.map((b) => <article key={b.brigadaId} className="familias-resumen">
+              <strong>{b.patrocinador} · Brigada de {b.lider}</strong>
+              <span>Familias asignadas: {b.familiasAsignadas}</span>
+              <span>En espera o evaluación: {b.enEspera}</span>
+              <span>Aprobadas: {b.aprobadas}</span>
+              <span>Beneficiadas: {b.beneficiadas}</span>
+            </article>)}
+          </section>
           <div style={{ minHeight: 510 }}>
             <MapaReactFlow
               key={detalle.proyecto.id}
