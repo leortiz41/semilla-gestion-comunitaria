@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import IntegrantesFamilia from './IntegrantesFamilia';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
@@ -317,6 +318,8 @@ export default function EvaluacionFamilia({
             </button>
           </footer>
         </form>}
+        <IntegrantesFamilia token={token} familiaId={familiaId}
+          puedeGestionar={puedeGestionar} onActualizacion={onActualizacion} />
         <section className="familias-documentos-aviso" aria-label="Documentación de respaldo">
           <h3>Documentos PDF acreditativos</h3>
           <p>El expediente documental será privado. La carga y revisión de PDF quedará
