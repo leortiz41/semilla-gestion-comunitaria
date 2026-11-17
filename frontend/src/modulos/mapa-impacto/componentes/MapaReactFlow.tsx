@@ -274,9 +274,9 @@ export default function MapaReactFlow({
           <button type="button" className={nivel === 'completo' ? 'activo' : ''}
             aria-pressed={nivel === 'completo'} onClick={mostrarTodo}>Ver mapa completo</button>
         </div>
-        <label className="mapa-impacto__buscar-nodo">
+        <label htmlFor="mapa-impacto-buscar-nodo" className="mapa-impacto__buscar-nodo">
           <span>Buscar nodo</span>
-          <input value={busquedaNodo} onChange={(e) => setBusquedaNodo(e.target.value)}
+          <input id="mapa-impacto-buscar-nodo" type="search" value={busquedaNodo} onChange={(e) => setBusquedaNodo(e.target.value)}
             placeholder="Buscar nodo…" aria-label="Buscar nodo del mapa" />
         </label>
         <div className="mapa-impacto__acciones-mapa">
