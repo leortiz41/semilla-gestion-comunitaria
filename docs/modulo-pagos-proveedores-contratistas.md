@@ -32,3 +32,21 @@ El frontend anterior de Pagos era una pantalla informativa. En Neon Development 
 - Builds frontend/backend exitosos; pruebas CRUD aisladas por organización; 403 DONANTE; proveedores inactivos no elegibles para nuevas solicitudes; suma de pagos confirmados ≤ monto aprobado; doble confirmación concurrente protegida con transacción y bloqueos de fila; rechazo con motivo; auditoría; permisos de rol.
 - Solucionar fallo preexistente HU12 en pruebas backend si persiste.
 - No crear datos de prueba en Production. No modificar `main` ni migrar Neon Production sin revisión.
+
+
+## Incremento 032 — flujo integrado de pagos (Development)
+- Desde **Pagos y solicitudes** se permite dar de alta personal contratado en un proyecto, solicitar pago a un proveedor existente o al personal contratado del mismo proyecto, revisar una solicitud, registrar un abono y confirmar un abono registrado.
+- `solicitudes_pago` sigue siendo la única referencia de autorización y `pagos.solicitud_pago_id` la referencia de desembolso. La interfaz presenta ambos con el proyecto asociado.
+- La creación de contrato registra la persona y su contrato en una transacción. La solicitud valida proyecto y beneficiario dentro de la organización de la sesión. No se crean movimientos sin usuario autenticado y permisos.
+- No se permite aprobar la solicitud propia; `solicitado_por_usuario_id` es obligatorio para las nuevas aprobaciones. La aprobación exige presupuesto asignado positivo y capacidad disponible, sumando solicitudes `APROBADA`/`PAGADA` del proyecto con bloqueo de la fila proyecto.
+- Un abono inicia `REGISTRADO`; no representa transferencia real de fondos. Otro usuario autorizado debe confirmarlo; se impide confirmar abonos propios. Solo `CONFIRMADO` suma al desembolsado.
+- Los abonos no anulados reservan saldo autorizado para impedir sobrepagos. Los bloqueos de fila de `solicitudes_pago` serializan confirmaciones concurrentes.
+- Cada escritura crítica registra `bitacora_auditoria`, sin incluir cuentas bancarias.
+- Migración `032_flujo_autorizacion_pagos.sql` aplicada únicamente en Neon Development. `main` y Neon Production no se modificaron.
+
+### Restricciones que deben completarse antes de producción
+1. La carga privada de contrato, factura y comprobante y su revisión siguen pendientes por el error de R2 (PUT 403). **No considerar un abono confirmado equivalente a una conciliación bancaria.**
+2. Falta política formal sobre quiénes pueden solicitar, aprobar y confirmar, y sobre revocación/cancelación auditada de solicitudes y abonos; actualmente ADMINISTRADOR y COORDINADOR tienen las operaciones y se impide autoaprobación.
+3. El registro de personal contratado aún no incorpora documentos, reutilización de persona existente, fechas, historial de cambios o verificación de duplicados entre personas.
+4. Falta cobertura automatizada específica de pagos para importe válido, aprobación presupuestaria, acceso cruzado entre organizaciones, concurrencia y doble confirmación. Las pruebas generales de HU12 continúan fallando con 503 donde se esperaba 403.
+5. No hay pagos bancarios integrados, transferencia de dinero ni conciliación externa; únicamente registros administrativos internos. No mezclar información de Development con Production.
