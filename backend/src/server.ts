@@ -16,6 +16,8 @@ import { donantesRouter } from './routes/donantes.routes.js';
 import { zonasRouter } from './routes/zonas.routes.js';
 import { usuariosRouter } from './routes/usuarios.routes.js';
 import { proyectosRouter } from './routes/proyectos.routes.js';
+import { proveedoresRouter } from './routes/proveedores.routes.js';
+import { pagosRouter } from './routes/pagos.routes.js';
 import { mapaImpactoRouter } from './routes/mapa-impacto.routes.js';
 import { plataformaRouter } from './routes/plataforma.routes.js';
 import { inicializacionSuperadministradorRouter } from './routes/inicializacion-superadministrador.routes.js';
@@ -47,6 +49,8 @@ app.use('/api/usuarios', usuariosRouter);
 app.use('/api/plataforma', plataformaRouter);
 app.use('/api/donantes', donantesRouter);
 app.use('/api/proyectos', proyectosRouter);
+app.use('/api/proveedores', proveedoresRouter);
+app.use('/api/pagos', pagosRouter);
 app.use('/api/mapa-impacto', mapaImpactoRouter);
 
 app.get('/api/health', async (_req, res) => {
