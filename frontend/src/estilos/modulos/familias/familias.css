@@ -1,0 +1,34 @@
+.familias-pagina{display:grid;gap:1.15rem}
+.familias-resumen{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem}
+.familias-resumen article{padding:1.2rem;border:1px solid #d7e5d5;border-radius:1rem;background:#f5faf3;display:grid;gap:.4rem}
+.familias-resumen span{color:#54715c;font-size:.88rem}.familias-resumen strong{color:#285c39;font-size:1.7rem}
+.familias-barra{display:flex;gap:.8rem;align-items:end;flex-wrap:wrap;padding:1rem;border:1px solid #dce5dc;border-radius:1rem;background:#fff}
+.familias-barra label,.familias-modal form>label{display:grid;gap:.4rem;color:#335f40;font-weight:650;font-size:.88rem}
+.familias-barra label{flex:1 1 175px}
+.familias-barra input,.familias-barra select,.familias-modal input,.familias-modal select,.familias-modal textarea{box-sizing:border-box;width:100%;padding:.75rem .85rem;border:1px solid #cedccd;border-radius:.7rem;background:white;color:#263f2e;font:inherit}
+.familias-boton-principal{border:0;border-radius:.7rem;padding:.8rem 1.1rem;background:#287644;color:#fff;font:inherit;font-weight:700;cursor:pointer}
+.familias-boton-principal:hover{background:#1e6136}.familias-boton-principal:disabled{opacity:.5;cursor:default}
+.familias-lista{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,310px),1fr));gap:1rem}
+.familias-tarjeta{border:1px solid #d8e4d7;border-radius:1rem;background:#fff;padding:1.15rem;box-shadow:0 7px 24px #203d2a0b;display:grid;gap:.6rem}
+.familias-tarjeta header,.familias-modal header{display:flex;justify-content:space-between;gap:1rem;align-items:start}
+.familias-tarjeta h2{color:#285e3a;margin:.25rem 0;font-size:1.25rem}
+.familias-tarjeta p{margin:0;color:#506759}
+.familias-tarjeta__etiqueta{text-transform:uppercase;color:#728575;letter-spacing:.06em;font-size:.7rem;font-weight:750}
+.familias-direccion{font-size:.86rem}
+.familias-estado{white-space:nowrap;border-radius:999px;padding:.25rem .6rem;background:#eee;color:#656565;font-weight:700;font-size:.75rem}
+.familias-estado--activo{background:#e7f5e7;color:#2b6836}
+.familias-tarjeta dl{display:flex;gap:1.5rem;margin:.6rem 0;flex-wrap:wrap}
+.familias-tarjeta dt{color:#728575;font-size:.79rem}.familias-tarjeta dd{margin:0;font-size:1.2rem;font-weight:750;color:#295d3b}
+.familias-acciones{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap}
+.familias-acciones button,.familias-modal button:not(.familias-boton-principal){font:inherit;padding:.6rem .8rem;border:1px solid #c9dbc9;border-radius:.6rem;background:#f6faf5;color:#345e3e;cursor:pointer}
+.familias-acciones span{font-size:.75rem;color:#6a796b}
+.familias-aviso,.familias-error,.familias-vacio{padding:1rem;border-radius:.7rem;background:#f2f8ef;color:#345d3a}
+.familias-error{background:#fff1ec;color:#a03323}
+.familias-modal-fondo{position:fixed;inset:0;z-index:1000;background:#142e1b99;display:grid;place-items:center;padding:1rem;overflow:auto}
+.familias-modal{width:min(100%,580px);max-height:90vh;overflow:auto;padding:1.4rem;background:#fff;border-radius:1rem;box-shadow:0 20px 60px #10241745}
+.familias-modal h2{margin:.4rem 0 1rem;color:#245a39}
+.familias-modal form{display:grid;gap:1rem}
+.familias-modal .familias-casilla{display:flex;align-items:center;gap:.7rem}.familias-modal .familias-casilla input{width:auto}
+.familias-nota{color:#6b786c;font-size:.82rem;line-height:1.55}
+.familias-modal footer{display:flex;justify-content:flex-end;gap:.7rem}
+@media(max-width:700px){.familias-resumen{grid-template-columns:1fr}.familias-barra label{flex-basis:100%}.familias-barra>.familias-boton-principal{width:100%}}
