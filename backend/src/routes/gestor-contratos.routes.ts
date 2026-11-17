@@ -23,9 +23,14 @@ function documentoValido(entrada: unknown): entrada is Nodo {
     if (typeof item.type !== 'string' || !tiposNodos.has(item.type)) return false;
     if (Object.keys(item).some(k => !['type','text','attrs','marks','content'].includes(k))) return false;
     if (item.attrs !== undefined) {
-      if (item.type !== 'heading' || !item.attrs || typeof item.attrs !== 'object' || Array.isArray(item.attrs)) return false;
+      if (!item.attrs || typeof item.attrs !== 'object' || Array.isArray(item.attrs)) return false;
       const a = item.attrs as Record<string, unknown>;
-      if (Object.keys(a).length !== 1 || ![1,2,3].includes(a.level as number)) return false;
+      if (item.type === 'heading') {
+        if (Object.keys(a).length !== 1 || ![1,2,3].includes(a.level as number)) return false;
+      } else if (item.type === 'orderedList') {
+        if (Object.keys(a).length !== 1 || !Number.isInteger(a.start) ||
+            (a.start as number) < 1 || (a.start as number) > 1000) return false;
+      } else return false;
     }
     if (item.type === 'heading' && !item.attrs) return false;
     if (item.text !== undefined && (item.type !== 'text' || typeof item.text !== 'string' || item.text.length > 20000)) return false;
