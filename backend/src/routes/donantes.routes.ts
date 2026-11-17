@@ -216,9 +216,9 @@ donantesRouter.get(
          JOIN proyectos_donantes pd ON pd.usuario_id=u.id AND pd.proyecto_id=$2
          JOIN proyectos p ON p.id=pd.proyecto_id
          JOIN comunidades c ON c.id=p.comunidad_id AND c.organizacion_id=u.organizacion_id
-         JOIN donantes d ON d.organizacion_id=u.organizacion_id AND d.activo
-           AND lower(d.correo)=lower(u.email)
-         JOIN brigadas_donantes b ON b.donante_id=d.id AND b.activo
+         JOIN cuentas_brigadas_donantes cbd ON cbd.usuario_id=u.id
+         JOIN brigadas_donantes b ON b.id=cbd.brigada_id AND b.activo
+         JOIN donantes d ON d.id=b.donante_id AND d.organizacion_id=u.organizacion_id AND d.activo
          JOIN brigadas_donantes_proyectos bp ON bp.brigada_id=b.id AND bp.proyecto_id=p.id
          LEFT JOIN asignaciones_familias_brigadas afb ON afb.brigada_id=b.id
          LEFT JOIN perfiles_familia pf ON pf.id=afb.perfil_id AND pf.proyecto_id=p.id
