@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import '../../estilos/modulos/paginaModuloBase.css';
 import '../../estilos/modulos/pagos/pagos.css';
 const API=import.meta.env.VITE_API_URL||'http://localhost:3000/api';
+type TipoProveedor={codigo:string;nombre:string;descripcion:string|null};
 type Proveedor={id:string;nombre:string;tipo:string;categoria:string|null;telefono:string|null;email:string|null;rtn:string|null;propietario:string|null;direccion:string|null;observaciones:string|null;activo:boolean};
 type Formulario={nombre:string;tipo:string;categoria:string;telefono:string;email:string;rtn:string;propietario:string;direccion:string;observaciones:string;activo:boolean};
 type Resumen={solicitudes:{id:string;proyecto:string;concepto:string;monto:number;estado:string}[];pagos:{id:string;proyecto:string;monto:number;fecha:string;estado:string}[];contratos:{id:string;persona:string;proyecto:string;cargo:string;valor:number;estado:string}[]};
@@ -15,6 +16,10 @@ const dinero=(n:number)=>new Intl.NumberFormat('es-HN',{style:'currency',currenc
 export default function PaginaPagos({token,puedeGestionar}:{token:string;puedeGestionar:boolean}){
  const [vista,setVista]=useState<'pagos'|'proveedores'>('pagos');
  const [proveedores,setProveedores]=useState<Proveedor[]>([]);
+ const [tipos,setTipos]=useState<TipoProveedor[]>([]);
+ const [nuevoTipo,setNuevoTipo]=useState(false);
+ const [nombreTipo,setNombreTipo]=useState('');
+ const [descripcionTipo,setDescripcionTipo]=useState('');
  const [resumen,setResumen]=useState<Resumen|null>(null);
  const [filtro,setFiltro]=useState('');
  const [formulario,setFormulario]=useState<Formulario|null>(null);
@@ -25,15 +30,33 @@ export default function PaginaPagos({token,puedeGestionar}:{token:string;puedeGe
  const [guardando,setGuardando]=useState(false);
  const [version,setVersion]=useState(0);
  useEffect(()=>{let activo=true;setCargando(true);setError('');
-  Promise.all([api<{proveedores:Proveedor[]}>(token,'/proveedores'),api<Resumen>(token,'/pagos/resumen')])
-   .then(([p,r])=>{if(activo){setProveedores(p.proveedores);setResumen(r);}})
+  Promise.all([
+    api<{proveedores:Proveedor[]}>(token,'/proveedores'),
+    api<Resumen>(token,'/pagos/resumen'),
+    api<{tipos:TipoProveedor[]}>(token,'/proveedores/tipos'),
+   ]).then(([p,r,t])=>{if(activo){setProveedores(p.proveedores);setResumen(r);setTipos(t.tipos);}})
    .catch((e:Error)=>{if(activo)setError(e.message);})
    .finally(()=>{if(activo)setCargando(false);});
   return()=>{activo=false;};
  },[token,version]);
- function abrir(p?:Proveedor){setEditando(p?.id||null);setFormulario(p?{
+ function abrir(p?:Proveedor){setNuevoTipo(false);setNombreTipo('');setDescripcionTipo('');setError('');
+  setEditando(p?.id||null);setFormulario(p?{
   nombre:p.nombre,tipo:p.tipo,categoria:p.categoria||'',telefono:p.telefono||'',email:p.email||'',rtn:p.rtn||'',
   propietario:p.propietario||'',direccion:p.direccion||'',observaciones:p.observaciones||'',activo:p.activo}:{...vacio});}
+ async function crearTipo(){
+  const nombre=nombreTipo.trim();
+  if(!nombre||guardando)return;
+  setGuardando(true);setError('');
+  try{
+   const {tipo}=await api<{tipo:TipoProveedor}>(token,'/proveedores/tipos',{
+    method:'POST',body:JSON.stringify({nombre,descripcion:descripcionTipo.trim()}),
+   });
+   setTipos(actual=>[...actual,tipo]);
+   setFormulario(actual=>actual?{...actual,tipo:tipo.codigo}:null);
+   setNuevoTipo(false);setNombreTipo('');setDescripcionTipo('');
+  }catch(err){setError(err instanceof Error?err.message:'No fue posible guardar el nuevo tipo.');}
+  finally{setGuardando(false);}
+ }
  async function guardar(e:FormEvent){e.preventDefault();if(!formulario||guardando)return;
   setGuardando(true);setError('');
   try{await api(token,editando?`/proveedores/${editando}`:'/proveedores',{method:editando?'PUT':'POST',body:JSON.stringify(formulario)});
@@ -85,17 +108,67 @@ export default function PaginaPagos({token,puedeGestionar}:{token:string;puedeGe
    <section className="pagos-modal" role="dialog" aria-modal="true" aria-labelledby="titulo-proveedor">
     <h2 id="titulo-proveedor">{editando?'Editar':'Registrar'} proveedor o contratista</h2>
     <form onSubmit={e=>void guardar(e)}>
-     <label>Nombre comercial o completo *<input required maxLength={180} value={formulario.nombre} onChange={e=>setFormulario({...formulario,nombre:e.target.value})}/></label>
-     <label>Tipo<select value={formulario.tipo} onChange={e=>setFormulario({...formulario,tipo:e.target.value})}>
-      <option value="PROVEEDOR">Proveedor</option><option value="CONTRATISTA">Contratista</option><option value="SERVICIOS">Servicios</option><option value="PROFESIONAL">Profesional independiente</option>
-     </select></label>
+     <label>Nombre comercial o completo *
+      <input required maxLength={180} value={formulario.nombre}
+       onChange={e=>setFormulario({...formulario,nombre:e.target.value})}
+       placeholder="Ej. Ferretería El Centro o nombre de la persona"/>
+      <small className="pagos-ayuda">Escribí el nombre de la empresa o de la persona que prestará el servicio.</small>
+     </label>
+     <label>Tipo *
+      <select required value={nuevoTipo?'__crear__':formulario.tipo} disabled={guardando}
+       onChange={e=>{
+        if(e.target.value==='__crear__'){setNuevoTipo(true);return;}
+        setNuevoTipo(false);setFormulario({...formulario,tipo:e.target.value});
+       }}>
+       {tipos.map(t=><option key={t.codigo} value={t.codigo}>{t.nombre}</option>)}
+       <option value="__crear__">+ Crear nuevo tipo…</option>
+      </select>
+      <small className="pagos-ayuda">Clasificá qué clase de proveedor es. Ej.: Contratista para una obra o Servicios para transporte.</small>
+     </label>
+     {nuevoTipo&&<div className="pagos-nuevo-tipo">
+      <h3>Crear tipo de proveedor</h3>
+      <label>Nombre del nuevo tipo *
+       <input maxLength={80} value={nombreTipo} onChange={e=>setNombreTipo(e.target.value)}
+        placeholder="Ej. Transporte comunitario"/>
+       <small className="pagos-ayuda">Escribí una categoría general reutilizable, no el nombre de una persona.</small>
+      </label>
+      <label>Descripción breve (opcional)
+       <input maxLength={240} value={descripcionTipo} onChange={e=>setDescripcionTipo(e.target.value)}
+        placeholder="Ej. Traslado de materiales y brigadas"/>
+       <small className="pagos-ayuda">Explicá qué tipo de contratación incluirá esta categoría.</small>
+      </label>
+      <div className="pagos-acciones-tipo">
+       <button type="button" disabled={guardando} onClick={()=>setNuevoTipo(false)}>Cancelar</button>
+       <button type="button" disabled={guardando||nombreTipo.trim().length<2}
+        onClick={()=>void crearTipo()}>Guardar y seleccionar tipo</button>
+      </div>
+     </div>}
      {(['categoria','rtn','propietario','telefono','email','direccion','observaciones'] as const).map(k=>
       <label key={k}>{({categoria:'Especialidad',rtn:'RTN',propietario:'Responsable',telefono:'Teléfono',email:'Correo',direccion:'Dirección',observaciones:'Observaciones'} as const)[k]}
        <input maxLength={k==='observaciones'?2000:k==='direccion'?1000:k==='categoria'?100:k==='rtn'?30:180}
-        value={formulario[k]} onChange={e=>setFormulario({...formulario,[k]:e.target.value})}/></label>)}
+        value={formulario[k]} onChange={e=>setFormulario({...formulario,[k]:e.target.value})}
+        placeholder={({
+          categoria:'Ej. Albañilería, soldadura, materiales',
+          rtn:'RTN, si lo proporciona',
+          propietario:'Nombre del representante o encargado',
+          telefono:'Ej. +504 9999-9999',
+          email:'Ej. contacto@empresa.com',
+          direccion:'Dirección de referencia',
+          observaciones:'Información útil para futuras contrataciones',
+        } as const)[k]}/>
+       <small className="pagos-ayuda">{({
+          categoria:'Detallá el oficio, producto o servicio específico que ofrece.',
+          rtn:'Registro Tributario Nacional, si corresponde; es opcional.',
+          propietario:'Persona responsable con quien la organización se comunica.',
+          telefono:'Número de contacto, preferiblemente con código de país.',
+          email:'Correo electrónico para consultas y documentación.',
+          direccion:'Ubicación o referencia donde opera el proveedor.',
+          observaciones:'Anotá condiciones o información relevante; evitá incluir contraseñas o cuentas bancarias.',
+        } as const)[k]}</small>
+      </label>)}
      {editando&&<label><input type="checkbox" checked={formulario.activo} onChange={e=>setFormulario({...formulario,activo:e.target.checked})}/> Activo</label>}
      <footer><button type="button" disabled={guardando} onClick={()=>setFormulario(null)}>Cancelar</button>
-      <button type="submit" disabled={guardando}>{guardando?'Guardando…':'Guardar'}</button></footer>
+      <button type="submit" disabled={guardando||nuevoTipo}>{guardando?'Guardando…':'Guardar'}</button></footer>
     </form>
    </section>
   </div>}
