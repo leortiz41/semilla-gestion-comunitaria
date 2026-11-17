@@ -124,14 +124,20 @@ gestorContratosRouter.put('/plantillas/:id',...escribir,async(req,res)=>{
     res.status(400).json({message:'Plantilla o versión no válida.'});return;
   }
   if(!databasePool){res.status(503).json({message:'Base no disponible.'});return;}
+  const client=await databasePool.connect();
   try {
-    const {rows}=await databasePool.query(
+    await client.query('BEGIN');
+    const {rows}=await client.query(
       `UPDATE plantillas_contrato SET contenido=$4::jsonb,version=version+1,actualizado_en=NOW()
        WHERE id=$1 AND organizacion_id=$2 AND version=$3 AND activo RETURNING id,version`,
       [req.params.id,req.auth!.organizacionId,version,JSON.stringify(contenido)]);
-    if(!rows.length){res.status(409).json({message:'Plantilla modificada por otro usuario o no disponible.'});return;}
-    res.json(rows[0]);
-  }catch(error){console.error('Error actualizando plantilla:',error);res.status(500).json({message:'No fue posible actualizar la plantilla.'});}
+    if(!rows.length){await client.query('ROLLBACK');
+      res.status(409).json({message:'Plantilla modificada por otro usuario o no disponible.'});return;}
+    await auditar(client,req.auth!.sub,'EDITAR_PLANTILLA_CONTRATO','plantillas_contrato',rows[0].id,{version:rows[0].version});
+    await client.query('COMMIT');res.json(rows[0]);
+  }catch(error){await client.query('ROLLBACK');
+    console.error('Error actualizando plantilla:',error);res.status(500).json({message:'No fue posible actualizar la plantilla.'});
+  }finally{client.release();}
 });
 gestorContratosRouter.get('/documentos',async(req,res)=>{
   if(!databasePool){res.status(503).json({message:'Base no disponible.'});return;}
