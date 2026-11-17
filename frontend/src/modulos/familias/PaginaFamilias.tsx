@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import EvaluacionFamilia from './EvaluacionFamilia';
+import AsignacionViviendas from './AsignacionViviendas';
 import '../../estilos/modulos/paginaModuloBase.css';
 import '../../estilos/modulos/familias/familias.css';
 
@@ -62,6 +63,7 @@ export default function PaginaFamilias({
   const [guardando, setGuardando] = useState(false);
   const [familiaPerfil, setFamiliaPerfil] = useState<Familia | null>(null);
   const [recarga, setRecarga] = useState(0);
+  const [vista, setVista] = useState<'familias'|'asignaciones'>('familias');
 
   useEffect(() => {
     let vigente = true;
@@ -130,6 +132,11 @@ export default function PaginaFamilias({
         </p>
       </header>
 
+      <div className="familias-acciones" role="group" aria-label="Vistas de gestión familiar">
+        <button type="button" aria-pressed={vista==='familias'} onClick={()=>setVista('familias')}>Familias</button>
+        {puedeGestionar&&<button type="button" aria-pressed={vista==='asignaciones'} onClick={()=>setVista('asignaciones')}>Asignación de viviendas</button>}
+      </div>
+      {vista==='asignaciones'&&puedeGestionar?<AsignacionViviendas token={token} onTerminar={()=>setRecarga(n=>n+1)} />:<>
       <div className="familias-resumen" aria-label="Resumen de familias">
         <article><span>Familias activas</span><strong>{familias.filter((f) => f.activo).length}</strong></article>
         <article><span>Con evaluaciones</span><strong>{familias.filter((f) => f.evaluacionesRegistradas > 0).length}</strong></article>
@@ -197,6 +204,7 @@ export default function PaginaFamilias({
           nombreFamilia={familiaPerfil.nombreReferencia} puedeGestionar={puedeGestionar}
           onCerrar={() => setFamiliaPerfil(null)} onActualizacion={() => setRecarga((n) => n + 1)} />
       )}
+      </>}
       {formulario && puedeGestionar && (
         <div className="familias-modal-fondo" role="presentation"
           onMouseDown={(e) => { if (e.target === e.currentTarget && !guardando) setFormulario(null); }}>
