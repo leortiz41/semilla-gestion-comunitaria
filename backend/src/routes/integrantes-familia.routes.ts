@@ -20,12 +20,15 @@ integrantesFamiliaRouter.get('/:familiaId/integrantes', async (req,res) => {
          p.segundo_apellido AS "segundoApellido", p.fecha_nacimiento::text AS "fechaNacimiento",
          p.ocupacion, mf.es_jefe_hogar AS "esJefeHogar", mf.parentesco_id AS "parentescoId",
          par.nombre AS parentesco, mf.fecha_ingreso::text AS "fechaIngreso",
-         mf.fecha_salida::text AS "fechaSalida"
+         mf.fecha_salida::text AS "fechaSalida",
+         mf.asiste_escuela AS "asisteEscuela", mf.grado_estudio_id AS "gradoEstudioId",
+         ge.nombre AS "gradoEstudio", ge.nivel AS "nivelEstudio"
        FROM miembros_familia mf
        JOIN familias f ON f.id=mf.familia_id
        JOIN comunidades c ON c.id=f.comunidad_id AND c.organizacion_id=$2
        JOIN personas p ON p.id=mf.persona_id
        LEFT JOIN parentescos par ON par.id=mf.parentesco_id
+       LEFT JOIN grados_estudio ge ON ge.id=mf.grado_estudio_id AND (ge.organizacion_id IS NULL OR ge.organizacion_id=c.organizacion_id)
        WHERE mf.familia_id=$1
        ORDER BY mf.fecha_salida NULLS FIRST, mf.es_jefe_hogar DESC, p.primer_nombre, mf.id`,
       [req.params.familiaId,req.auth!.organizacionId],
@@ -49,22 +52,68 @@ integrantesFamiliaRouter.get('/catalogos/parentescos', async (_req,res) => {
   }
 });
 
+integrantesFamiliaRouter.get('/catalogos/grados-estudio', async (req,res) => {
+  try {
+    if (!databasePool) { res.status(503).json({message:'Base no disponible.'});return; }
+    const {rows}=await databasePool.query(
+      `SELECT id,nombre,nivel,organizacion_id AS "organizacionId"
+       FROM grados_estudio WHERE activo AND (organizacion_id IS NULL OR organizacion_id=$1)
+       ORDER BY nivel,nombre,id`, [req.auth!.organizacionId]);
+    res.json({grados:rows});
+  } catch(error) {
+    console.error('Error consultando grados:',error);
+    res.status(500).json({message:'No fue posible consultar los grados.'});
+  }
+});
+integrantesFamiliaRouter.post('/catalogos/grados-estudio',...gestion,async(req,res)=>{
+  const nombre=typeof req.body?.nombre==='string'?req.body.nombre.trim():'';
+  const nivel=typeof req.body?.nivel==='string'?req.body.nivel.trim():'';
+  if(!nombre || nombre.length>100 || !nivel || nivel.length>60){
+    res.status(400).json({message:'Ingresá nombre y nivel válidos.'});return;
+  }
+  try {
+    if (!databasePool) {res.status(503).json({message:'Base no disponible.'});return;}
+    const {rows}=await databasePool.query(
+      `INSERT INTO grados_estudio(organizacion_id,nombre,nivel) VALUES($1,$2,$3)
+       ON CONFLICT DO NOTHING RETURNING id,nombre,nivel`,
+       [req.auth!.organizacionId,nombre,nivel]);
+    if(!rows.length){res.status(409).json({message:'Ese grado ya está registrado.'});return;}
+    res.status(201).json({grado:rows[0]});
+  }catch(error){
+    console.error('Error creando grado de estudio:',error);
+    res.status(500).json({message:'No fue posible crear el grado.'});
+  }
+});
+
+function datosIntegrante(v: Record<string,unknown>) {
+  const obligatorio=(clave:string)=>typeof v[clave]==='string'?(v[clave] as string).trim():'';
+  const opcional=(clave:string)=>v[clave]==null?'':obligatorio(clave);
+  return {
+    primerNombre:obligatorio('primerNombre'),segundoNombre:opcional('segundoNombre'),
+    primerApellido:obligatorio('primerApellido'),segundoApellido:opcional('segundoApellido'),
+    ocupacion:opcional('ocupacion'),parentescoId:v.parentescoId||null,
+    fechaNacimiento:v.fechaNacimiento||null,esJefeHogar:v.esJefeHogar,
+    asisteEscuela:v.asisteEscuela??null,gradoEstudioId:v.gradoEstudioId||null,
+  };
+}
+function validarIntegrante(d:ReturnType<typeof datosIntegrante>) {
+  return !!d.primerNombre && !!d.primerApellido &&
+    [d.primerNombre,d.primerApellido,d.segundoNombre,d.segundoApellido].every(x=>x.length<=100) &&
+    d.ocupacion.length<=120 &&
+    (d.parentescoId===null || esUuid(d.parentescoId)) &&
+    (d.gradoEstudioId===null || esUuid(d.gradoEstudioId)) &&
+    (d.fechaNacimiento===null || (typeof d.fechaNacimiento==='string' && /^\\d{4}-\\d{2}-\\d{2}$/.test(d.fechaNacimiento))) &&
+    typeof d.esJefeHogar==='boolean' &&
+    (d.asisteEscuela===null || typeof d.asisteEscuela==='boolean') &&
+    (d.asisteEscuela!==false || d.gradoEstudioId===null);
+}
+
 integrantesFamiliaRouter.post('/:familiaId/integrantes',...gestion, async(req,res)=>{
   const f=req.params.familiaId;
   const v=req.body||{};
-  const nombre=typeof v.primerNombre==='string'?v.primerNombre.trim():'';
-  const apellido=typeof v.primerApellido==='string'?v.primerApellido.trim():'';
-  const segundoNombre=typeof v.segundoNombre==='string'?v.segundoNombre.trim():'';
-  const segundoApellido=typeof v.segundoApellido==='string'?v.segundoApellido.trim():'';
-  const ocupacion=typeof v.ocupacion==='string'?v.ocupacion.trim():'';
-  const parentescoId=v.parentescoId||null;
-  const fecha=v.fechaNacimiento||null;
-  if(!esUuid(f)||!nombre||!apellido||nombre.length>100||apellido.length>100||
-     segundoNombre.length>100||segundoApellido.length>100||ocupacion.length>120||
-     (parentescoId!==null&&!esUuid(parentescoId))||
-     (fecha!==null&&(typeof fecha!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(fecha)))||
-     typeof v.esJefeHogar!=='boolean') {
-    res.status(400).json({message:'Revisá nombre, apellido, fecha y parentesco.'});return;
+  const d=datosIntegrante(v);
+  if(!esUuid(f)||!validarIntegrante(d)){
+    res.status(400).json({message:'Revisá los datos y escolaridad del integrante.'});return;
   }
   if(!databasePool){res.status(503).json({message:'Base no disponible.'});return;}
   const cliente=await databasePool.connect();
@@ -76,24 +125,30 @@ integrantesFamiliaRouter.post('/:familiaId/integrantes',...gestion, async(req,re
       [f,req.auth!.organizacionId],
     );
     if(!familia.rows.length){await cliente.query('ROLLBACK');res.status(404).json({message:'Familia no disponible.'});return;}
-    if(parentescoId){
-      const par=await cliente.query('SELECT 1 FROM parentescos WHERE id=$1 AND activo',[parentescoId]);
+    if(d.parentescoId){
+      const par=await cliente.query('SELECT 1 FROM parentescos WHERE id=$1 AND activo',[d.parentescoId]);
       if(!par.rows.length){await cliente.query('ROLLBACK');res.status(400).json({message:'Parentesco inválido.'});return;}
+    }
+    if(d.gradoEstudioId){
+      const grado=await cliente.query(
+        'SELECT 1 FROM grados_estudio WHERE id=$1 AND activo AND (organizacion_id IS NULL OR organizacion_id=$2)',
+        [d.gradoEstudioId,req.auth!.organizacionId]);
+      if(!grado.rows.length){await cliente.query('ROLLBACK');res.status(400).json({message:'Grado no disponible.'});return;}
     }
     const persona=await cliente.query(
       `INSERT INTO personas (primer_nombre,segundo_nombre,primer_apellido,segundo_apellido,
                              fecha_nacimiento,ocupacion)
        VALUES($1,NULLIF($2,''),$3,NULLIF($4,''),$5::date,NULLIF($6,''))
        RETURNING id`,
-      [nombre,segundoNombre,apellido,segundoApellido,fecha,ocupacion],
+      [d.primerNombre,d.segundoNombre,d.primerApellido,d.segundoApellido,d.fechaNacimiento,d.ocupacion],
     );
-    if(v.esJefeHogar){
+    if(d.esJefeHogar){
       await cliente.query('UPDATE miembros_familia SET es_jefe_hogar=FALSE,actualizado_en=NOW() WHERE familia_id=$1',[f]);
     }
     const {rows}=await cliente.query(
-      `INSERT INTO miembros_familia(familia_id,persona_id,parentesco_id,es_jefe_hogar)
-       VALUES($1,$2,$3,$4) RETURNING id`,
-      [f,persona.rows[0].id,parentescoId,v.esJefeHogar],
+      `INSERT INTO miembros_familia(familia_id,persona_id,parentesco_id,es_jefe_hogar,asiste_escuela,grado_estudio_id)
+       VALUES($1,$2,$3,$4,$5,$6) RETURNING id`,
+      [f,persona.rows[0].id,d.parentescoId,d.esJefeHogar,d.asisteEscuela,d.gradoEstudioId],
     );
     await cliente.query('COMMIT');
     res.status(201).json({id:rows[0].id});
@@ -104,6 +159,56 @@ integrantesFamiliaRouter.post('/:familiaId/integrantes',...gestion, async(req,re
   }finally{cliente.release();}
 });
 
+
+integrantesFamiliaRouter.put('/:familiaId/integrantes/:miembroId',...gestion,async(req,res)=>{
+  const {familiaId,miembroId}=req.params;
+  const d=datosIntegrante(req.body||{});
+  if(!esUuid(familiaId)||!esUuid(miembroId)||!validarIntegrante(d)){
+    res.status(400).json({message:'Datos del integrante inválidos.'});return;
+  }
+  if(!databasePool){res.status(503).json({message:'Base no disponible.'});return;}
+  const cliente=await databasePool.connect();
+  try{
+    await cliente.query('BEGIN');
+    const {rows:miembros}=await cliente.query(
+      `SELECT mf.persona_id AS "personaId" FROM miembros_familia mf
+       JOIN familias f ON f.id=mf.familia_id AND f.activo
+       JOIN comunidades c ON c.id=f.comunidad_id AND c.organizacion_id=$3
+       WHERE mf.id=$1 AND mf.familia_id=$2 AND mf.fecha_salida IS NULL
+       FOR UPDATE OF mf`,[miembroId,familiaId,req.auth!.organizacionId]);
+    if(!miembros.length){await cliente.query('ROLLBACK');res.status(404).json({message:'Integrante activo no encontrado.'});return;}
+    if(d.parentescoId){
+      const {rowCount}=await cliente.query('SELECT id FROM parentescos WHERE id=$1 AND activo',[d.parentescoId]);
+      if(!rowCount){await cliente.query('ROLLBACK');res.status(400).json({message:'Parentesco inválido.'});return;}
+    }
+    if(d.gradoEstudioId){
+      const {rowCount}=await cliente.query(
+        'SELECT id FROM grados_estudio WHERE id=$1 AND activo AND (organizacion_id IS NULL OR organizacion_id=$2)',
+        [d.gradoEstudioId,req.auth!.organizacionId]);
+      if(!rowCount){await cliente.query('ROLLBACK');res.status(400).json({message:'Grado inválido.'});return;}
+    }
+    const {rowCount}=await cliente.query(
+      `UPDATE personas SET primer_nombre=$2,segundo_nombre=NULLIF($3,''),primer_apellido=$4,
+         segundo_apellido=NULLIF($5,''),fecha_nacimiento=$6::date,ocupacion=NULLIF($7,''),actualizado_en=NOW()
+       WHERE id=$1`,
+      [miembros[0].personaId,d.primerNombre,d.segundoNombre,d.primerApellido,d.segundoApellido,d.fechaNacimiento,d.ocupacion]);
+    if(!rowCount){throw new Error('La persona no está disponible.');}
+    if(d.esJefeHogar){
+      await cliente.query('UPDATE miembros_familia SET es_jefe_hogar=FALSE,actualizado_en=NOW() WHERE familia_id=$1',[familiaId]);
+    }
+    await cliente.query(
+      `UPDATE miembros_familia SET parentesco_id=$2,es_jefe_hogar=$3,
+        asiste_escuela=$4,grado_estudio_id=$5,actualizado_en=NOW() WHERE id=$1`,
+      [miembroId,d.parentescoId,d.esJefeHogar,d.asisteEscuela,d.gradoEstudioId]);
+    await cliente.query('COMMIT');res.sendStatus(204);
+  }catch(error){
+    await cliente.query('ROLLBACK');
+    console.error('Error actualizando integrante:',error);
+    res.status(500).json({message:'No fue posible actualizar el integrante.'});
+  }finally{cliente.release();}
+});
+
+// Baja lógica: preserva el historial del hogar y nunca elimina físicamente a la persona.
 integrantesFamiliaRouter.post('/:familiaId/integrantes/:miembroId/salida',...gestion,async(req,res)=>{
   const {familiaId,miembroId}=req.params;
   if(!esUuid(familiaId)||!esUuid(miembroId)){res.status(400).json({message:'Integrante inválido.'});return;}
