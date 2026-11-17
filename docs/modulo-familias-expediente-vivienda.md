@@ -67,3 +67,16 @@ No trasladar datos de Development a Production ni marcar documentos como aprobad
 - La lectura es en la consulta (no hay WebSocket ni notificaciones en tiempo real); refrescar el mapa obtiene los datos actualizados de Neon Development.
 - **Pruebas pendientes**: 2 cuentas DONANTE con brigadas diferentes que financian el mismo proyecto; una familia asignada a cada una; comprobar que ambas ven solo sus conteos y no acceden a PDF, identidad ni otras brigadas.
 - Migración 027 aplicada a Development; Production permanece sin cambios.
+
+
+## Flujo unificado de Asignación de Viviendas (029)
+- Desde **Familias → Asignación de viviendas**, el operador selecciona familia, brigada, cuenta DONANTE, proyecto existente de tipo vivienda o nombre/fecha de uno nuevo, y datos mínimos de evaluación.
+- Una sola transacción crea o vincula el proyecto a la comunidad de la familia; registra el perfil `PENDIENTE`, vincula la brigada en `brigadas_donantes_proyectos` y `asignaciones_familias_brigadas`, vincula la ficha donante y asigna permisos de proyectos a las cuentas de la brigada.
+- El catálogo de cuentas se limita a usuarios activos con rol DONANTE de la misma organización. Los proyectos vinculables deben ser de la misma comunidad, del tipo vivienda y no estar cancelados.
+- La tabla `cuentas_brigadas_donantes` reemplaza la coincidencia de correos para el resumen de impacto familiar de la brigada; las cuentas ya relacionadas a ella consultan todos sus proyectos, incluidos los históricos. El CRUD completo de autorizaciones de cuenta–brigada y revocaciones aún necesita una pantalla administrativa específica.
+- No se crea un segundo perfil para la misma familia y proyecto, ni se sobreescribe una evaluación anterior; ante conflictos se revierte la operación.
+- La relación con la brigada no cambia los estados `SELECCIONADO` ni `FINALIZADO`. La aprobación documental y constancia de entrega siguen siendo obligatorias antes de esos cambios.
+- Portal DONANTE: el listado y mapa siguen leyendo `proyectos_donantes`. El resumen de viviendas asignadas a brigadas verifica `cuentas_brigadas_donantes` sin incluir identidad familiar ni PDF.
+- Los datos se actualizan al consultar/refrescar la pantalla, no mediante WebSocket.
+- Migración 029 aplicada solamente a Neon Development; no aplicar a Production sin comprobaciones de seguridad.
+- Pruebas pendientes: 2 brigadas de una misma organización con 2 cuentas donantes; permisos cruzados; familia de otra organización; proyecto de otra comunidad; múltiples cuentas por brigada; colisión familia-proyecto; rollback por conflicto; fechas inválidas; no exposición de documentos.
