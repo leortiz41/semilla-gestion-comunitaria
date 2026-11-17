@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import FlujoPagos from './FlujoPagos';
+import GestorContratos from './GestorContratos';
 import '../../estilos/modulos/paginaModuloBase.css';
 import '../../estilos/modulos/pagos/pagos.css';
 const API=import.meta.env.VITE_API_URL||'http://localhost:3000/api';
@@ -15,7 +16,7 @@ async function api<T>(token:string,ruta:string,opciones:RequestInit={}):Promise<
 }
 const dinero=(n:number)=>new Intl.NumberFormat('es-HN',{style:'currency',currency:'HNL'}).format(n);
 export default function PaginaPagos({token,puedeGestionar}:{token:string;puedeGestionar:boolean}){
- const [vista,setVista]=useState<'pagos'|'proveedores'>('pagos');
+ const [vista,setVista]=useState<'pagos'|'proveedores'|'contratos'>('pagos');
  const [proveedores,setProveedores]=useState<Proveedor[]>([]);
  const [tipos,setTipos]=useState<TipoProveedor[]>([]);
  const [nuevoTipo,setNuevoTipo]=useState(false);
@@ -73,6 +74,7 @@ export default function PaginaPagos({token,puedeGestionar}:{token:string;puedeGe
   <div className="pagos-pestanas" role="group" aria-label="Vistas financieras">
    <button type="button" aria-pressed={vista==='pagos'} onClick={()=>setVista('pagos')}>Pagos y solicitudes</button>
    <button type="button" aria-pressed={vista==='proveedores'} onClick={()=>setVista('proveedores')}>Proveedores y contratistas</button>
+   <button type="button" aria-pressed={vista==='contratos'} onClick={()=>setVista('contratos')}>Gestor de contratos</button>
   </div>
   {error&&<p className="pagos-error" role="alert">{error}</p>}
   {mensaje&&<p className="pagos-aviso" role="status">{mensaje}</p>}
@@ -86,6 +88,7 @@ export default function PaginaPagos({token,puedeGestionar}:{token:string;puedeGe
    <FlujoPagos token={token} puedeGestionar={puedeGestionar} onActualizar={()=>setVersion(n=>n+1)}/>
 
   </>}
+  {vista==='contratos'&&<GestorContratos token={token} puedeGestionar={puedeGestionar}/>}
   {vista==='proveedores'&&<>
    <div className="pagos-herramientas">
     <label htmlFor="pagos-buscar-proveedor">Buscar proveedor o contratista <input id="pagos-buscar-proveedor" type="search" value={filtro} onChange={e=>setFiltro(e.target.value)} placeholder="Nombre o especialidad"/></label>
