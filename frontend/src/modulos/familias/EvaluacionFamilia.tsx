@@ -215,12 +215,9 @@ export default function EvaluacionFamilia({
                 {p.estado === 'PENDIENTE' && (
                   <button type="button" disabled={guardando}
                     onClick={() => void revisar(p, 'EVALUADO')}>Marcar evaluado</button>)}
-                {p.estado === 'EVALUADO' && (
-                  <button type="button" disabled={guardando}
-                    onClick={() => void revisar(p, 'SELECCIONADO')}>Seleccionar familia</button>)}
-                {p.estado === 'SELECCIONADO' && (
-                  <button type="button" disabled={guardando}
-                    onClick={() => void revisar(p, 'FINALIZADO')}>Registrar expediente finalizado</button>)}
+                {p.estado === 'EVALUADO' && <p className="familias-nota">
+                  La selección para recibir vivienda quedará disponible una vez verificados los PDF obligatorios.
+                </p>}
                 {['PENDIENTE','EVALUADO'].includes(p.estado) && (
                   <>
                     <input value={motivos[p.id] ?? ''} maxLength={2000}
