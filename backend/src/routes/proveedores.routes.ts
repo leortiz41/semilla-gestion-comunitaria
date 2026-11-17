@@ -107,7 +107,7 @@ proveedoresRouter.post('/',...modificar,async(req,res)=>{
 proveedoresRouter.put('/:id',...modificar,async(req,res)=>{
   if(!esUuid(req.params.id)){res.status(400).json({message:'Identificador no válido.'});return;}
   const d=validar(req.body),activo=req.body?.activo;
-  if(!d.nombre||!d.tipo||!tipos.includes(d.tipo)||typeof activo!=='boolean'||
+  if(!d.nombre||!d.tipo||!(await tipoAutorizado(d.tipo,req.auth!.organizacionId))||typeof activo!=='boolean'||
      [d.categoria,d.rtn,d.propietario,d.direccion,d.telefono,d.email,d.observaciones].some(x=>x===null)||
      (d.email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email))){
     res.status(400).json({message:'Datos del proveedor no válidos.'});return;
