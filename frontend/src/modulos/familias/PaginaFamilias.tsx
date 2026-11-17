@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import EvaluacionFamilia from './EvaluacionFamilia';
 import '../../estilos/modulos/paginaModuloBase.css';
 import '../../estilos/modulos/familias/familias.css';
 
@@ -59,6 +60,7 @@ export default function PaginaFamilias({
   const [formulario, setFormulario] = useState<DatosFamilia | null>(null);
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
+  const [familiaPerfil, setFamiliaPerfil] = useState<Familia | null>(null);
   const [recarga, setRecarga] = useState(0);
 
   useEffect(() => {
@@ -182,13 +184,19 @@ export default function PaginaFamilias({
               <div><dt>Evaluaciones</dt><dd>{familia.evaluacionesRegistradas}</dd></div>
             </dl>
             <div className="familias-acciones">
+              <button type="button" onClick={() => setFamiliaPerfil(familia)}>Ver expediente y evaluación</button>
               {puedeGestionar && <button type="button" onClick={() => abrir(familia)}>Editar datos generales</button>}
-              <span>Documentos y evaluación: siguiente etapa del expediente</span>
             </div>
           </article>
         ))}
       </div>
 
+      {familiaPerfil && (
+        <EvaluacionFamilia key={familiaPerfil.id} token={token}
+          familiaId={familiaPerfil.id} comunidadId={familiaPerfil.comunidadId}
+          nombreFamilia={familiaPerfil.nombreReferencia} puedeGestionar={puedeGestionar}
+          onCerrar={() => setFamiliaPerfil(null)} onActualizacion={() => setRecarga((n) => n + 1)} />
+      )}
       {formulario && puedeGestionar && (
         <div className="familias-modal-fondo" role="presentation"
           onMouseDown={(e) => { if (e.target === e.currentTarget && !guardando) setFormulario(null); }}>
