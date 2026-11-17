@@ -278,7 +278,8 @@ function App() {
                 puedeGestionar={usuario.permisos.includes('evidencias.gestionar')} />
             ) : null;
       case 'pagos':
-        return <PaginaPagos />;
+        return !esDonante && usuario && accessToken && usuario.permisos.includes('pagos.ver')
+          ? <PaginaPagos token={accessToken} puedeGestionar={usuario.permisos.includes('pagos.gestionar') && usuario.roles.some(r=>r==='ADMINISTRADOR'||r==='COORDINADOR')} /> : null;
       case 'donantes':
         return puedeGestionarDonantes && accessToken ? <PaginaDonantes token={accessToken} /> : null;
       case 'plataforma':
