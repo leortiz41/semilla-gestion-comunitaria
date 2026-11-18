@@ -118,7 +118,7 @@ export default function PaginaConfiguracion({token,onActualizar}:{
      <button type="button" onClick={()=>{
       cambiar('colorPrimario','#2D7545');setDatos(actual=>actual?{...actual,
        colorPrimario:'#2D7545',colorSecundario:'#D98B36',colorFondo:'#F5F8F2'}:actual);
-     }}>Restaurar colores de Semilla</button>
+     }}>Restaurar colores</button>
     </div>}
     {seccion==='bienvenida'&&<div className="config-institucional__panel">
      <h2>Pantalla de bienvenida</h2>
