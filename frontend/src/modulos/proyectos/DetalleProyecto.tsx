@@ -209,7 +209,16 @@ export default function DetalleProyecto({
       setErroresCamposPlan({});
       refrescar();
     } catch (fallo) {
-      setErrorPlanificacion(fallo instanceof Error ? fallo.message : 'No fue posible guardar la planificación.');
+      const detalle = fallo instanceof Error ? fallo.message : 'No fue posible guardar la planificación.';
+      setErrorPlanificacion(detalle);
+      const campo = /presupuesto|saldo disponible|asignaciones/i.test(detalle)
+        ? 'presupuestoEstimado'
+        : /responsable/i.test(detalle) ? 'responsableAsignadoId' : null;
+      if (campo) {
+        setErroresCamposPlan((actual) => ({ ...actual, [campo]: detalle }));
+        const elemento = formulario.elements.namedItem(campo);
+        if (elemento instanceof HTMLElement) elemento.focus();
+      }
     } finally {
       setGuardando(false);
     }
@@ -309,12 +318,15 @@ export default function DetalleProyecto({
                 <small>Especificá una tarea concreta dentro del proyecto.</small>
               </label>
               <label>Responsable asignado
-                <select name="responsableAsignadoId" defaultValue={actividad?.responsableAsignadoId ?? ''}>
+                <select name="responsableAsignadoId" defaultValue={actividad?.responsableAsignadoId ?? ''}
+                  aria-invalid={Boolean(erroresCamposPlan.responsableAsignadoId)}>
                   <option value="">Sin asignar</option>
                   {responsables.map((responsable) => (
                     <option key={responsable.id} value={responsable.id}>{responsable.nombre}</option>
                   ))}
                 </select>
+                {erroresCamposPlan.responsableAsignadoId &&
+                  <small className="actividad-plan-form__campo-error">{erroresCamposPlan.responsableAsignadoId}</small>}
               </label>
               <label>Inicio previsto<input name="fechaInicio" type="date" defaultValue={actividad?.fechaInicio ?? ''} /></label>
               <label>Finalización prevista
