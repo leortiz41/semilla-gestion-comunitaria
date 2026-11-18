@@ -161,7 +161,7 @@ proyectosRouter.post(rutaEvidencias+'/subir',
       res.status(503).json({message:'Almacenamiento de evidencias no disponible.'});return;
     }
     try{
-      const avance=await accesoEvidenciaAvance(proyectoId,actividadId,avanceId,req.auth!.organizacionId);
+      const avance=await accesoEvidenciaAvance(String(proyectoId),String(actividadId),String(avanceId),req.auth!.organizacionId);
       if(!avance){res.status(404).json({message:'Avance no disponible.'});return;}
       if(!['BORRADOR','DEVUELTO'].includes(avance.estado)||avance.responsable!==req.auth!.sub){
         res.status(409).json({message:'Solo el responsable puede subir fotos a un borrador o avance devuelto.'});return;
