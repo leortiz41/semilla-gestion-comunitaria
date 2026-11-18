@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { Router, raw, type RequestHandler } from 'express';
-import { firmarObjetoR2, r2Disponible, verificarObjetoR2, cargarObjetoR2, leerObjetoR2 } from '../services/r2-evidencias.service.js';
+import { firmarObjetoR2, r2Disponible, verificarObjetoR2, cargarObjetoR2, leerObjetoR2, diagnosticarErrorR2 } from '../services/r2-evidencias.service.js';
 import { databasePool } from '../config/database.js';
 import { areasNecesidad } from '../domain/necesidades.js';
 import { esUuid } from '../domain/expediente.js';
@@ -202,8 +202,13 @@ proyectosRouter.post(rutaEvidencias+'/subir',
       }catch(error){await cliente.query('ROLLBACK');throw error;}
       finally{cliente.release();}
     }catch(error){
-      console.error('Error cargando fotografía por proxy R2:',error instanceof Error?error.name:'Error');
-      res.status(502).json({message:'El servidor no pudo guardar la fotografía en R2. Revisá conexión y credenciales R2 del backend.'});
+      const diagnostico=diagnosticarErrorR2(error);
+      console.error('Error cargando fotografía por proxy R2:',diagnostico);
+      res.status(502).json({
+        message:'El servidor no pudo guardar la fotografía en R2.',
+        diagnostico:diagnostico.categoria,
+        codigo:diagnostico.codigo,
+      });
     }
   }
 );
