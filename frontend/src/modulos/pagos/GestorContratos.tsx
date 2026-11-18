@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { JSONContent } from '@tiptap/core';
 import EditorContrato from './EditorContrato';
+import SelectorBuscable from './SelectorBuscable';
 import { completarPlantilla, plantillaMarco, variablesContrato } from './plantillaMarco';
 import '../../estilos/modulos/pagos/gestorContratos.css';
 
@@ -154,18 +155,16 @@ export default function GestorContratos({token,puedeGestionar}:{token:string;pue
       <option value="marco">Prestación de servicios · plantilla inicial</option>
       {plantillas.map(p=><option key={p.id} value={p.id}>{p.nombre}</option>)}
      </select></label>
-     <label>Proyecto<select value={proyectoId} onChange={e=>{
-      setProyectoId(e.target.value);setBeneficiarioId('');
-     }}><option value="">Seleccionar</option>
-      {opciones.proyectos.map(p=><option key={p.id} value={p.id}>{p.nombre}</option>)}</select></label>
+     <SelectorBuscable etiqueta="Proyecto" valor={proyectoId} opciones={opciones.proyectos}
+      requerido={false} alCambiar={id=>{setProyectoId(id);setBeneficiarioId('');}}
+      vacio="No hay proyectos disponibles para la organización."/>
      <label>Tipo de contratación<select value={tipo} onChange={e=>{
       setTipo(e.target.value as 'proveedor'|'personal');setBeneficiarioId('');
      }}><option value="proveedor">Proveedor o contratista</option>
       <option value="personal">Personal contratado para proyecto</option></select></label>
-     <label>Contratista<select value={beneficiarioId} onChange={e=>setBeneficiarioId(e.target.value)}>
-      <option value="">Seleccionar</option>
-      {contratados.map(p=><option key={p.id} value={p.id}>{p.nombre}</option>)}
-     </select></label>
+     <SelectorBuscable etiqueta="Contratista" valor={beneficiarioId}
+      opciones={contratados} requerido={false} alCambiar={setBeneficiarioId}
+      vacio={tipo==='personal'?'No hay personal contratado para el proyecto.':'No hay proveedores disponibles en la organización.'}/>
      {variablesContrato.map(v=><label key={v.clave}>{v.etiqueta}
       <input maxLength={2500} value={valores[v.clave]||''}
        onChange={e=>setValores(a=>({...a,[v.clave]:e.target.value}))}/>
