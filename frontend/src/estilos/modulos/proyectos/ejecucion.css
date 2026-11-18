@@ -34,3 +34,76 @@
 .ejecucion-progreso__actividad-encabezado{display:flex;justify-content:space-between;gap:.7rem;align-items:center;color:#356340;font-size:.9rem}
 .ejecucion-progreso__actividad-encabezado strong{font-size:1.12rem;font-variant-numeric:tabular-nums}
 @media(max-width:650px){.ejecucion-progreso__valor{font-size:1.8rem}.ejecucion-progreso__pie{gap:.35rem 1rem}}
+
+
+/* UX móvil: el historial ocupa la altura necesaria, sin una segunda barra de scroll. */
+@media (max-width: 650px) {
+  .proyectos-espacio .proyecto-detalle,
+  .proyectos-espacio .proyecto-detalle__panel,
+  .proyectos-espacio .proyecto-detalle__lista--ejecucion,
+  .proyectos-espacio .actividad-detalle,
+  .proyectos-espacio .actividad-avances,
+  .proyectos-espacio .actividad-avances__lista,
+  .proyectos-espacio .actividad-avance {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .proyectos-espacio .proyecto-detalle__panel {
+    padding: 0;
+  }
+
+  .proyectos-espacio .proyecto-detalle__lista--ejecucion > .actividad-detalle {
+    padding: .7rem;
+    gap: .65rem;
+  }
+
+  .proyectos-espacio .actividad-avances {
+    padding: .55rem;
+    gap: .65rem;
+    overflow: visible;
+  }
+
+  .proyectos-espacio .actividad-avances__lista {
+    max-height: none;
+    overflow: visible;
+    padding: 0;
+    gap: .75rem;
+  }
+
+  .proyectos-espacio .actividad-avances__lista > .actividad-avance {
+    padding: .7rem;
+    display: grid;
+    gap: .55rem;
+    overflow: visible;
+    min-width: 0;
+  }
+
+  .proyectos-espacio .actividad-avances__detalle {
+    flex-wrap: wrap;
+    gap: .35rem;
+  }
+
+  .proyectos-espacio .actividad-avance__indicadores {
+    gap: .35rem;
+    margin: 0;
+  }
+
+  .proyectos-espacio .actividad-avance__acciones {
+    justify-content: stretch;
+  }
+
+  .proyectos-espacio .actividad-avance__acciones > button {
+    flex: 1 1 100%;
+    min-height: 44px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .proyectos-espacio .ejecucion-progreso__actividad {
+    margin: .5rem 0 .75rem;
+    padding: .7rem;
+  }
+}
