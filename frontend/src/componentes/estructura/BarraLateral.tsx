@@ -1,4 +1,5 @@
 import logoSemilla from '../../assets/logo-semilla-app.png';
+import type { ConfiguracionInstitucional } from '../../modulos/configuracion/configuracionInstitucional';
 import type { SeccionBarraLateral, SubseccionComunidades } from '../../tipos/navegacion';
 
 interface OpcionNavegacion {
@@ -11,6 +12,7 @@ interface PropiedadesBarraLateral {
   puedeGestionarDonantes: boolean;
   esSuperadministrador: boolean;
   permisos: string[];
+  configuracion: ConfiguracionInstitucional | null;
   seccionActiva?: SeccionBarraLateral;
   subseccionComunidades: SubseccionComunidades;
   alCambiarSeccion: (seccion: SeccionBarraLateral) => void;
@@ -29,6 +31,7 @@ const opcionesNavegacion: OpcionNavegacion[] = [
   { clave: 'usuarios', etiqueta: 'Usuarios' },
   { clave: 'plataforma', etiqueta: 'Superadministración' },
   { clave: 'auditoria', etiqueta: 'Auditoría' },
+  { clave: 'configuracion', etiqueta: 'Configuración' },
 ];
 
 function BarraLateral({
@@ -36,6 +39,7 @@ function BarraLateral({
   puedeGestionarDonantes,
   esSuperadministrador,
   permisos,
+  configuracion,
   seccionActiva,
   subseccionComunidades,
   alCambiarSeccion,
@@ -51,12 +55,12 @@ function BarraLateral({
       <div className="barra-lateral__marca">
         <img
           className="barra-lateral__simbolo"
-          src={logoSemilla}
-          alt="Logo de Semilla"
+          src={configuracion?.logo||logoSemilla}
+          alt="Logo institucional"
         />
         <div>
-          <strong>Semilla</strong>
-          <span>Gestión comunitaria</span>
+          <strong>{configuracion?.nombrePublico||'Semilla'}</strong>
+          <span>{configuracion?.lema||'Gestión comunitaria'}</span>
         </div>
       </div>
 
@@ -75,6 +79,7 @@ function BarraLateral({
                 (clave === 'evidencias' && (permisos.includes('evidencias.ver') || permisos.includes('evidencias.gestionar'))) ||
                 (clave === 'pagos' && permisos.includes('pagos.ver')) ||
                 (clave === 'usuarios' && permisos.includes('usuarios.ver')) ||
+                (clave === 'configuracion' && permisos.includes('usuarios.gestionar') && permisos.includes('usuarios.ver')) ||
                 (clave === 'auditoria' && permisos.includes('auditoria.ver')) ||
                 clave === 'donantes'
               )
