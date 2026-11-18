@@ -50,3 +50,12 @@ El frontend anterior de Pagos era una pantalla informativa. En Neon Development 
 3. El registro de personal contratado aún no incorpora documentos, reutilización de persona existente, fechas, historial de cambios o verificación de duplicados entre personas.
 4. Falta cobertura automatizada específica de pagos para importe válido, aprobación presupuestaria, acceso cruzado entre organizaciones, concurrencia y doble confirmación. Las pruebas generales de HU12 continúan fallando con 503 donde se esperaba 403.
 5. No hay pagos bancarios integrados, transferencia de dinero ni conciliación externa; únicamente registros administrativos internos. No mezclar información de Development con Production.
+
+## Bandeja de aprobaciones (incremento siguiente)
+- **Pagos → Bandeja de aprobaciones** separa las solicitudes del formulario de creación.
+- Vistas: Pendientes (`SOLICITADA`), Aprobadas (`APROBADA`), Rechazadas (`RECHAZADA`) e Historial (incluye `PAGADA`/`CANCELADA`).
+- Cada solicitud muestra proyecto, concepto, beneficiario, monto, solicitante, fecha, revisor y motivo cuando aplica.
+- La revisión usa el endpoint existente `POST /api/pagos/solicitudes/:id/revisar`; exige permisos `pagos.gestionar`, otro usuario distinto del solicitante, estado pendiente y presupuesto suficiente.
+- El rechazo requiere motivo, la respuesta se muestra al usuario, la bandeja se refresca tras la operación y la auditoría se conserva en el backend.
+- La bandeja no ejecuta transferencias ni confirma abonos. Los formularios de contratos y solicitudes siguen en la pestaña Pagos y solicitudes.
+- Pendiente antes de main: probar solicitudes reales de dos cuentas administrativas en Development, caso de presupuesto insuficiente, acceso entre organizaciones, auditoría y fallo histórico de HU12; revisar paginación si hay más de 250 solicitudes por organización.
