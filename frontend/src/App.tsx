@@ -331,6 +331,7 @@ function App() {
 
         return (
           <PaginaPerfilSeguridad
+            token={accessToken||''}
             usuario={usuario}
             mensaje={mensaje}
             error={error}
