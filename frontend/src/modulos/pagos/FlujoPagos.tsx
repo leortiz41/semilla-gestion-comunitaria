@@ -30,7 +30,6 @@ export default function FlujoPagos({token,puedeGestionar,onActualizar}:{
  const [contrato,setContrato]=useState({proyectoId:'',primerNombre:'',primerApellido:'',cargo:'',tipoContrato:'Por obra',valorContrato:''});
  const [solicitud,setSolicitud]=useState({proyectoId:'',destinatarioTipo:'PROVEEDOR',destinatarioId:'',concepto:'',monto:''});
  const [abono,setAbono]=useState({solicitudId:'',monto:'',metodo:'TRANSFERENCIA',referencia:''});
- const [motivo,setMotivo]=useState<Record<string,string>>({});
  useEffect(()=>{
   let vigente=true;setCargando(true);
   Promise.all([api<Opciones>(token,'/opciones'),api<Resumen>(token,'/resumen')])
@@ -119,20 +118,6 @@ export default function FlujoPagos({token,puedeGestionar,onActualizar}:{
    </form>}
   </div>}
   {resumen&&<>
-   <h3>Solicitudes y autorizaciones</h3>
-   <div className="pagos-listado">{resumen.solicitudes.map(s=><article key={s.id}>
-    <strong>{s.concepto}</strong><span>{s.proyecto} · {s.proveedor||s.contratado||'Beneficiario'}</span>
-    <span>{dinero(s.monto)} · {s.estado}</span>
-    {puedeGestionar&&s.estado==='SOLICITADA'&&<>
-     <label>Motivo de revisión (obligatorio si se rechaza)
-      <input maxLength={2000} value={motivo[s.id]||''} onChange={e=>setMotivo({...motivo,[s.id]:e.target.value})}/></label>
-     <div className="pagos-flujo__acciones">
-      <button type="button" disabled={guardando} onClick={()=>void ejecutar(`/solicitudes/${s.id}/revisar`,{estado:'APROBADA',motivo:motivo[s.id]||''},'Solicitud aprobada.')}>Aprobar</button>
-      <button type="button" disabled={guardando||!motivo[s.id]?.trim()} onClick={()=>void ejecutar(`/solicitudes/${s.id}/revisar`,{estado:'RECHAZADA',motivo:motivo[s.id]},'Solicitud rechazada.')}>Rechazar</button>
-     </div>
-    </>}
-   </article>)}
-   {!resumen.solicitudes.length&&<p>No existen solicitudes pendientes o anteriores.</p>}</div>
    <h3>Abonos registrados y confirmados</h3>
    <div className="pagos-listado">{resumen.pagos.map(p=><article key={p.id}>
     <strong>{dinero(p.monto)}</strong><span>{p.proyecto} · {p.fecha}</span><span>{p.estado}</span>
