@@ -20,14 +20,30 @@ export async function authenticateAccessToken(req: Request, res: Response, next:
   }
   try {
     const resultado = await databasePool.query(
-      `SELECT 1 FROM usuarios u JOIN organizaciones o ON o.id=u.organizacion_id
-        WHERE u.id=$1 AND u.organizacion_id=$2 AND u.activo AND o.activo LIMIT 1`,
+      `SELECT
+         ARRAY(SELECT DISTINCT r.nombre FROM usuarios_roles ur
+           JOIN roles r ON r.id=ur.rol_id AND r.activo
+           WHERE ur.usuario_id=u.id ORDER BY r.nombre) AS roles,
+         ARRAY(SELECT DISTINCT p.codigo FROM usuarios_roles ur
+           JOIN roles r ON r.id=ur.rol_id AND r.activo
+           JOIN roles_permisos rp ON rp.rol_id=r.id
+           JOIN permisos p ON p.id=rp.permiso_id
+           WHERE ur.usuario_id=u.id AND NOT EXISTS (
+             SELECT 1 FROM usuarios_permisos_restringidos restr
+             WHERE restr.organizacion_id=u.organizacion_id
+               AND restr.usuario_id=u.id AND restr.permiso_id=p.id
+           ) ORDER BY p.codigo) AS permisos
+         FROM usuarios u JOIN organizaciones o ON o.id=u.organizacion_id
+         WHERE u.id=$1 AND u.organizacion_id=$2 AND u.activo AND o.activo LIMIT 1`,
       [acceso.sub, acceso.organizacionId],
     );
     if (!resultado.rows.length) {
       res.status(403).json({ message: 'La cuenta o su organización se encuentra desactivada.' }); return;
     }
-    req.auth = { ...acceso, ...limitarAccesoDonante(acceso.roles, acceso.permisos) };
+    const actual=resultado.rows[0] as {roles:string[];permisos:string[]};
+    // En cada petición se recalculan permisos efectivos: revocaciones y cambios
+    // de roles surten efecto inmediatamente, aunque el JWT anterior siga vigente.
+    req.auth = { ...acceso, ...limitarAccesoDonante(actual.roles,actual.permisos) };
     next();
   } catch (error) {
     console.error('No se pudo verificar el estado de la sesión:', error);
