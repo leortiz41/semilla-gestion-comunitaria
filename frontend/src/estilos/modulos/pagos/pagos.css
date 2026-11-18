@@ -56,3 +56,15 @@
 .pagos-bandeja__acciones button{padding:.7rem .95rem;background:#2b7544;border:1px solid #2b7544;color:#fff;border-radius:.6rem;font:inherit;cursor:pointer}
 .pagos-bandeja__acciones button+button{background:#fff;color:#8c4332;border-color:#e2bbb0}
 .pagos-bandeja__acciones button:disabled{opacity:.55;cursor:not-allowed}
+
+/* Búsqueda accesible en selectores extensos */
+.pagos-selector-buscable{display:grid;gap:.4rem;align-content:start;min-width:0}
+.pagos-selector-buscable>label{font-size:.9rem;font-weight:650;color:#375d41;cursor:pointer}
+.pagos-selector-buscable>input,.pagos-selector-buscable>select{
+ width:100%;min-width:0;box-sizing:border-box;padding:.75rem;
+ border:1px solid #c9dec7;border-radius:.6rem;background:#fff;color:#284932;font:inherit
+}
+.pagos-selector-buscable>input:focus-visible,.pagos-selector-buscable>select:focus-visible{
+ outline:2px solid #388450;outline-offset:2px
+}
+.pagos-selector-buscable__vacio{color:#9b5731;font-size:.8rem;line-height:1.5}
