@@ -4,7 +4,7 @@ import '../../estilos/modulos/matrizAccesos.css';
 const API=import.meta.env.VITE_API_URL||'http://localhost:3000/api';
 type Cuenta={id:string;email:string;activo:boolean;debeCambiarContrasena:boolean;roles:string[];permisosBase:string[];permisosRestringidos:string[]};
 type Permiso={codigo:string;modulo:string;descripcion:string|null};
-type Rol={nombre:string;descripcion:string|null;activo:boolean;permisos:string[]};
+type Rol={nombre:string;descripcion:string|null;activo:boolean;permisos:string[];permisosRestringidos:string[]};
 type Configuracion={cuentas:Cuenta[];permisos:Permiso[];roles:Rol[];yo:string};
 async function api<T>(token:string,ruta:string,opciones:RequestInit={}):Promise<T>{
  const r=await fetch(API+'/usuarios/administracion'+ruta,{...opciones,cache:'no-store',headers:{
@@ -29,6 +29,8 @@ export default function PanelMatrizAccesos({token}:{token:string}){
  const [busqueda,setBusqueda]=useState('');
  const [filtro,setFiltro]=useState<'todos'|'activos'|'inactivos'>('todos');
  const [vista,setVista]=useState<'permisos'|'roles'>('permisos');
+ const [perfilElegido,setPerfilElegido]=useState('');
+ const [permisosPerfil,setPermisosPerfil]=useState<string[]>([]);
  const [habilitados,setHabilitados]=useState<string[]>([]);
  const [error,setError]=useState('');
  const [mensaje,setMensaje]=useState('');
@@ -46,6 +48,7 @@ export default function PanelMatrizAccesos({token}:{token:string}){
   (filtro==='todos'||(filtro==='activos'?c.activo:!c.activo))
  )||[],[config,busqueda,filtro]);
  const cuenta=config?.cuentas.find(c=>c.id===seleccion);
+ const perfilActual=config?.roles.find(r=>r.nombre===perfilElegido);
  const permisosCuenta=useMemo(()=>config?.permisos.filter(p=>cuenta?.permisosBase.includes(p.codigo))||[],[config,cuenta]);
  const grupos=useMemo(()=>{
   const mapa=new Map<string,Permiso[]>();
@@ -55,6 +58,24 @@ export default function PanelMatrizAccesos({token}:{token:string}){
  },[permisosCuenta]);
  function abrir(c:Cuenta){setSeleccion(c.id);setHabilitados(c.permisosBase.filter(p=>!c.permisosRestringidos.includes(p)));setVista('permisos');setError('');setMensaje('');}
  function alternar(codigo:string){setHabilitados(antes=>antes.includes(codigo)?antes.filter(p=>p!==codigo):[...antes,codigo]);}
+ function editarPerfil(rol:Rol){
+  setPerfilElegido(rol.nombre);
+  setPermisosPerfil(rol.permisos.filter(p=>!rol.permisosRestringidos.includes(p)));
+  setError('');setMensaje('');
+ }
+ async function guardarPerfil(){
+  if(!perfilActual||perfilActual.nombre==='ADMINISTRADOR'||ocupado)return;
+  if(!window.confirm('¿Actualizar permisos del perfil '+perfilActual.nombre+' para todos sus usuarios en esta organización?'))return;
+  setOcupado(true);setError('');setMensaje('');
+  try{
+   await api(token,'/roles/'+encodeURIComponent(perfilActual.nombre)+'/permisos',{
+    method:'PUT',body:JSON.stringify({permisos:permisosPerfil}),
+   });
+   setMensaje('Política del perfil actualizada para esta organización. Los controles del backend ya respetan el cambio.');
+   setPerfilElegido('');setSeleccion('');setRecarga(n=>n+1);
+  }catch(e){setError(e instanceof Error?e.message:'No se pudo actualizar el perfil.');}
+  finally{setOcupado(false);}
+ }
  const puedeEditar=Boolean(cuenta?.activo&&!cuenta.roles.some(r=>r==='ADMINISTRADOR'||r==='SUPERADMINISTRADOR'));
  async function guardar(){
   if(!cuenta||!puedeEditar||ocupado)return;
@@ -155,6 +176,35 @@ export default function PanelMatrizAccesos({token}:{token:string}){
      </>}
     </div>
    </div>
+   <section className="matriz-accesos__roles-institucionales" aria-label="Políticas de roles de la organización">
+    <header><h3>Permisos de los roles de tu organización</h3>
+     <p>Estos ajustes afectan a quienes tengan el perfil seleccionado, sin modificar los roles de otros tenants.</p>
+    </header>
+    <div className="matriz-accesos__perfiles">
+     {config.roles.map(r=><button type="button" key={r.nombre} disabled={!r.activo}
+       aria-pressed={perfilElegido===r.nombre} onClick={()=>editarPerfil(r)}>
+       <strong>{r.nombre}</strong>
+       <small>{r.permisos.length-r.permisosRestringidos.length} de {r.permisos.length} permisos habilitados</small>
+     </button>)}
+    </div>
+    {perfilActual&&<div className="matriz-accesos__config-rol">
+     <h4>Perfil: {perfilActual.nombre}</h4>
+     <p>{perfilActual.descripcion||'Perfil de acceso institucional.'}</p>
+     {perfilActual.nombre==='ADMINISTRADOR'&&<p className="matriz-accesos__aviso">
+      Los permisos del ADMINISTRADOR son protegidos para evitar bloquear la gestión de su organización.
+     </p>}
+     <fieldset disabled={ocupado||perfilActual.nombre==='ADMINISTRADOR'} className="matriz-accesos__grupo">
+      <legend>Vistas y operaciones de este perfil</legend>
+      {perfilActual.permisos.map(codigo=><label className="matriz-accesos__permiso" key={codigo}>
+       <input type="checkbox" checked={permisosPerfil.includes(codigo)}
+        onChange={()=>setPermisosPerfil(antes=>antes.includes(codigo)?antes.filter(x=>x!==codigo):[...antes,codigo])}/>
+       <span><strong>{etiqueta(codigo)}</strong><code>{codigo}</code></span>
+      </label>)}
+     </fieldset>
+     {perfilActual.nombre!=='ADMINISTRADOR'&&<button type="button" className="matriz-accesos__guardar"
+      disabled={ocupado} onClick={()=>void guardarPerfil()}>Guardar permisos del perfil</button>}
+    </div>}
+   </section>
   </>}
  </section>;
 }
