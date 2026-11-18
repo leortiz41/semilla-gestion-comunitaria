@@ -65,7 +65,8 @@ function BarraLateral({
         <ul className="barra-lateral__lista">
            {opcionesNavegacion.filter(({ clave }) =>
             esSuperadministrador ? clave === 'plataforma' : esDonante
-              ? clave === 'proyectos' || clave === 'evidencias'
+              ? (clave === 'proyectos' && permisos.includes('proyectos.ver')) ||
+                (clave === 'evidencias' && permisos.includes('evidencias.ver'))
               : clave !== 'plataforma' && (clave !== 'donantes' || puedeGestionarDonantes) && (
                 clave === 'dashboard' ||
                 (clave === 'comunidades' && permisos.includes('comunidades.ver')) ||
