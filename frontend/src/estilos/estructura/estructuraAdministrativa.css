@@ -155,3 +155,38 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Personalización por tenant: sólo se activa con variables institucionales. */
+.page-shell[style*="--institucion-primario"] {
+ --brand:var(--institucion-primario);
+ --brand-deep:var(--institucion-primario);
+ --accent:var(--institucion-secundario);
+}
+.page-shell[style*="--institucion-primario"] .barra-lateral{
+ border-color:color-mix(in srgb,var(--institucion-primario) 24%,transparent);
+ background:linear-gradient(160deg,#fff,color-mix(in srgb,var(--institucion-fondo) 75%,#fff));
+}
+.page-shell[style*="--institucion-primario"] .barra-lateral__marca strong{
+ color:var(--institucion-primario);
+}
+.page-shell[style*="--institucion-primario"] .barra-lateral__opcion:hover{
+ border-color:var(--institucion-primario);
+}
+.page-shell[style*="--institucion-primario"] .barra-lateral__opcion--activa{
+ color:var(--institucion-primario);
+ background:color-mix(in srgb,var(--institucion-primario) 9%,#fff);
+ border-color:color-mix(in srgb,var(--institucion-primario) 26%,#fff);
+ box-shadow:inset 3px 0 0 var(--institucion-secundario);
+}
+.page-shell[style*="--institucion-primario"] .config-institucional__guardar,
+.page-shell[style*="--institucion-primario"] .matriz-accesos__guardar{
+ background:var(--institucion-primario)!important;
+ color:var(--institucion-texto-primario)!important;
+}
+.bienvenida-institucional{display:flex;align-items:center;justify-content:space-between;gap:1.5rem;margin:0 0 1.2rem;padding:1.25rem 1.5rem;background:linear-gradient(100deg,color-mix(in srgb,var(--institucion-fondo,#f5f8f2) 85%,white),#fff);border:1px solid color-mix(in srgb,var(--institucion-primario,#2d7545) 26%,white);border-left:5px solid var(--institucion-secundario,#d98b36);border-radius:1rem}
+.bienvenida-institucional span{display:block;color:var(--institucion-primario,#2d7545);font-size:.8rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase}
+.bienvenida-institucional h2{margin:.3rem 0;color:var(--institucion-primario,#2d7545);font-size:clamp(1.2rem,2vw,1.65rem)}
+.bienvenida-institucional p{margin:.45rem 0;color:#344936;line-height:1.5}
+.bienvenida-institucional small{color:#647365}
+.bienvenida-institucional img{max-width:98px;max-height:98px;object-fit:contain}
+@media(max-width:560px){.bienvenida-institucional{align-items:flex-start}.bienvenida-institucional img{max-width:55px;max-height:55px}}
