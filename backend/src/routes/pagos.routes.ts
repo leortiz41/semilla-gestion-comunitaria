@@ -15,11 +15,20 @@ pagosRouter.get('/resumen',async(req,res)=>{
       `SELECT sp.id,sp.proyecto_id AS "proyectoId",p.nombre AS proyecto,
          sp.fecha_solicitud::text AS fecha,sp.concepto,sp.valor_solicitado::float8 AS monto,
          sp.anticipo::float8 AS anticipo,sp.estado,
+         sp.solicitado_por_usuario_id AS "solicitanteId",
+         sp.revisado_por_usuario_id AS "revisorId",
+         solicitante.email AS solicitante,
+         revisor.email AS revisor,
+         sp.revisado_en AS "revisadoEn",sp.motivo_revision AS "motivoRevision",
          prov.nombre_comercial AS proveedor,
          COALESCE(per.primer_nombre||' '||per.primer_apellido,'') AS contratado
        FROM solicitudes_pago sp
        JOIN proyectos p ON p.id=sp.proyecto_id
        JOIN comunidades c ON c.id=p.comunidad_id AND c.organizacion_id=$1
+       LEFT JOIN usuarios solicitante ON solicitante.id=sp.solicitado_por_usuario_id
+         AND solicitante.organizacion_id=$1
+       LEFT JOIN usuarios revisor ON revisor.id=sp.revisado_por_usuario_id
+         AND revisor.organizacion_id=$1
        LEFT JOIN proveedores prov ON prov.id=sp.proveedor_id AND prov.organizacion_id=$1
        LEFT JOIN personal_contratado pc ON pc.id=sp.personal_contratado_id AND pc.proyecto_id=p.id
        LEFT JOIN personas per ON per.id=pc.persona_id
