@@ -6,6 +6,8 @@ import BarraLateral from './componentes/estructura/BarraLateral';
 import EncabezadoAdministrativo from './componentes/estructura/EncabezadoAdministrativo';
 import EstructuraAdministrativa from './componentes/estructura/EstructuraAdministrativa';
 import PaginaAuditoria from './modulos/auditoria/PaginaAuditoria';
+import PaginaConfiguracion from './modulos/configuracion/PaginaConfiguracion';
+import { cargarConfiguracion,contraste,type ConfiguracionInstitucional } from './modulos/configuracion/configuracionInstitucional';
 import PaginaComunidades from './modulos/comunidades/PaginaComunidades';
 import PaginaDashboard from './modulos/dashboard/PaginaDashboard';
 import PaginaEvidencias from './modulos/evidencias/PaginaEvidencias';
@@ -69,6 +71,7 @@ function App() {
   const [password, setPassword] = useState('');
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [usuario, setUsuario] = useState<UsuarioSesion | null>(null);
+  const [configuracion, setConfiguracion] = useState<ConfiguracionInstitucional | null>(null);
   const [mensaje, setMensaje] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [procesando, setProcesando] = useState(false);
@@ -102,6 +105,29 @@ function App() {
       activo = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!accessToken || !usuario || usuario.roles.includes('SUPERADMINISTRADOR')) {
+      setConfiguracion(null);
+      return;
+    }
+    let vigente=true;
+    setConfiguracion(null);
+    cargarConfiguracion(accessToken).then(datos=>{if(vigente)setConfiguracion(datos);})
+      .catch(()=>{if(vigente)setConfiguracion(null);});
+    return ()=>{vigente=false;};
+  },[accessToken,usuario?.id]);
+
+  useEffect(() => {
+    if (!configuracion || vista!=='sesion') return;
+    const papel={A4:'A4',LETTER:'letter',LEGAL:'legal'}[configuracion.pdfPapel];
+    const orientacion=configuracion.pdfOrientacion;
+    const margen=configuracion.pdfMargenMm;
+    const estilos=document.createElement('style');
+    estilos.textContent='@page { size: '+papel+' '+orientacion+'; margin: '+margen+'mm; }';
+    document.head.appendChild(estilos);
+    return ()=>{estilos.remove();};
+  },[configuracion?.pdfPapel,configuracion?.pdfOrientacion,configuracion?.pdfMargenMm,vista]);
 
   useEffect(() => {
     if (vista !== 'login') return;
@@ -295,7 +321,11 @@ function App() {
           />
         ) : null;
       case 'auditoria':
-        return <PaginaAuditoria />;
+        return usuario&&accessToken&&usuario.permisos.includes('auditoria.ver')
+          ? <PaginaAuditoria token={accessToken}/> : null;
+      case 'configuracion':
+        return usuario&&accessToken&&usuario.roles.includes('ADMINISTRADOR')&&usuario.permisos.includes('usuarios.gestionar')
+          ? <PaginaConfiguracion token={accessToken} onActualizar={setConfiguracion}/> : null;
       case 'perfil':
         if (!usuario) return null;
 
@@ -325,7 +355,14 @@ function App() {
   }
 
   return (
-    <main className={`page-shell${vista === 'inicio' ? ' page-shell--inicio' : ''}`}>
+    <main className={`page-shell${vista === 'inicio' ? ' page-shell--inicio' : ''}`}
+      style={configuracion&&vista==='sesion'?{
+        '--institucion-primario':configuracion.colorPrimario,
+        '--institucion-secundario':configuracion.colorSecundario,
+        '--institucion-fondo':configuracion.colorFondo,
+        '--institucion-texto-primario':contraste(configuracion.colorPrimario),
+        '--institucion-texto-secundario':contraste(configuracion.colorSecundario),
+      } as React.CSSProperties:undefined}>
       {vista !== 'sesion' && (
         <header className="topbar">
           <div className="brand-inline">
@@ -451,6 +488,7 @@ function App() {
               esDonante={esDonante}
               esSuperadministrador={esSuperadministrador}
               permisos={usuario.permisos}
+              configuracion={configuracion}
               puedeGestionarDonantes={Boolean(puedeGestionarDonantes)}
               subseccionComunidades={subseccionComunidades}
               alCambiarSeccion={setSeccionAdministrativa}
@@ -483,6 +521,17 @@ function App() {
                   </button>
                 </div>
               )}
+              {seccionVisible==='dashboard'&&configuracion&&!esSuperadministrador&&(
+                <div className="bienvenida-institucional">
+                  <div>
+                    <span>{configuracion.nombrePublico}</span>
+                    <h2>{configuracion.bienvenidaTitulo}</h2>
+                    <p>{configuracion.bienvenidaTexto}</p>
+                    <small>{configuracion.lema}</small>
+                  </div>
+                  {configuracion.logo&&<img src={configuracion.logo} alt="Logotipo de la organización"/>}
+                </div>
+              )}
               {renderizarSeccionAdministrativa()}
             </>
           )}
@@ -491,8 +540,8 @@ function App() {
 
       <footer>
         <div className="footer__identidad">
-          <span>Semilla · Plataforma de Gestión Comunitaria</span>
-          <span>Las transformaciones comunitarias Surgen con la gestión adecuada de los recursos</span>
+          <span>{vista==='sesion'&&configuracion?configuracion.nombrePublico:'Semilla'} · Plataforma de Gestión Comunitaria</span>
+          <span>{vista==='sesion'&&configuracion?configuracion.lema:'Las transformaciones comunitarias surgen con la gestión adecuada de los recursos'}</span>
         </div>
         <div className="footer__creditos">
           <span>© 2026 Semilla · Todos los derechos reservados</span>
