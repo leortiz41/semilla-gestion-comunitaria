@@ -761,7 +761,15 @@ export async function subirFotoAvance(
   }catch{
     throw Error('No se pudo comunicar con el servidor de Semilla para subir la fotografía.');
   }
-  if(!respuesta.ok)throw await parseError(respuesta);
+  if(!respuesta.ok){
+    const detalle=await respuesta.json().catch(()=>({})) as {
+      message?:string;diagnostico?:string;codigo?:string;
+    };
+    if(respuesta.status===502&&detalle.diagnostico){
+      throw Error(`${detalle.message||'Error de almacenamiento.'} Diagnóstico: ${detalle.diagnostico} (${detalle.codigo||'sin código'}).`);
+    }
+    throw Error(detalle.message||`Error de carga HTTP ${respuesta.status}.`);
+  }
   return await respuesta.json() as {id:string};
 }
 
