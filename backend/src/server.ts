@@ -4,6 +4,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import { checkDatabaseConnection } from './config/database.js';
 import { authRouter } from './routes/auth.routes.js';
+import { perfilRouter } from './routes/perfil.routes.js';
 import { comunidadesRouter } from './routes/comunidades.routes.js';
 import { familiasRouter } from './routes/familias.routes.js';
 import { asignacionesFamiliasRouter } from './routes/asignaciones-familias.routes.js';
@@ -40,6 +41,7 @@ app.use(cors({
 app.use(express.json({ limit: '1mb' }));
 
 app.use('/api/auth', authRouter);
+app.use('/api/perfil', perfilRouter);
 app.use('/api/inicializacion-superadministrador', inicializacionSuperadministradorRouter);
 app.use('/api/comunidades', comunidadesRouter);
 app.use('/api/familias/viviendas', asignacionViviendasRouter);
