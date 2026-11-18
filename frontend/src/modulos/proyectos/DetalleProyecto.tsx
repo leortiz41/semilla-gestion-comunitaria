@@ -166,7 +166,10 @@ export default function DetalleProyecto({
     if (metaCantidad !== null && !unidadMedida) errores.unidadMedida = 'Ingresá la unidad de medida.';
     if (metaCantidad === null && unidadMedida && !errores.metaCantidad)
       errores.metaCantidad = 'Ingresá la meta o eliminá la unidad de medida.';
-    const presupuestoEstimado = numero('presupuestoEstimado', 2, 0, presupuestoProyecto);
+    const presupuestoEstimado = numero('presupuestoEstimado', 2, 0);
+    if (presupuestoEstimado !== null && presupuestoEstimado > presupuestoDisponible + 0.00001) {
+      errores.presupuestoEstimado = `El presupuesto de esta actividad supera el saldo disponible del proyecto (${formatoCantidad(presupuestoDisponible)} ${moneda}). Reducí el importe o ajustá el presupuesto del proyecto.`;
+    }
     const pesoResultado = numero('pesoResultado', 2, 0, 100);
     for (const elemento of Array.from(formulario.elements)) {
       if (!(elemento instanceof HTMLInputElement ||
@@ -178,7 +181,9 @@ export default function DetalleProyecto({
     setErroresCamposPlan(errores);
     if (Object.keys(errores).length) {
       setErrorPlanificacion('No se guardó la actividad. Revisá los campos señalados.');
-      const primero = formulario.elements.namedItem(Object.keys(errores)[0]);
+      const primerCampo = Object.keys(errores)[0] === 'unidadMedida' && unidadSeleccionada !== 'OTRA'
+        ? 'unidadCatalogo' : Object.keys(errores)[0];
+      const primero = formulario.elements.namedItem(primerCampo);
       if (primero instanceof HTMLElement) primero.focus();
       return;
     }
