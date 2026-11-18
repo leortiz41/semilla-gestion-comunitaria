@@ -131,23 +131,42 @@ export async function leerObjetoR2(clave: string): Promise<{datos:Uint8Array;mim
 }
 
 
-// Diagnóstico sin secretos ni URL firmadas: únicamente fase y códigos técnicos.
+// Diagnóstico sin secretos: examina causas anidadas de los errores del SDK S3.
 export function diagnosticarErrorR2(error: unknown): {categoria:string;codigo:string;estado:number|null} {
-  const principal=error && typeof error==='object'?error as {
-    name?:unknown;cause?:unknown;$metadata?:{httpStatusCode?:number};
-  }:{};
-  const causa=principal.cause && typeof principal.cause==='object'
-    ? principal.cause as {code?:unknown;name?:unknown}: {};
-  const codigo=typeof causa.code==='string'?causa.code
-    : typeof principal.name==='string'?principal.name:'DESCONOCIDO';
-  const estado=typeof principal.$metadata?.httpStatusCode==='number'
-    ? principal.$metadata.httpStatusCode:null;
-  const categoria=/CERT_|TLS|SSL|EPROTO/.test(codigo)?'TLS_CERTIFICADO'
-    : /ENOTFOUND|EAI_AGAIN/.test(codigo)?'DNS'
-    : /ECONN|ETIMEDOUT|EHOSTUNREACH|UND_ERR/.test(codigo)?'RED'
-    : estado===401||estado===403||/AccessDenied|InvalidAccessKey|SignatureDoesNotMatch/.test(codigo)
-      ?'CREDENCIALES_O_PERMISOS'
-    : estado===404||/NoSuchBucket/.test(codigo)?'BUCKET'
-    :'ALMACENAMIENTO';
-  return {categoria,codigo:codigo.slice(0,80),estado};
+  const visitar=(valor:unknown,nivel:number):{codigos:string[];estado:number|null}=>{
+    if(!valor||typeof valor!=='object'||nivel>5)return {codigos:[],estado:null};
+    const e=valor as {
+      name?:unknown;code?:unknown;cause?:unknown;errors?:unknown;
+      $metadata?:{httpStatusCode?:number};
+    };
+    const propios=[e.code,e.name].filter((v):v is string=>typeof v==='string');
+    const anidados=[e.cause,...(Array.isArray(e.errors)?e.errors.slice(0,5):[])]
+      .map(x=>visitar(x,nivel+1));
+    return {
+      codigos:[...anidados.flatMap(x=>x.codigos),...propios],
+      estado:typeof e.$metadata?.httpStatusCode==='number'?e.$metadata.httpStatusCode
+        :anidados.find(x=>x.estado!==null)?.estado??null,
+    };
+  };
+  const inspeccion=visitar(error,0);
+  const patrones={
+    TLS_CERTIFICADO:/ERR_SSL|CERT_|TLS|SSL|EPROTO|UNABLE_TO_VERIFY|SELF_SIGNED|WRONG_VERSION|HANDSHAKE/i,
+    DNS:/ENOTFOUND|EAI_AGAIN|ENODATA|DNS/i,
+    RED:/ECONN|ETIMEDOUT|EHOSTUNREACH|UND_ERR|TimeoutError|AbortError/i,
+    CREDENCIALES_O_PERMISOS:/AccessDenied|InvalidAccessKey|SignatureDoesNotMatch|InvalidToken|Forbidden/i,
+    BUCKET:/NoSuchBucket|NotFound/i,
+  };
+  const pista=inspeccion.codigos.find(c=>Object.values(patrones).some(p=>p.test(c)))
+    ||inspeccion.codigos.find(c=>c!=='Error')||'DESCONOCIDO';
+  let categoria='ALMACENAMIENTO';
+  for(const [grupo,patron] of Object.entries(patrones)){
+    if(inspeccion.codigos.some(c=>patron.test(c))){categoria=grupo;break;}
+  }
+  if(categoria==='ALMACENAMIENTO'){
+    if([401,403].includes(inspeccion.estado??0))categoria='CREDENCIALES_O_PERMISOS';
+    if(inspeccion.estado===404)categoria='BUCKET';
+  }
+  // Whitelist: no publicar mensajes, hosts, rutas, objetos, firmas o secretos.
+  const seguro=/^[A-Za-z][A-Za-z0-9_]{0,79}$/.test(pista)?pista:'DESCONOCIDO';
+  return {categoria,codigo:seguro,estado:inspeccion.estado};
 }
