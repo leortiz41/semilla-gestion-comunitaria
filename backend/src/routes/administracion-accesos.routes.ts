@@ -16,7 +16,10 @@ administracionAccesosRouter.get('/configuracion',async(req,res)=>{
        WHERE ur.usuario_id=u.id ORDER BY r.nombre),ARRAY[]::text[]) AS roles,
      COALESCE(ARRAY(SELECT DISTINCT p.codigo FROM usuarios_roles ur JOIN roles r ON r.id=ur.rol_id AND r.activo
        JOIN roles_permisos rp ON rp.rol_id=r.id JOIN permisos p ON p.id=rp.permiso_id
-       WHERE ur.usuario_id=u.id ORDER BY p.codigo),ARRAY[]::text[]) AS "permisosBase",
+       WHERE ur.usuario_id=u.id AND NOT EXISTS (
+        SELECT 1 FROM organizaciones_roles_permisos_restringidos br
+        WHERE br.organizacion_id=u.organizacion_id AND br.rol_id=r.id AND br.permiso_id=p.id
+       ) ORDER BY p.codigo),ARRAY[]::text[]) AS "permisosBase",
      COALESCE(ARRAY(SELECT p.codigo FROM usuarios_permisos_restringidos restr
        JOIN permisos p ON p.id=restr.permiso_id
        WHERE restr.usuario_id=u.id AND restr.organizacion_id=$1 ORDER BY p.codigo),ARRAY[]::text[]) AS "permisosRestringidos"
@@ -27,9 +30,13 @@ administracionAccesosRouter.get('/configuracion',async(req,res)=>{
    databasePool.query('SELECT codigo,modulo,descripcion FROM permisos ORDER BY modulo,codigo'),
    databasePool.query(`SELECT r.nombre,r.descripcion,r.activo,
       ARRAY(SELECT p.codigo FROM roles_permisos rp JOIN permisos p ON p.id=rp.permiso_id
-      WHERE rp.rol_id=r.id ORDER BY p.codigo) AS permisos
+      WHERE rp.rol_id=r.id ORDER BY p.codigo) AS permisos,
+      ARRAY(SELECT p.codigo FROM organizaciones_roles_permisos_restringidos bloqueado
+        JOIN permisos p ON p.id=bloqueado.permiso_id
+        WHERE bloqueado.rol_id=r.id AND bloqueado.organizacion_id=$2 ORDER BY p.codigo)
+        AS "permisosRestringidos"
       FROM roles r WHERE r.nombre=ANY($1::text[]) ORDER BY r.nombre`,
-      [['ADMINISTRADOR','COORDINADOR','CAMPO','FINANZAS','DONANTE']])
+      [['ADMINISTRADOR','COORDINADOR','CAMPO','FINANZAS','DONANTE'],org])
   ]);
   res.set('Cache-Control','no-store');
   res.json({cuentas:cuentas.rows,permisos:permisos.rows,roles:perfiles.rows,yo:req.auth!.sub});
@@ -64,7 +71,11 @@ administracionAccesosRouter.put('/cuentas/:id/permisos',async(req,res)=>{
   }
   const base=await client.query(`SELECT DISTINCT p.id,p.codigo FROM usuarios_roles ur
    JOIN roles r ON r.id=ur.rol_id AND r.activo JOIN roles_permisos rp ON rp.rol_id=r.id
-   JOIN permisos p ON p.id=rp.permiso_id WHERE ur.usuario_id=$1`,[id]);
+   JOIN permisos p ON p.id=rp.permiso_id WHERE ur.usuario_id=$1
+     AND NOT EXISTS (
+      SELECT 1 FROM organizaciones_roles_permisos_restringidos bloq
+      WHERE bloq.organizacion_id=$2 AND bloq.rol_id=r.id AND bloq.permiso_id=p.id
+     )`,[id,org]);
   const disponibles=new Set(base.rows.map((p:{codigo:string})=>p.codigo));
   if(permitidos.some((p:string)=>!disponibles.has(p))){
    await client.query('ROLLBACK');res.status(400).json({message:'Solo podés limitar permisos incluidos en los roles asignados.'});return;
