@@ -702,7 +702,25 @@ const guardarActividad: RequestHandler = async (req, res) => {
         res.status(404).json({ message: 'No se encontró el proyecto o la actividad.' });
         return;
       }
-      res.status(400).json({ message: 'El responsable debe estar activo en la organización y las asignaciones estimadas no pueden superar el presupuesto del proyecto.' });
+      const { rows: saldos } = await databasePool.query(
+        `SELECT p.presupuesto_asignado::numeric AS presupuesto,
+          COALESCE(SUM(a.presupuesto_estimado) FILTER (WHERE a.id IS DISTINCT FROM $3::uuid), 0)::numeric AS asignado
+         FROM proyectos p JOIN comunidades c ON c.id=p.comunidad_id
+         LEFT JOIN actividades_programadas a ON a.proyecto_id=p.id
+         WHERE p.id=$1 AND c.organizacion_id=$2
+         GROUP BY p.id,p.presupuesto_asignado`,
+        [proyectoId,req.auth!.organizacionId,actividadId ?? null],
+      );
+      if (saldos.length && Number(presupuestoEstimado ?? 0) >
+        Number(saldos[0].presupuesto) - Number(saldos[0].asignado)) {
+        res.status(400).json({
+          message: 'El presupuesto estimado supera el saldo disponible del proyecto. Revisá las asignaciones de las demás actividades.',
+        });
+        return;
+      }
+      res.status(400).json({
+        message: 'Revisá el responsable asignado: debe ser un usuario activo de esta organización.',
+      });
       return;
     }
     res.status(actividadId ? 200 : 201).json(rows[0]);
