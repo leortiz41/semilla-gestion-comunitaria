@@ -450,6 +450,7 @@ function App() {
               seccionActiva={seccionVisible === 'perfil' ? undefined : seccionVisible}
               esDonante={esDonante}
               esSuperadministrador={esSuperadministrador}
+              permisos={usuario.permisos}
               puedeGestionarDonantes={Boolean(puedeGestionarDonantes)}
               subseccionComunidades={subseccionComunidades}
               alCambiarSeccion={setSeccionAdministrativa}
