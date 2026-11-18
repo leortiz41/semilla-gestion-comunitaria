@@ -129,3 +129,25 @@ export async function leerObjetoR2(clave: string): Promise<{datos:Uint8Array;mim
     return {datos,mime:salida.ContentType!.split(';')[0].trim().toLowerCase()};
   } finally {cliente.destroy();}
 }
+
+
+// Diagnóstico sin secretos ni URL firmadas: únicamente fase y códigos técnicos.
+export function diagnosticarErrorR2(error: unknown): {categoria:string;codigo:string;estado:number|null} {
+  const principal=error && typeof error==='object'?error as {
+    name?:unknown;cause?:unknown;$metadata?:{httpStatusCode?:number};
+  }:{};
+  const causa=principal.cause && typeof principal.cause==='object'
+    ? principal.cause as {code?:unknown;name?:unknown}: {};
+  const codigo=typeof causa.code==='string'?causa.code
+    : typeof principal.name==='string'?principal.name:'DESCONOCIDO';
+  const estado=typeof principal.$metadata?.httpStatusCode==='number'
+    ? principal.$metadata.httpStatusCode:null;
+  const categoria=/CERT_|TLS|SSL|EPROTO/.test(codigo)?'TLS_CERTIFICADO'
+    : /ENOTFOUND|EAI_AGAIN/.test(codigo)?'DNS'
+    : /ECONN|ETIMEDOUT|EHOSTUNREACH|UND_ERR/.test(codigo)?'RED'
+    : estado===401||estado===403||/AccessDenied|InvalidAccessKey|SignatureDoesNotMatch/.test(codigo)
+      ?'CREDENCIALES_O_PERMISOS'
+    : estado===404||/NoSuchBucket/.test(codigo)?'BUCKET'
+    :'ALMACENAMIENTO';
+  return {categoria,codigo:codigo.slice(0,80),estado};
+}
