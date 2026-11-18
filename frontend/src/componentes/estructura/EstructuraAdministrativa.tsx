@@ -5,20 +5,22 @@ interface PropiedadesEstructuraAdministrativa {
   barraLateral?: ReactNode;
   encabezado?: ReactNode;
   contenido: ReactNode;
+  menuMovilPlegable?: boolean;
 }
 
 function EstructuraAdministrativa({
   barraLateral,
   encabezado,
   contenido,
+  menuMovilPlegable = false,
 }: PropiedadesEstructuraAdministrativa) {
   const [menuAbierto, setMenuAbierto] = useState(false);
 
   return (
-    <div className="estructura-administrativa">
+    <div className={`estructura-administrativa${menuMovilPlegable ? " estructura-administrativa--menu-plegable" : ""}`}>
       {barraLateral && (
         <>
-          <div className="estructura-administrativa__navegacion-movil">
+          {menuMovilPlegable && <div className="estructura-administrativa__navegacion-movil">
             <button
               type="button"
               className="estructura-administrativa__alternar-menu"
@@ -30,7 +32,7 @@ function EstructuraAdministrativa({
               {menuAbierto ? 'Cerrar menú' : 'Abrir menú'}
             </button>
             <span className="estructura-administrativa__modulo-actual">Navegación</span>
-          </div>
+          </div>}
           <aside
             id="navegacion-institucional"
             className={`estructura-administrativa__lateral${menuAbierto ? ' estructura-administrativa__lateral--abierta' : ''}`}
