@@ -483,6 +483,7 @@ function App() {
 
       {vista === 'sesion' && usuario && (
         <EstructuraAdministrativa
+          menuMovilPlegable={seccionVisible === 'proyectos'}
           barraLateral={(
             <BarraLateral
               seccionActiva={seccionVisible === 'perfil' ? undefined : seccionVisible}
