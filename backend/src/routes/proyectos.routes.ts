@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { Router, type RequestHandler } from 'express';
-import { firmarObjetoR2, r2Disponible, verificarObjetoR2 } from '../services/r2-evidencias.service.js';
+import { Router, raw, type RequestHandler } from 'express';
+import { firmarObjetoR2, r2Disponible, verificarObjetoR2, cargarObjetoR2, leerObjetoR2 } from '../services/r2-evidencias.service.js';
 import { databasePool } from '../config/database.js';
 import { areasNecesidad } from '../domain/necesidades.js';
 import { esUuid } from '../domain/expediente.js';
@@ -110,6 +110,103 @@ proyectosRouter.get(rutaEvidencias, async (req, res) => {
     res.status(500).json({ message: 'No fue posible consultar las fotografías.' });
   }
 });
+
+
+// Descarga de evidencia: sesión y tenant validados antes de consultar R2.
+proyectosRouter.get(rutaEvidencias + '/:evidenciaId/imagen', async (req,res) => {
+  const {proyectoId,actividadId,avanceId,evidenciaId}=req.params;
+  if(!esUuid(evidenciaId)){res.status(400).json({message:'Evidencia inválida.'});return;}
+  try {
+    if(!await accesoEvidenciaAvance(proyectoId,actividadId,avanceId,req.auth!.organizacionId)){
+      res.status(404).json({message:'Avance no disponible.'});return;
+    }
+    const encontrado=await databasePool!.query(
+      `SELECT e.archivo_url AS clave FROM evidencias e
+       WHERE e.id=$1 AND e.proyecto_id=$2 AND e.avance_proyecto_id=$3`,
+      [evidenciaId,proyectoId,avanceId]);
+    const clave=encontrado.rows[0]?.clave as string|undefined;
+    if(!clave?.startsWith('r2:')){
+      res.status(404).json({message:'Fotografía privada no disponible.'});return;
+    }
+    const foto=await leerObjetoR2(clave.slice(3));
+    res.set('Content-Type',foto.mime);
+    res.set('Cache-Control','private, no-store');
+    res.set('X-Content-Type-Options','nosniff');
+    res.send(Buffer.from(foto.datos));
+  }catch(error){
+    console.error('Error leyendo fotografía desde backend:',error instanceof Error?error.name:'Error');
+    res.status(502).json({message:'No se pudo leer la fotografía del almacenamiento R2 desde el servidor.'});
+  }
+});
+
+// Subida por proxy autenticado: el navegador nunca se conecta al endpoint S3.
+proyectosRouter.post(rutaEvidencias+'/subir',
+  requirePermission('evidencias.gestionar'),
+  raw({type:['image/jpeg','image/png','image/webp'],limit:'10mb'}),
+  async(req,res)=>{
+    const {proyectoId,actividadId,avanceId}=req.params;
+    const mime=req.headers['content-type']?.split(';')[0].trim().toLowerCase()||'';
+    const titulo=typeof req.query.titulo==='string'?req.query.titulo.trim():'';
+    const bytes=req.body;
+    if(![proyectoId,actividadId,avanceId].every(esUuid)||!tiposFoto.includes(mime)||
+      !Buffer.isBuffer(bytes)||!bytes.length||bytes.length>10*1024*1024||
+      titulo.length>180 || /[<>\\\x00-\x1f]/.test(titulo)){
+      res.status(400).json({message:'La fotografía o su ubicación no son válidas.'});return;
+    }
+    const firmaValida=mime==='image/png' ? bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]))
+      : mime==='image/jpeg'?bytes[0]===255&&bytes[1]===216&&bytes[2]===255
+      : bytes.subarray(0,4).toString()==='RIFF'&&bytes.subarray(8,12).toString()==='WEBP';
+    if(!firmaValida){res.status(400).json({message:'El contenido no corresponde al formato de fotografía indicado.'});return;}
+    if(!r2Disponible()||!databasePool){
+      res.status(503).json({message:'Almacenamiento de evidencias no disponible.'});return;
+    }
+    try{
+      const avance=await accesoEvidenciaAvance(proyectoId,actividadId,avanceId,req.auth!.organizacionId);
+      if(!avance){res.status(404).json({message:'Avance no disponible.'});return;}
+      if(!['BORRADOR','DEVUELTO'].includes(avance.estado)||avance.responsable!==req.auth!.sub){
+        res.status(409).json({message:'Solo el responsable puede subir fotos a un borrador o avance devuelto.'});return;
+      }
+      const clave=`organizaciones/${req.auth!.organizacionId}/proyectos/${proyectoId}/avances/${avanceId}/${randomUUID()}`;
+      await cargarObjetoR2(clave,mime,bytes);
+      if(!await verificarObjetoR2(clave,mime)){
+        res.status(502).json({message:'R2 recibió la carga, pero no pudo verificarse el archivo.'});return;
+      }
+      const cliente=await databasePool.connect();
+      try{
+        await cliente.query('BEGIN');
+        const vigente=await cliente.query(
+          `SELECT av.id FROM avances_proyecto av
+           JOIN actividades_programadas a ON a.id=av.actividad_id AND a.proyecto_id=av.proyecto_id
+           JOIN proyectos p ON p.id=a.proyecto_id JOIN comunidades c ON c.id=p.comunidad_id
+           WHERE av.id=$1 AND a.id=$2 AND p.id=$3 AND c.organizacion_id=$4
+             AND av.responsable_usuario_id=$5 AND av.estado_revision IN ('BORRADOR','DEVUELTO')
+           FOR UPDATE OF av`,
+           [avanceId,actividadId,proyectoId,req.auth!.organizacionId,req.auth!.sub]);
+        if(!vigente.rows.length){
+          await cliente.query('ROLLBACK');
+          res.status(409).json({message:'El estado del avance cambió durante la carga.'});return;
+        }
+        const guardado=await cliente.query(
+          `INSERT INTO evidencias
+           (proyecto_id,avance_proyecto_id,tipo_evidencia,titulo,archivo_url,
+            tipo_mime,subido_por_usuario_id,visible_para_donantes)
+           VALUES ($1,$2,'FOTOGRAFIA',$3,$4,$5,$6,false) RETURNING id`,
+          [proyectoId,avanceId,titulo||null,'r2:'+clave,mime,req.auth!.sub]);
+        await cliente.query(
+          `INSERT INTO bitacora_auditoria
+           (usuario_id,accion,nombre_entidad,entidad_id,valores_nuevos)
+           VALUES($1,'REGISTRAR_EVIDENCIA','evidencias',$2,$3::jsonb)`,
+          [req.auth!.sub,guardado.rows[0].id,JSON.stringify({proyectoId,actividadId,avanceId,tipoMime:mime})]);
+        await cliente.query('COMMIT');
+        res.status(201).json({id:guardado.rows[0].id});
+      }catch(error){await cliente.query('ROLLBACK');throw error;}
+      finally{cliente.release();}
+    }catch(error){
+      console.error('Error cargando fotografía por proxy R2:',error instanceof Error?error.name:'Error');
+      res.status(502).json({message:'El servidor no pudo guardar la fotografía en R2. Revisá conexión y credenciales R2 del backend.'});
+    }
+  }
+);
 
 proyectosRouter.post(rutaEvidencias + '/preparar', requirePermission('evidencias.gestionar'), async (req, res) => {
   const { proyectoId, actividadId, avanceId } = req.params;
