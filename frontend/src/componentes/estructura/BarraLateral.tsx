@@ -10,6 +10,7 @@ interface PropiedadesBarraLateral {
   esDonante: boolean;
   puedeGestionarDonantes: boolean;
   esSuperadministrador: boolean;
+  permisos: string[];
   seccionActiva?: SeccionBarraLateral;
   subseccionComunidades: SubseccionComunidades;
   alCambiarSeccion: (seccion: SeccionBarraLateral) => void;
@@ -34,6 +35,7 @@ function BarraLateral({
   esDonante,
   puedeGestionarDonantes,
   esSuperadministrador,
+  permisos,
   seccionActiva,
   subseccionComunidades,
   alCambiarSeccion,
@@ -64,7 +66,17 @@ function BarraLateral({
            {opcionesNavegacion.filter(({ clave }) =>
             esSuperadministrador ? clave === 'plataforma' : esDonante
               ? clave === 'proyectos' || clave === 'evidencias'
-              : clave !== 'plataforma' && (clave !== 'donantes' || puedeGestionarDonantes)
+              : clave !== 'plataforma' && (clave !== 'donantes' || puedeGestionarDonantes) && (
+                clave === 'dashboard' ||
+                (clave === 'comunidades' && permisos.includes('comunidades.ver')) ||
+                (clave === 'familias' && permisos.includes('familias.ver')) ||
+                (['proyectos','mapa-impacto'].includes(clave) && permisos.includes('proyectos.ver')) ||
+                (clave === 'evidencias' && (permisos.includes('evidencias.ver') || permisos.includes('evidencias.gestionar'))) ||
+                (clave === 'pagos' && permisos.includes('pagos.ver')) ||
+                (clave === 'usuarios' && permisos.includes('usuarios.ver')) ||
+                (clave === 'auditoria' && permisos.includes('auditoria.ver')) ||
+                clave === 'donantes'
+              )
           ).map((opcion) => {
             const estaActiva = seccionActiva === opcion.clave;
             const esComunidades = opcion.clave === 'comunidades';
