@@ -1,5 +1,6 @@
 import PanelAccesoDonantes from './PanelAccesoDonantes';
 import PanelCuentasOrganizacion from './PanelCuentasOrganizacion';
+import PanelMatrizAccesos from './PanelMatrizAccesos';
 import { useEffect, useState } from 'react';
 import { obtenerRoles, type RolCatalogo } from '../../lib/api';
 import '../../estilos/modulos/paginaModuloBase.css';
@@ -50,8 +51,14 @@ function PaginaUsuarios({ tokenAcceso, puedeVer, puedeGestionarAcceso, puedeGest
         ) : roles === null ? <p role="status">Cargando roles…</p> : (
           <>
           {puedeGestionarCuentas && (
-            <PanelCuentasOrganizacion token={tokenAcceso}
-              rolesActivos={roles.filter((rol) => rol.activo).map((rol) => rol.nombre)} />
+            <>
+              <PanelMatrizAccesos token={tokenAcceso}/>
+              <details className="roles-panel__administracion-cuentas">
+                <summary>Crear usuarios, asignar roles y administrar credenciales</summary>
+                <PanelCuentasOrganizacion token={tokenAcceso}
+                  rolesActivos={roles.filter((rol) => rol.activo).map((rol) => rol.nombre)} />
+              </details>
+            </>
           )}
           <div className="roles-panel">
             {perfiles.map((perfil) => {
