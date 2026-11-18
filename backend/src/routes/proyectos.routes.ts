@@ -115,9 +115,9 @@ proyectosRouter.get(rutaEvidencias, async (req, res) => {
 // Descarga de evidencia: sesión y tenant validados antes de consultar R2.
 proyectosRouter.get(rutaEvidencias + '/:evidenciaId/imagen', async (req,res) => {
   const {proyectoId,actividadId,avanceId,evidenciaId}=req.params;
-  if(!esUuid(evidenciaId)){res.status(400).json({message:'Evidencia inválida.'});return;}
+  if(![proyectoId,actividadId,avanceId,evidenciaId].every((id)=>typeof id==='string'&&esUuid(id))){res.status(400).json({message:'Evidencia inválida.'});return;}
   try {
-    if(!await accesoEvidenciaAvance(proyectoId,actividadId,avanceId,req.auth!.organizacionId)){
+    if(!await accesoEvidenciaAvance(String(proyectoId),String(actividadId),String(avanceId),req.auth!.organizacionId)){
       res.status(404).json({message:'Avance no disponible.'});return;
     }
     const encontrado=await databasePool!.query(
@@ -148,7 +148,7 @@ proyectosRouter.post(rutaEvidencias+'/subir',
     const mime=req.headers['content-type']?.split(';')[0].trim().toLowerCase()||'';
     const titulo=typeof req.query.titulo==='string'?req.query.titulo.trim():'';
     const bytes=req.body;
-    if(![proyectoId,actividadId,avanceId].every(esUuid)||!tiposFoto.includes(mime)||
+    if(![proyectoId,actividadId,avanceId].every((id)=>typeof id==='string'&&esUuid(id))||!tiposFoto.includes(mime)||
       !Buffer.isBuffer(bytes)||!bytes.length||bytes.length>10*1024*1024||
       titulo.length>180 || /[<>\\\x00-\x1f]/.test(titulo)){
       res.status(400).json({message:'La fotografía o su ubicación no son válidas.'});return;
