@@ -60,6 +60,13 @@ function PaginaUsuarios({ tokenAcceso, puedeVer, puedeGestionarAcceso, puedeGest
               </details>
             </>
           )}
+          <div>
+            <h2 className="pagina-modulo__titulo">Perfiles base de Semilla</h2>
+            <p className="pagina-modulo__descripcion">
+              Este catálogo es la referencia global. Las restricciones particulares de tu organización
+              se gestionan en «Configuración de accesos», sin alterar otros tenants.
+            </p>
+          </div>
           <div className="roles-panel">
             {perfiles.map((perfil) => {
               const rol = roles.find((item) => item.nombre === perfil.codigo);
