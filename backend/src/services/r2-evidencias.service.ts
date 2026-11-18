@@ -97,3 +97,35 @@ export async function verificarObjetoR2(clave: string, mime: string, maxBytes = 
     cliente.destroy();
   }
 }
+
+
+// Transferencia privada desde el backend: evita conexiones directas navegador → R2.
+export async function cargarObjetoR2(clave: string, mime: string, datos: Buffer) {
+  validarClave(clave);
+  if (!['image/jpeg','image/png','image/webp'].includes(mime) ||
+      !datos.length || datos.length > 10 * 1024 * 1024) {
+    throw new Error('Archivo de evidencia inválido.');
+  }
+  const {cliente,bucket}=clienteR2();
+  try {
+    await cliente.send(new PutObjectCommand({
+      Bucket:bucket,Key:clave,Body:datos,ContentType:mime,
+    }));
+  } finally {cliente.destroy();}
+}
+
+export async function leerObjetoR2(clave: string): Promise<{datos:Uint8Array;mime:string}> {
+  validarClave(clave);
+  const {cliente,bucket}=clienteR2();
+  try {
+    const salida=await cliente.send(new GetObjectCommand({Bucket:bucket,Key:clave}));
+    if (!salida.Body || !['image/jpeg','image/png','image/webp'].includes(
+      salida.ContentType?.split(';')[0]?.trim().toLowerCase() || ''
+    ) || (salida.ContentLength??0)>10*1024*1024) {
+      throw new Error('Objeto de imagen no válido.');
+    }
+    const datos=await salida.Body.transformToByteArray();
+    if (!datos.length || datos.length>10*1024*1024)throw new Error('Imagen demasiado grande.');
+    return {datos,mime:salida.ContentType!.split(';')[0].trim().toLowerCase()};
+  } finally {cliente.destroy();}
+}
