@@ -46,3 +46,13 @@
 .roles-panel__administracion-cuentas>summary{cursor:pointer;color:#275b39;font-weight:700}
 @media(max-width:900px){.matriz-accesos__layout{grid-template-columns:1fr}.matriz-accesos__grupo{grid-template-columns:1fr}}
 @media(max-width:600px){.matriz-accesos__indicadores{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.matriz-accesos__roles-institucionales{display:grid;gap:.9rem;padding:1rem;background:#fff;border:1px solid #d8e7d7;border-radius:.85rem}
+.matriz-accesos__roles-institucionales h3{color:#285d3b;margin:0;font-size:1.2rem}
+.matriz-accesos__roles-institucionales header p,.matriz-accesos__config-rol>p{font-size:.86rem;color:#687b69;line-height:1.55;margin:.35rem 0}
+.matriz-accesos__perfiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:.6rem}
+.matriz-accesos__perfiles button{display:grid;text-align:left;gap:.3rem}
+.matriz-accesos__perfiles button[aria-pressed=true]{background:#e6f4e5;border-color:#7aaf83}
+.matriz-accesos__perfiles small{color:#607566;font-size:.77rem}
+.matriz-accesos__config-rol{display:grid;gap:.75rem;border-top:1px solid #dce9dc;padding-top:.85rem}
+.matriz-accesos__config-rol h4{color:#2a623a;margin:.1rem 0}
