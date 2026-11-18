@@ -1,4 +1,5 @@
 import { useEffect,useState,type FormEvent } from 'react';
+import SelectorBuscable from './SelectorBuscable';
 const API=import.meta.env.VITE_API_URL||'http://localhost:3000/api';
 type Proyecto={id:string;nombre:string;presupuesto:number};
 type Proveedor={id:string;nombre:string};
@@ -78,9 +79,10 @@ export default function FlujoPagos({token,puedeGestionar,onActualizar}:{
   {formulario&&opciones&&<div className="pagos-flujo__formulario">
    <h3>{formulario==='contrato'?'Registrar personal contratado':formulario==='solicitud'?'Nueva solicitud de pago':'Registrar abono administrativo'}</h3>
    {formulario==='contrato'&&<form onSubmit={e=>void enviarContrato(e)}>
-    <label>Proyecto *<select required value={contrato.proyectoId} onChange={e=>setContrato({...contrato,proyectoId:e.target.value})}>
-     <option value="">Seleccionar proyecto</option>{opciones.proyectos.map(p=><option key={p.id} value={p.id}>{p.nombre}</option>)}
-    </select></label>
+    <SelectorBuscable etiqueta="Proyecto *" valor={contrato.proyectoId}
+     opciones={opciones.proyectos.map(p=>({id:p.id,nombre:p.nombre}))}
+     alCambiar={proyectoId=>setContrato({...contrato,proyectoId})}
+     placeholder="Seleccionar proyecto" vacio="No hay proyectos disponibles en esta organización."/>
     <label>Primer nombre *<input required maxLength={100} value={contrato.primerNombre} onChange={e=>setContrato({...contrato,primerNombre:e.target.value})}/></label>
     <label>Primer apellido *<input required maxLength={100} value={contrato.primerApellido} onChange={e=>setContrato({...contrato,primerApellido:e.target.value})}/></label>
     <label>Cargo u oficio *<input required maxLength={120} placeholder="Ej. Maestro de obra" value={contrato.cargo} onChange={e=>setContrato({...contrato,cargo:e.target.value})}/></label>
@@ -89,25 +91,30 @@ export default function FlujoPagos({token,puedeGestionar,onActualizar}:{
     <div className="pagos-flujo__acciones"><button disabled={guardando} type="submit">Guardar contratación</button><button type="button" onClick={()=>setFormulario(null)}>Cancelar</button></div>
    </form>}
    {formulario==='solicitud'&&<form onSubmit={e=>void enviarSolicitud(e)}>
-    <label>Proyecto *<select required value={solicitud.proyectoId} onChange={e=>setSolicitud({...solicitud,proyectoId:e.target.value,destinatarioId:''})}>
-     <option value="">Seleccionar proyecto</option>{opciones.proyectos.map(p=><option key={p.id} value={p.id}>{p.nombre} · presupuesto {dinero(p.presupuesto)}</option>)}
-    </select></label>
+    <SelectorBuscable etiqueta="Proyecto *" valor={solicitud.proyectoId}
+     opciones={opciones.proyectos.map(p=>({id:p.id,nombre:p.nombre+' · presupuesto '+dinero(p.presupuesto)}))}
+     alCambiar={proyectoId=>setSolicitud({...solicitud,proyectoId,destinatarioId:''})}
+     placeholder="Seleccionar proyecto" vacio="No hay proyectos disponibles en esta organización."/>
     <label>¿A quién se pagará? *<select value={solicitud.destinatarioTipo} onChange={e=>setSolicitud({...solicitud,destinatarioTipo:e.target.value,destinatarioId:''})}>
      <option value="PROVEEDOR">Proveedor o contratista registrado</option><option value="PERSONAL">Trabajador contratado para el proyecto</option>
     </select></label>
-    <label>Beneficiario del pago *<select required value={solicitud.destinatarioId} onChange={e=>setSolicitud({...solicitud,destinatarioId:e.target.value})}>
-     <option value="">Seleccionar beneficiario</option>{destinatarios.map(d=><option key={d.id} value={d.id}>{d.nombre}</option>)}
-    </select></label>
+    <SelectorBuscable etiqueta="Beneficiario del pago *" valor={solicitud.destinatarioId}
+     opciones={destinatarios} alCambiar={destinatarioId=>setSolicitud({...solicitud,destinatarioId})}
+     placeholder="Seleccionar beneficiario"
+     vacio={solicitud.destinatarioTipo==='PERSONAL'
+      ?(!solicitud.proyectoId?'Primero seleccioná un proyecto.':'No hay trabajadores contratados activos para este proyecto. Usá «+ Contratar personal» o cambiá a «Proveedor o contratista registrado».')
+      :'No hay proveedores activos registrados en esta organización. Registralos en la pestaña Proveedores y contratistas.'}/> 
     <label>Concepto del pago *<input required maxLength={400} placeholder="Ej. Primer avance de construcción" value={solicitud.concepto} onChange={e=>setSolicitud({...solicitud,concepto:e.target.value})}/></label>
     <label>Monto solicitado (L) *<input required type="number" min=".01" step=".01" value={solicitud.monto} onChange={e=>setSolicitud({...solicitud,monto:e.target.value})}/></label>
     <p className="pagos-nota">La solicitud no se paga automáticamente. Otra persona deberá aprobarla, verificando presupuesto.</p>
     <div className="pagos-flujo__acciones"><button disabled={guardando} type="submit">Enviar solicitud</button><button type="button" onClick={()=>setFormulario(null)}>Cancelar</button></div>
    </form>}
    {formulario==='abono'&&<form onSubmit={e=>void enviarAbono(e)}>
-    <label>Solicitud aprobada *<select required value={abono.solicitudId} onChange={e=>setAbono({...abono,solicitudId:e.target.value})}>
-     <option value="">Seleccionar solicitud</option>{resumen?.solicitudes.filter(s=>['APROBADA','PAGADA'].includes(s.estado)).map(s=>
-      <option key={s.id} value={s.id}>{s.proyecto} · {s.concepto} · {dinero(s.monto)}</option>)}
-    </select></label>
+    <SelectorBuscable etiqueta="Solicitud aprobada *" valor={abono.solicitudId}
+     opciones={(resumen?.solicitudes||[]).filter(s=>['APROBADA','PAGADA'].includes(s.estado))
+      .map(s=>({id:s.id,nombre:s.proyecto+' · '+s.concepto+' · '+dinero(s.monto)}))}
+     alCambiar={solicitudId=>setAbono({...abono,solicitudId})} placeholder="Seleccionar solicitud"
+     vacio="No hay solicitudes aprobadas para registrar un abono."/>
     <label>Importe del abono (L) *<input type="number" required min=".01" step=".01" value={abono.monto} onChange={e=>setAbono({...abono,monto:e.target.value})}/></label>
     <label>Método *<select value={abono.metodo} onChange={e=>setAbono({...abono,metodo:e.target.value})}>
      <option value="TRANSFERENCIA">Transferencia</option><option value="EFECTIVO">Efectivo</option><option value="CHEQUE">Cheque</option><option value="OTRO">Otro</option>
