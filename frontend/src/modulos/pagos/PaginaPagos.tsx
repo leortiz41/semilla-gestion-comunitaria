@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import FlujoPagos from './FlujoPagos';
+import BandejaAprobaciones from './BandejaAprobaciones';
 import GestorContratos from './GestorContratos';
 import '../../estilos/modulos/paginaModuloBase.css';
 import '../../estilos/modulos/pagos/pagos.css';
@@ -16,7 +17,7 @@ async function api<T>(token:string,ruta:string,opciones:RequestInit={}):Promise<
 }
 const dinero=(n:number)=>new Intl.NumberFormat('es-HN',{style:'currency',currency:'HNL'}).format(n);
 export default function PaginaPagos({token,puedeGestionar}:{token:string;puedeGestionar:boolean}){
- const [vista,setVista]=useState<'pagos'|'proveedores'|'contratos'>('pagos');
+ const [vista,setVista]=useState<'pagos'|'aprobaciones'|'proveedores'|'contratos'>('pagos');
  const [proveedores,setProveedores]=useState<Proveedor[]>([]);
  const [tipos,setTipos]=useState<TipoProveedor[]>([]);
  const [nuevoTipo,setNuevoTipo]=useState(false);
@@ -73,6 +74,7 @@ export default function PaginaPagos({token,puedeGestionar}:{token:string;puedeGe
   </header>
   <div className="pagos-pestanas" role="group" aria-label="Vistas financieras">
    <button type="button" aria-pressed={vista==='pagos'} onClick={()=>setVista('pagos')}>Pagos y solicitudes</button>
+   <button type="button" aria-pressed={vista==='aprobaciones'} onClick={()=>setVista('aprobaciones')}>Bandeja de aprobaciones{resumen ? ` (${resumen.solicitudes.filter(s=>s.estado==='SOLICITADA').length})` : ''}</button>
    <button type="button" aria-pressed={vista==='proveedores'} onClick={()=>setVista('proveedores')}>Proveedores y contratistas</button>
    <button type="button" aria-pressed={vista==='contratos'} onClick={()=>setVista('contratos')}>Gestor de contratos</button>
   </div>
@@ -88,6 +90,7 @@ export default function PaginaPagos({token,puedeGestionar}:{token:string;puedeGe
    <FlujoPagos token={token} puedeGestionar={puedeGestionar} onActualizar={()=>setVersion(n=>n+1)}/>
 
   </>}
+  {vista==='aprobaciones'&&<BandejaAprobaciones token={token} puedeGestionar={puedeGestionar} onActualizar={()=>setVersion(n=>n+1)}/>}
   {vista==='contratos'&&<GestorContratos token={token} puedeGestionar={puedeGestionar}/>}
   {vista==='proveedores'&&<>
    <div className="pagos-herramientas">
