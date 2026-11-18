@@ -36,3 +36,23 @@
 .pagos-flujo__formulario form .pagos-nota,.pagos-flujo__formulario form .pagos-flujo__acciones{grid-column:1/-1}
 .pagos-nota{color:#5a705f;font-size:.86rem;line-height:1.5}
 @media(max-width:680px){.pagos-flujo__formulario form{grid-template-columns:1fr}}
+
+/* Bandeja de revisión de solicitudes */
+.pagos-bandeja{display:grid;gap:1.1rem;background:#f9fcf8;border:1px solid #d5e6d4;border-radius:1rem;padding:clamp(1rem,2.5vw,1.5rem)}
+.pagos-bandeja header h2{margin:0 0 .4rem;color:#285d3a}
+.pagos-bandeja header p{margin:0;color:#5b7160;line-height:1.55}
+.pagos-bandeja__tabs{display:flex;gap:.55rem;flex-wrap:wrap}
+.pagos-bandeja__tabs button{border:1px solid #c8dec7;background:#fff;color:#2b5e3c;border-radius:.65rem;font:inherit;padding:.65rem .9rem;cursor:pointer}
+.pagos-bandeja__tabs button[aria-pressed=true]{background:#2d7447;color:#fff;border-color:#2d7447}
+.pagos-bandeja>label,.pagos-bandeja__revision label{display:grid;gap:.45rem;color:#315d3b;font-weight:600}
+.pagos-bandeja input,.pagos-bandeja textarea{width:100%;box-sizing:border-box;font:inherit;border:1px solid #cbdccb;border-radius:.6rem;padding:.75rem;background:#fff;color:#254a31}
+.pagos-bandeja__solicitud{gap:.5rem!important}
+.pagos-bandeja__solicitud p{margin:.1rem 0;font-size:.9rem}
+.pagos-bandeja__cabecera{display:flex;justify-content:space-between;gap:.65rem;flex-wrap:wrap;align-items:center}
+.pagos-bandeja__cabecera span{border-radius:1rem;padding:.25rem .65rem;background:#eaf2e7;color:#285937;font-size:.75rem}
+.pagos-bandeja__revision{display:grid;gap:.75rem;border-top:1px solid #dae7d8;padding-top:.9rem}
+.pagos-bandeja__revision small{color:#5d7162;line-height:1.45}
+.pagos-bandeja__acciones{display:flex;flex-wrap:wrap;gap:.6rem}
+.pagos-bandeja__acciones button{padding:.7rem .95rem;background:#2b7544;border:1px solid #2b7544;color:#fff;border-radius:.6rem;font:inherit;cursor:pointer}
+.pagos-bandeja__acciones button+button{background:#fff;color:#8c4332;border-color:#e2bbb0}
+.pagos-bandeja__acciones button:disabled{opacity:.55;cursor:not-allowed}
