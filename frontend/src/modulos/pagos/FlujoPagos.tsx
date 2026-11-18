@@ -47,14 +47,19 @@ export default function FlujoPagos({token,puedeGestionar,onActualizar}:{
   finally{setGuardando(false);}
  }
  async function enviarContrato(e:FormEvent){e.preventDefault();
+  if(!contrato.proyectoId){setError('Seleccioná un proyecto de la lista.');return;}
   const ok=await ejecutar('/contratos',{...contrato,valorContrato:Number(contrato.valorContrato)},'Contratación registrada y asociada al proyecto.');
   if(ok)setFormulario(null);
  }
  async function enviarSolicitud(e:FormEvent){e.preventDefault();
+  if(!solicitud.proyectoId||!solicitud.destinatarioId){
+   setError('Seleccioná un proyecto y un beneficiario de los resultados de búsqueda.');return;
+  }
   const ok=await ejecutar('/solicitudes',{...solicitud,monto:Number(solicitud.monto)},'Solicitud registrada. Está pendiente de revisión por otra persona autorizada.');
   if(ok)setFormulario(null);
  }
  async function enviarAbono(e:FormEvent){e.preventDefault();
+  if(!abono.solicitudId){setError('Seleccioná una solicitud aprobada de la lista.');return;}
   const ok=await ejecutar(`/solicitudes/${abono.solicitudId}/abonos`,{
    monto:Number(abono.monto),metodo:abono.metodo,referencia:abono.referencia,
   },'Abono registrado. Aún requiere confirmación por otro usuario.');
