@@ -446,6 +446,14 @@ export function reemitirCredencialTemporalCuenta(token: string, usuarioId: strin
     });
 }
 
+export function cambiarNombreCuenta(token: string, usuarioId: string, nombreVisible: string) {
+  return request<{ nombreVisible: string }>(`/usuarios/cuentas/${encodeURIComponent(usuarioId)}/nombre`, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ nombreVisible }),
+  });
+}
+
 export function cambiarCorreoCuenta(token: string, usuarioId: string, email: string) {
   return request<{ email: string }>(`/usuarios/cuentas/${usuarioId}/email`, {
     method: 'PUT', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify({ email }),
