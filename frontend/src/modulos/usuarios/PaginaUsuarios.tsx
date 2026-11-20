@@ -45,9 +45,7 @@ function PaginaUsuarios({
         <>
           {puedeGestionarCuentas ? (
             <>
-              <PanelMatrizAccesos token={tokenAcceso} />
-              <details className="roles-panel__administracion-cuentas">
-                <summary>Crear usuarios, asignar roles y administrar credenciales</summary>
+              <div className="roles-panel__administracion-cuentas">
                 {error && (
                   <div role="alert">
                     <p>{error}</p>
@@ -65,6 +63,10 @@ function PaginaUsuarios({
                     rolesActivos={roles.filter((rol) => rol.activo).map((rol) => rol.nombre)}
                   />
                 )}
+              </div>
+              <details className="roles-panel__administracion-cuentas">
+                <summary>Consultar matriz de accesos y permisos</summary>
+                <PanelMatrizAccesos token={tokenAcceso} />
               </details>
             </>
           ) : (
