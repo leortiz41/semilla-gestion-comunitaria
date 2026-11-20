@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import {
   cambiarCorreoCuenta, cambiarNombreCuenta, cambiarRolesCuenta, cambiarEstadoCuentaOrganizacion, crearCuentaOrganizacion, obtenerCuentasOrganizacion,
-  reemitirCredencialTemporalCuenta,
+  reemitirCredencialTemporalCuenta, retirarCuentaOrganizacion,
   type CuentaOrganizacion,
 } from '../../lib/api';
 import '../../estilos/modulos/cuentasOrganizacion.css';
@@ -23,7 +23,7 @@ export default function PanelCuentasOrganizacion({
   const [correo, setCorreo] = useState('');
   const [crearVisible, setCrearVisible] = useState(false);
   const [busqueda, setBusqueda] = useState('');
-  const [filtroEstado, setFiltroEstado] = useState<'todos' | 'activos' | 'inactivos'>('todos');
+  const [filtroEstado, setFiltroEstado] = useState<'todos' | 'activos' | 'inactivos' | 'retirados'>('todos');
   const [seleccion, setSeleccion] = useState<string[]>(['CAMPO']);
   const [edicion, setEdicion] = useState<string | null>(null);
   const [rolesEdicion, setRolesEdicion] = useState<string[]>([]);
@@ -33,6 +33,7 @@ export default function PanelCuentasOrganizacion({
   const [correoEdicion, setCorreoEdicion] = useState('');
   const [confirmandoReemision, setConfirmandoReemision] = useState<string | null>(null);
   const [confirmandoEstado, setConfirmandoEstado] = useState<string | null>(null);
+  const [confirmandoRetiro, setConfirmandoRetiro] = useState<string | null>(null);
   const [menuCuenta, setMenuCuenta] = useState<string | null>(null);
   const [temporal, setTemporal] = useState<{ correo: string; clave: string } | null>(null);
   const [guardando, setGuardando] = useState(false);
@@ -134,6 +135,19 @@ export default function PanelCuentasOrganizacion({
     } finally { setGuardando(false); }
   }
 
+  async function retirar(cuenta: CuentaOrganizacion) {
+    if(guardando)return;
+    setGuardando(true);setError('');setMensaje('');
+    try{
+      await retirarCuentaOrganizacion(token,cuenta.id);
+      setCuentas((actual)=>actual?.map((item)=>item.id===cuenta.id
+        ? {...item,activo:false,retirado:true}:item)??null);
+      setConfirmandoRetiro(null);setMenuCuenta(null);
+      setMensaje('Cuenta retirada. El acceso fue revocado y se conservó el historial.');
+    }catch(error){setError(error instanceof Error?error.message:'No se pudo retirar la cuenta.');}
+    finally{setGuardando(false);}
+  }
+
   async function reemitir(cuenta: CuentaOrganizacion) {
     if (guardando || temporal) return;
     setGuardando(true);setError('');setMensaje('');
@@ -217,27 +231,38 @@ export default function PanelCuentasOrganizacion({
         </div>
       )}
       <div className="cuentas-org__listado">
-        <h3>Usuarios registrados ({cuentas?.length ?? 0})</h3>
+        <h3>Usuarios registrados ({cuentas?.filter((c)=>!c.retirado).length ?? 0})</h3>
         <div className="cuentas-org__filtros">
           <label>Buscar usuario
             <input type="text" value={busqueda} placeholder="Nombre o correo" onChange={(e) => setBusqueda(e.target.value)} />
           </label>
           <label>Estado
             <select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value as typeof filtroEstado)}>
-              <option value="todos">Todos</option><option value="activos">Activos</option><option value="inactivos">Inactivos</option>
+              <option value="todos">Todos</option><option value="activos">Activos</option><option value="inactivos">Inactivos</option><option value="retirados">Retirados (historial)</option>
             </select>
           </label>
         </div>
         {cuentas === null && !error && <p role="status">Consultando cuentas…</p>}
         {cuentas?.length === 0 && <p>Todavía no hay usuarios en esta organización.</p>}
         {cuentas?.filter((cuenta) => (cuenta.email + ' ' + (cuenta.nombreVisible ?? '')).toLowerCase().includes(busqueda.trim().toLowerCase()) &&
-          (filtroEstado === 'todos' || cuenta.activo === (filtroEstado === 'activos'))).map((cuenta) => (
+          (filtroEstado === 'retirados' ? Boolean(cuenta.retirado) :
+            !cuenta.retirado && (filtroEstado === 'todos' || cuenta.activo === (filtroEstado === 'activos')))).map((cuenta) => (
           <article className="cuentas-org__cuenta" key={cuenta.id}>
             <div className="cuentas-org__identidad">
               <strong>{cuenta.nombreVisible || cuenta.email}</strong>
               {cuenta.nombreVisible && <span>{cuenta.email}</span>}
-              <small>{cuenta.activo ? 'Cuenta activa' : 'Cuenta inactiva'} · {cuenta.roles.join(', ') || 'Sin roles'}</small>
+              <small>{cuenta.retirado ? 'Cuenta retirada' : cuenta.activo ? 'Cuenta activa' : 'Cuenta inactiva'} · {cuenta.roles.join(', ') || 'Sin roles'}</small>
             </div>
+            {confirmandoRetiro === cuenta.id && (
+              <div className="cuentas-org__confirmacion" role="alert">
+                <p>¿Retirar {cuenta.email}? Su acceso se bloqueará y dejará de aparecer en la lista habitual. Se conservarán correo e historial. No se puede revertir desde este panel.</p>
+                <div className="cuentas-org__acciones">
+                  <button type="button" disabled={guardando} onClick={()=>void retirar(cuenta)}>Sí, retirar cuenta</button>
+                  <button type="button" className="cuentas-org__secundario" disabled={guardando}
+                    onClick={()=>setConfirmandoRetiro(null)}>Cancelar</button>
+                </div>
+              </div>
+            )}
             {confirmandoEstado === cuenta.id && (
               <div className="cuentas-org__confirmacion" role="alert">
                 <p>¿Querés {cuenta.activo ? 'desactivar' : 'reactivar'} la cuenta de {cuenta.email}?</p>
@@ -309,7 +334,7 @@ export default function PanelCuentasOrganizacion({
                     onClick={() => setEdicion(null)}>Cancelar</button>
                 </div>
               </div>
-            ) : (
+            ) : !cuenta.retirado ? (
               <div className="cuentas-org__menu-contenedor">
                 <button type="button" className="cuentas-org__secundario" aria-expanded={menuCuenta === cuenta.id}
                   aria-controls={`acciones-cuenta-${cuenta.id}`} disabled={guardando}
@@ -334,10 +359,15 @@ export default function PanelCuentasOrganizacion({
                     <button type="button" disabled={guardando} onClick={() => {
                       setConfirmandoEstado(cuenta.id); setConfirmandoReemision(null); setMenuCuenta(null);
                     }}>{cuenta.activo ? 'Desactivar cuenta' : 'Reactivar cuenta'}</button>
+                    <button type="button" disabled={guardando} onClick={()=>{
+                      setConfirmandoRetiro(cuenta.id);setConfirmandoEstado(null);
+                      setConfirmandoReemision(null);setMenuCuenta(null);setEdicion(null);
+                      setEdicionCorreo(null);setEdicionNombre(null);
+                    }}>Retirar de organización</button>
                   </div>
                 )}
               </div>
-            )}
+            ) : <span>Historial conservado</span>}
           </article>
         ))}
       </div>
