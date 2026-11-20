@@ -77,6 +77,8 @@ usuariosRouter.get('/cuentas', authenticateAccessToken, requireRole('ADMINISTRAD
         `SELECT u.id, u.email, u.activo, u.debe_cambiar_contrasena AS "debeCambiarContrasena",
            (SELECT pf.nombre_visible FROM perfiles_usuarios pf
              WHERE pf.usuario_id=u.id AND pf.organizacion_id=u.organizacion_id) AS "nombreVisible",
+           EXISTS (SELECT 1 FROM bitacora_auditoria b WHERE b.entidad_id=u.id
+             AND b.nombre_entidad='usuarios' AND b.accion='RETIRAR_USUARIO_ORGANIZACION') AS retirado,
            COALESCE(array_agg(r.nombre ORDER BY r.nombre) FILTER (WHERE r.id IS NOT NULL), '{}'::text[]) AS roles
          FROM usuarios u LEFT JOIN usuarios_roles ur ON ur.usuario_id=u.id
          LEFT JOIN roles r ON r.id=ur.rol_id
@@ -151,6 +153,52 @@ usuariosRouter.post('/cuentas', authenticateAccessToken, requireRole('ADMINISTRA
       console.error('Error creando usuario de la organización:', error);
       res.status(500).json({ message: 'No fue posible crear la cuenta.' });
     }
+  });
+
+// Retirada lógica: preserva datos relacionados e impide reactivar desde paneles.
+usuariosRouter.post('/cuentas/:usuarioId/retirar', authenticateAccessToken,
+  requireRole('ADMINISTRADOR'), requirePermission('usuarios.gestionar'), async(req,res)=>{
+    const id=req.params.usuarioId, org=req.auth!.organizacionId;
+    if(typeof id!=='string'||!/^[0-9a-f-]{36}$/i.test(id)){res.status(400).json({message:'Cuenta inválida.'});return;}
+    if(id===req.auth!.sub){res.status(409).json({message:'No podés retirar tu propia cuenta.'});return;}
+    if(!databasePool){res.status(503).json({message:'Gestión de cuentas no disponible.'});return;}
+    const client=await databasePool.connect();
+    try{
+      await client.query('BEGIN');
+      const organizacion=await client.query('SELECT id FROM organizaciones WHERE id=$1 AND activo FOR UPDATE',[org]);
+      const admin=await client.query(`SELECT 1 FROM usuarios u JOIN usuarios_roles ur ON ur.usuario_id=u.id
+        JOIN roles r ON r.id=ur.rol_id AND r.nombre='ADMINISTRADOR' AND r.activo
+        WHERE u.id=$1 AND u.organizacion_id=$2 AND u.activo LIMIT 1`,[req.auth!.sub,org]);
+      if(!organizacion.rowCount||!admin.rowCount){
+        await client.query('ROLLBACK');res.status(403).json({message:'Administración no autorizada.'});return;
+      }
+      const cuenta=await client.query('SELECT id,activo FROM usuarios WHERE id=$1 AND organizacion_id=$2 FOR UPDATE',[id,org]);
+      if(!cuenta.rowCount){await client.query('ROLLBACK');res.status(404).json({message:'Cuenta no encontrada.'});return;}
+      const roles=await client.query(`SELECT r.nombre FROM usuarios_roles ur JOIN roles r ON r.id=ur.rol_id WHERE ur.usuario_id=$1`,[id]);
+      if(roles.rows.some((r:{nombre:string})=>r.nombre==='SUPERADMINISTRADOR')){
+        await client.query('ROLLBACK');res.status(403).json({message:'Cuenta de plataforma protegida.'});return;
+      }
+      const retirada=await client.query(`SELECT 1 FROM bitacora_auditoria
+        WHERE entidad_id=$1 AND nombre_entidad='usuarios' AND accion='RETIRAR_USUARIO_ORGANIZACION' LIMIT 1`,[id]);
+      if(retirada.rowCount){await client.query('ROLLBACK');res.status(409).json({message:'Cuenta ya retirada.'});return;}
+      if(roles.rows.some((r:{nombre:string})=>r.nombre==='ADMINISTRADOR')){
+        const otros=await client.query(`SELECT COUNT(DISTINCT u.id)::int AS total FROM usuarios u
+          JOIN usuarios_roles ur ON ur.usuario_id=u.id JOIN roles r ON r.id=ur.rol_id AND r.activo
+          WHERE u.organizacion_id=$1 AND u.activo AND r.nombre='ADMINISTRADOR' AND u.id<>$2`,[org,id]);
+        if(!otros.rows[0].total){await client.query('ROLLBACK');
+          res.status(409).json({message:'La organización debe conservar al menos un administrador.'});return;}
+      }
+      await client.query('UPDATE usuarios SET activo=FALSE,actualizado_en=NOW() WHERE id=$1',[id]);
+      await client.query('UPDATE tokens_refresco SET revocado_en=COALESCE(revocado_en,NOW()) WHERE usuario_id=$1',[id]);
+      await client.query(`INSERT INTO bitacora_auditoria
+        (usuario_id,accion,nombre_entidad,entidad_id,valores_anteriores,valores_nuevos)
+        VALUES ($1,'RETIRAR_USUARIO_ORGANIZACION','usuarios',$2,$3::jsonb,$4::jsonb)`,
+        [req.auth!.sub,id,JSON.stringify({activo:cuenta.rows[0].activo}),
+          JSON.stringify({activo:false,retirado:true,organizacionId:org})]);
+      await client.query('COMMIT');res.set('Cache-Control','no-store');res.json({id,activo:false,retirado:true});
+    }catch(error){await client.query('ROLLBACK');console.error('Error retirando usuario:',error);
+      res.status(500).json({message:'No fue posible retirar la cuenta.'});
+    }finally{client.release();}
   });
 
 // Los administradores reemiten una contraseña temporal solo para cuentas de su organización.
