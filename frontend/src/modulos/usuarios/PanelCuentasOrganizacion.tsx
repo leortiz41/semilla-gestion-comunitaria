@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import {
-  cambiarCorreoCuenta, cambiarRolesCuenta, cambiarEstadoCuentaOrganizacion, crearCuentaOrganizacion, obtenerCuentasOrganizacion,
+  cambiarCorreoCuenta, cambiarNombreCuenta, cambiarRolesCuenta, cambiarEstadoCuentaOrganizacion, crearCuentaOrganizacion, obtenerCuentasOrganizacion,
   reemitirCredencialTemporalCuenta,
   type CuentaOrganizacion,
 } from '../../lib/api';
@@ -27,6 +27,8 @@ export default function PanelCuentasOrganizacion({
   const [seleccion, setSeleccion] = useState<string[]>(['CAMPO']);
   const [edicion, setEdicion] = useState<string | null>(null);
   const [rolesEdicion, setRolesEdicion] = useState<string[]>([]);
+  const [edicionNombre, setEdicionNombre] = useState<string | null>(null);
+  const [nombreEdicion, setNombreEdicion] = useState('');
   const [edicionCorreo, setEdicionCorreo] = useState<string | null>(null);
   const [correoEdicion, setCorreoEdicion] = useState('');
   const [confirmandoReemision, setConfirmandoReemision] = useState<string | null>(null);
@@ -78,6 +80,25 @@ export default function PanelCuentasOrganizacion({
       setMensaje('Roles actualizados. El usuario debe volver a iniciar sesión para actualizar sus permisos.');
     } catch (fallo) {
       setError(fallo instanceof Error ? fallo.message : 'No se pudieron actualizar los roles.');
+    } finally { setGuardando(false); }
+  }
+
+  async function guardarNombre(cuenta: CuentaOrganizacion) {
+    if (guardando) return;
+    const nuevo = nombreEdicion.trim().replace(/\s+/g, ' ');
+    if (nuevo.length < 2 || nuevo.length > 140) {
+      setError('Ingresá un nombre de 2 a 140 caracteres.'); return;
+    }
+    setGuardando(true); setError(''); setMensaje('');
+    try {
+      const { nombreVisible } = await cambiarNombreCuenta(token, cuenta.id, nuevo);
+      setCuentas((actual) => actual?.map((item) => item.id === cuenta.id
+        ? { ...item, nombreVisible } : item) ?? null);
+      setEdicionNombre(null);
+      setNombreEdicion('');
+      setMensaje('Nombre visible actualizado correctamente.');
+    } catch (fallo) {
+      setError(fallo instanceof Error ? fallo.message : 'No fue posible actualizar el nombre.');
     } finally { setGuardando(false); }
   }
 
@@ -240,6 +261,20 @@ export default function PanelCuentasOrganizacion({
                 </div>
               </div>
             )}
+            {edicionNombre === cuenta.id && (
+              <form className="cuentas-org__editor" onSubmit={(e) => { e.preventDefault(); void guardarNombre(cuenta); }}>
+                <label>Nombre visible
+                  <input type="text" required minLength={2} maxLength={140}
+                    value={nombreEdicion} disabled={guardando}
+                    onChange={(e) => setNombreEdicion(e.target.value)} />
+                </label>
+                <div className="cuentas-org__acciones">
+                  <button type="submit" disabled={guardando}>Guardar nombre</button>
+                  <button type="button" className="cuentas-org__secundario" disabled={guardando}
+                    onClick={() => setEdicionNombre(null)}>Cancelar</button>
+                </div>
+              </form>
+            )}
             {edicionCorreo === cuenta.id && (
               <form className="cuentas-org__editor" onSubmit={(e) => { e.preventDefault(); void guardarCorreo(cuenta); }}>
                 <label>Correo electrónico corregido
@@ -283,14 +318,18 @@ export default function PanelCuentasOrganizacion({
                 </button>
                 {menuCuenta === cuenta.id && (
                   <div className="cuentas-org__menu" id={`acciones-cuenta-${cuenta.id}`}>
+                    <button type="button" disabled={guardando} onClick={() => {
+                      setEdicionNombre(cuenta.id); setNombreEdicion(cuenta.nombreVisible || '');
+                      setEdicion(null); setEdicionCorreo(null); setMenuCuenta(null);
+                    }}>Editar nombre</button>
                     <button type="button" disabled={guardando || !cuenta.activo} onClick={() => {
-                      setEdicion(cuenta.id); setEdicionCorreo(null); setRolesEdicion(cuenta.roles); setMenuCuenta(null);
+                      setEdicion(cuenta.id); setEdicionNombre(null); setEdicionCorreo(null); setRolesEdicion(cuenta.roles); setMenuCuenta(null);
                     }}>Editar roles</button>
                     <button type="button" disabled={guardando || !cuenta.activo} onClick={() => {
-                      setEdicionCorreo(cuenta.id); setCorreoEdicion(cuenta.email); setEdicion(null); setMenuCuenta(null);
+                      setEdicionCorreo(cuenta.id); setCorreoEdicion(cuenta.email); setEdicion(null); setEdicionNombre(null); setMenuCuenta(null);
                     }}>Editar correo</button>
                     <button type="button" disabled={guardando || !cuenta.activo || Boolean(temporal)} onClick={() => {
-                      setConfirmandoReemision(cuenta.id); setEdicion(null); setEdicionCorreo(null); setMenuCuenta(null);
+                      setConfirmandoReemision(cuenta.id); setEdicion(null); setEdicionCorreo(null); setEdicionNombre(null); setMenuCuenta(null);
                     }}>Reemitir contraseña temporal</button>
                     <button type="button" disabled={guardando} onClick={() => {
                       setConfirmandoEstado(cuenta.id); setConfirmandoReemision(null); setMenuCuenta(null);
