@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import {
-  cambiarCorreoCuenta, cambiarRolesCuenta, crearCuentaOrganizacion, obtenerCuentasOrganizacion,
+  cambiarCorreoCuenta, cambiarRolesCuenta, cambiarEstadoCuentaOrganizacion, crearCuentaOrganizacion, obtenerCuentasOrganizacion,
   reemitirCredencialTemporalCuenta,
   type CuentaOrganizacion,
 } from '../../lib/api';
@@ -30,6 +30,8 @@ export default function PanelCuentasOrganizacion({
   const [edicionCorreo, setEdicionCorreo] = useState<string | null>(null);
   const [correoEdicion, setCorreoEdicion] = useState('');
   const [confirmandoReemision, setConfirmandoReemision] = useState<string | null>(null);
+  const [confirmandoEstado, setConfirmandoEstado] = useState<string | null>(null);
+  const [menuCuenta, setMenuCuenta] = useState<string | null>(null);
   const [temporal, setTemporal] = useState<{ correo: string; clave: string } | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
@@ -97,6 +99,20 @@ export default function PanelCuentasOrganizacion({
     } finally { setGuardando(false); }
   }
 
+  async function actualizarEstado(cuenta: CuentaOrganizacion) {
+    if (guardando) return;
+    setGuardando(true); setError(''); setMensaje('');
+    try {
+      const { activo } = await cambiarEstadoCuentaOrganizacion(token, cuenta.id, !cuenta.activo);
+      setCuentas((actual) => actual?.map((item) => item.id === cuenta.id ? { ...item, activo } : item) ?? null);
+      setConfirmandoEstado(null);
+      setMenuCuenta(null);
+      setMensaje(activo ? 'Cuenta reactivada correctamente.' : 'Cuenta desactivada; sus sesiones de renovación fueron revocadas.');
+    } catch (fallo) {
+      setError(fallo instanceof Error ? fallo.message : 'No fue posible cambiar el estado de la cuenta.');
+    } finally { setGuardando(false); }
+  }
+
   async function reemitir(cuenta: CuentaOrganizacion) {
     if (guardando || temporal) return;
     setGuardando(true);setError('');setMensaje('');
@@ -120,16 +136,22 @@ export default function PanelCuentasOrganizacion({
           <p>Creá accesos y asigná perfiles de Semilla. Solo se muestran usuarios de tu organización.</p>
         </div>
         <div className="cuentas-org__acciones">
-          <button type="button" disabled={guardando || Boolean(temporal)} onClick={() => setCrearVisible((v) => !v)}>
-            {crearVisible ? 'Cancelar creación' : 'Nuevo usuario'}
+          <button type="button" disabled={guardando || Boolean(temporal)} onClick={() => setCrearVisible(true)}>
+            Nuevo usuario
           </button>
           <button type="button" onClick={() => setVersion((v) => v + 1)} disabled={guardando}>Actualizar</button>
         </div>
       </div>
       {error && <p role="alert" className="cuentas-org__error">{error}</p>}
       {mensaje && <p role="status" className="cuentas-org__mensaje">{mensaje}</p>}
-      {crearVisible && <form className="cuentas-org__formulario" onSubmit={(evento) => void crear(evento)}>
-        <h3>Crear nueva cuenta</h3>
+      {crearVisible && <div className="cuentas-org__modal-fondo" onMouseDown={(e) => { if (e.target === e.currentTarget && !guardando) setCrearVisible(false); }}>
+        <div className="cuentas-org__modal" role="dialog" aria-modal="true" aria-labelledby="titulo-crear-cuenta">
+          <div className="cuentas-org__modal-encabezado">
+            <div><h3 id="titulo-crear-cuenta">Crear nueva cuenta</h3><p>La cuenta pertenecerá a tu organización actual.</p></div>
+            <button type="button" className="cuentas-org__secundario" disabled={guardando} onClick={() => setCrearVisible(false)} aria-label="Cerrar formulario">Cerrar</button>
+          </div>
+          <form className="cuentas-org__formulario" onSubmit={(evento) => void crear(evento)}>
+        {error && <p role="alert" className="cuentas-org__error">{error}</p>}
         <div className="cuentas-org__nombres">
           <label>Nombre
             <input type="text" required minLength={2} maxLength={100} value={nombre}
@@ -161,7 +183,10 @@ export default function PanelCuentasOrganizacion({
         <button type="submit" disabled={!seleccion.length || guardando || Boolean(temporal)}>
           {guardando ? 'Creando cuenta…' : 'Crear cuenta y contraseña temporal'}
         </button>
-      </form>}
+          <div className="cuentas-org__acciones"><button type="button" className="cuentas-org__secundario" disabled={guardando} onClick={() => setCrearVisible(false)}>Cancelar</button></div>
+          </form>
+        </div>
+      </div>}
       {temporal && (
         <div className="cuentas-org__temporal" role="status">
           <strong>Acceso creado: {temporal.correo}</strong>
@@ -192,6 +217,18 @@ export default function PanelCuentasOrganizacion({
               {cuenta.nombreVisible && <span>{cuenta.email}</span>}
               <small>{cuenta.activo ? 'Cuenta activa' : 'Cuenta inactiva'} · {cuenta.roles.join(', ') || 'Sin roles'}</small>
             </div>
+            {confirmandoEstado === cuenta.id && (
+              <div className="cuentas-org__confirmacion" role="alert">
+                <p>¿Querés {cuenta.activo ? 'desactivar' : 'reactivar'} la cuenta de {cuenta.email}?</p>
+                <div className="cuentas-org__acciones">
+                  <button type="button" disabled={guardando} onClick={() => void actualizarEstado(cuenta)}>
+                    Sí, {cuenta.activo ? 'desactivar' : 'reactivar'}
+                  </button>
+                  <button type="button" className="cuentas-org__secundario" disabled={guardando}
+                    onClick={() => setConfirmandoEstado(null)}>Cancelar</button>
+                </div>
+              </div>
+            )}
             {confirmandoReemision === cuenta.id && (
               <div className="cuentas-org__confirmacion" role="alert">
                 <p>¿Generar una nueva contraseña temporal para {cuenta.email}? La anterior dejará de funcionar.</p>
@@ -238,22 +275,28 @@ export default function PanelCuentasOrganizacion({
                 </div>
               </div>
             ) : (
-              <div className="cuentas-org__acciones">
-                <button type="button" className="cuentas-org__secundario"
-                  disabled={guardando || !cuenta.activo || edicionCorreo === cuenta.id}
-                  onClick={() => { setEdicion(cuenta.id); setEdicionCorreo(null); setRolesEdicion(cuenta.roles); }}>
-                  Editar roles
+              <div className="cuentas-org__menu-contenedor">
+                <button type="button" className="cuentas-org__secundario" aria-expanded={menuCuenta === cuenta.id}
+                  aria-controls={`acciones-cuenta-${cuenta.id}`} disabled={guardando}
+                  onClick={() => setMenuCuenta((actual) => actual === cuenta.id ? null : cuenta.id)}>
+                  Acciones ···
                 </button>
-                <button type="button" className="cuentas-org__secundario"
-                  disabled={guardando || !cuenta.activo || edicionCorreo === cuenta.id}
-                  onClick={() => { setEdicionCorreo(cuenta.id); setCorreoEdicion(cuenta.email); setEdicion(null); }}>
-                  Editar correo
-                </button>
-                <button type="button" className="cuentas-org__secundario"
-                  disabled={guardando || !cuenta.activo || Boolean(temporal) || edicionCorreo === cuenta.id}
-                  onClick={()=>{setConfirmandoReemision(cuenta.id);setEdicion(null);setEdicionCorreo(null);}}>
-                  Reemitir contraseña temporal
-                </button>
+                {menuCuenta === cuenta.id && (
+                  <div className="cuentas-org__menu" id={`acciones-cuenta-${cuenta.id}`}>
+                    <button type="button" disabled={guardando || !cuenta.activo} onClick={() => {
+                      setEdicion(cuenta.id); setEdicionCorreo(null); setRolesEdicion(cuenta.roles); setMenuCuenta(null);
+                    }}>Editar roles</button>
+                    <button type="button" disabled={guardando || !cuenta.activo} onClick={() => {
+                      setEdicionCorreo(cuenta.id); setCorreoEdicion(cuenta.email); setEdicion(null); setMenuCuenta(null);
+                    }}>Editar correo</button>
+                    <button type="button" disabled={guardando || !cuenta.activo || Boolean(temporal)} onClick={() => {
+                      setConfirmandoReemision(cuenta.id); setEdicion(null); setEdicionCorreo(null); setMenuCuenta(null);
+                    }}>Reemitir contraseña temporal</button>
+                    <button type="button" disabled={guardando} onClick={() => {
+                      setConfirmandoEstado(cuenta.id); setConfirmandoReemision(null); setMenuCuenta(null);
+                    }}>{cuenta.activo ? 'Desactivar cuenta' : 'Reactivar cuenta'}</button>
+                  </div>
+                )}
               </div>
             )}
           </article>
