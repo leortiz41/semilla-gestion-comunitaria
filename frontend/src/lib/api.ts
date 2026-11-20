@@ -520,10 +520,12 @@ export function obtenerCuentasPlataforma(token: string, organizacionId: string) 
     headers: { Authorization: `Bearer ${token}` },
   });
 }
-export function crearCuentaPlataforma(token: string, organizacionId: string, email: string, roles: string[]) {
+export function crearCuentaPlataforma(token: string, organizacionId: string, datos: {
+  nombre: string; apellido: string; email: string; roles: string[];
+}) {
   return request<{ cuenta: CuentaOrganizacion; contrasenaTemporal: string }>(
     `/plataforma/organizaciones/${organizacionId}/cuentas`, {
-      method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify({ email, roles }),
+      method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify(datos),
     });
 }
 
