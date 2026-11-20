@@ -419,6 +419,7 @@ export function obtenerRoles(tokenAcceso: string) {
 export interface CuentaOrganizacion {
   id: string;
   email: string;
+  nombreVisible?: string | null;
   activo: boolean;
   debeCambiarContrasena: boolean;
   roles: string[];
@@ -430,11 +431,11 @@ export function obtenerCuentasOrganizacion(token: string) {
   });
 }
 
-export function crearCuentaOrganizacion(token: string, email: string, roles: string[]) {
+export function crearCuentaOrganizacion(token: string, datos: { nombre: string; apellido: string; email: string; roles: string[] }) {
   return request<{ cuenta: CuentaOrganizacion; contrasenaTemporal: string }>('/usuarios/cuentas', {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ email, roles }),
+    body: JSON.stringify(datos),
   });
 }
 
