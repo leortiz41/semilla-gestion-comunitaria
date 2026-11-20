@@ -42,3 +42,15 @@
 .cuentas-org__filtros{padding:.65rem 0}
 .cuentas-org__identidad span{font-size:.85rem;color:#647769}
 @media(max-width:600px){.cuentas-org__nombres,.cuentas-org__filtros{grid-template-columns:1fr}}
+
+/* Gestión de cuentas: modal y menú compacto */
+.cuentas-org__modal-fondo{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:1rem;background:rgba(11,28,20,.6)}
+.cuentas-org__modal{width:min(100%,580px);max-height:min(90vh,780px);overflow:auto;padding:1.25rem;background:#fff;border-radius:1rem;box-shadow:0 20px 70px rgba(0,0,0,.25)}
+.cuentas-org__modal-encabezado{display:flex;justify-content:space-between;align-items:start;gap:1rem;margin-bottom:1rem}
+.cuentas-org__modal .cuentas-org__formulario{margin:0}
+.cuentas-org__menu-contenedor{position:relative;margin-left:auto}
+.cuentas-org__menu{position:absolute;top:calc(100% + .3rem);right:0;z-index:10;display:grid;gap:.25rem;min-width:220px;padding:.4rem;background:#fff;border:1px solid #d5e5d7;border-radius:.65rem;box-shadow:0 8px 24px rgba(0,0,0,.13)}
+.cuentas-org__menu button{background:#fff;color:#254f34;border:0;text-align:left;font-weight:500}
+.cuentas-org__menu button:hover:not(:disabled){background:#eff6ec}
+.cuentas-org__cuenta{position:relative}
+@media(max-width:600px){.cuentas-org__modal{padding:.8rem}.cuentas-org__menu{min-width:190px}}
