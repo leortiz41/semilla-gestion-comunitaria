@@ -33,7 +33,7 @@ export default function PanelCredencialesTemporales({
   }, [organizacion.id]);
 
   const administradores = cuentas.filter((cuenta) =>
-    cuenta.activo &&
+    cuenta.activo && !cuenta.retirado &&
     !cuenta.roles.includes('SUPERADMINISTRADOR'),
   );
 
