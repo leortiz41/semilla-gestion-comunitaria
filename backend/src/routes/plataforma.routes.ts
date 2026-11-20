@@ -273,6 +273,88 @@ plataformaRouter.post('/organizaciones/:organizacionId/cuentas/:usuarioId/creden
   }
 });
 
+// El superadministrador puede mantener la identidad visible de cualquier cuenta activa
+// de una organización sin cambiar su correo, fotografía ni credenciales.
+plataformaRouter.put('/organizaciones/:organizacionId/cuentas/:usuarioId/nombre', async(req,res)=>{
+  const {organizacionId,usuarioId}=req.params;
+  const nombreVisible=typeof req.body?.nombreVisible==='string'
+    ? req.body.nombreVisible.trim().replace(/\s+/g,' '):'';
+  if(!esUuid(organizacionId)||!esUuid(usuarioId)||nombreVisible.length<2||
+     nombreVisible.length>140||/[\x00-\x1f\x7f]/.test(nombreVisible)){
+    res.status(400).json({message:'Organización, cuenta o nombre inválidos.'});return;
+  }
+  const client=await databasePool!.connect();
+  try {
+    await client.query('BEGIN');
+    const org=await client.query('SELECT id FROM organizaciones WHERE id=$1 AND activo FOR UPDATE',[organizacionId]);
+    const cuenta=await client.query(`SELECT u.id,pf.nombre_visible AS "nombreVisible"
+      FROM usuarios u LEFT JOIN perfiles_usuarios pf ON pf.usuario_id=u.id AND pf.organizacion_id=u.organizacion_id
+      WHERE u.id=$1 AND u.organizacion_id=$2 AND u.activo FOR UPDATE OF u`,[usuarioId,organizacionId]);
+    if(!org.rowCount||!cuenta.rowCount){await client.query('ROLLBACK');res.status(404).json({message:'Cuenta u organización no activa.'});return;}
+    const protegida=await client.query(`SELECT 1 FROM usuarios_roles ur JOIN roles r ON r.id=ur.rol_id
+      WHERE ur.usuario_id=$1 AND r.nombre='SUPERADMINISTRADOR' LIMIT 1`,[usuarioId]);
+    if(protegida.rowCount){await client.query('ROLLBACK');res.status(403).json({message:'Cuenta de plataforma protegida.'});return;}
+    const retirada=await client.query(`SELECT 1 FROM bitacora_auditoria WHERE entidad_id=$1 AND
+      nombre_entidad='usuarios' AND accion='RETIRAR_USUARIO_ORGANIZACION' LIMIT 1`,[usuarioId]);
+    if(retirada.rowCount){await client.query('ROLLBACK');res.status(409).json({message:'Cuenta retirada.'});return;}
+    const anterior=cuenta.rows[0].nombreVisible as string|null;
+    if(anterior!==nombreVisible) {
+      await client.query(`INSERT INTO perfiles_usuarios(usuario_id,organizacion_id,nombre_visible)
+        VALUES($1,$2,$3) ON CONFLICT(usuario_id)
+        DO UPDATE SET nombre_visible=EXCLUDED.nombre_visible,actualizado_en=NOW()`,
+        [usuarioId,organizacionId,nombreVisible]);
+      await client.query(`INSERT INTO bitacora_auditoria
+        (usuario_id,accion,nombre_entidad,entidad_id,valores_anteriores,valores_nuevos)
+        VALUES($1,'PLATAFORMA_CAMBIAR_NOMBRE','usuarios',$2,$3::jsonb,$4::jsonb)`,
+        [req.auth!.sub,usuarioId,JSON.stringify({organizacionId,nombreVisible:anterior}),
+         JSON.stringify({organizacionId,nombreVisible})]);
+    }
+    await client.query('COMMIT');
+    res.set('Cache-Control','no-store');res.json({nombreVisible});
+  }catch(error){await client.query('ROLLBACK');console.error('Error editando nombre de cuenta:',errorHttp(error));
+    res.status(500).json({message:'No fue posible actualizar el nombre.'});
+  }finally{client.release();}
+});
+
+// Retiro por soporte de plataforma: baja lógica auditada que no elimina relaciones históricas.
+plataformaRouter.post('/organizaciones/:organizacionId/cuentas/:usuarioId/retirar',async(req,res)=>{
+  const {organizacionId,usuarioId}=req.params;
+  if(!esUuid(organizacionId)||!esUuid(usuarioId)){res.status(400).json({message:'Cuenta u organización inválida.'});return;}
+  if(usuarioId===req.auth!.sub){res.status(409).json({message:'No podés retirar tu propia cuenta.'});return;}
+  const client=await databasePool!.connect();
+  try {
+    await client.query('BEGIN');
+    const org=await client.query('SELECT id FROM organizaciones WHERE id=$1 AND activo FOR UPDATE',[organizacionId]);
+    const cuenta=await client.query('SELECT id,activo FROM usuarios WHERE id=$1 AND organizacion_id=$2 FOR UPDATE',[usuarioId,organizacionId]);
+    if(!org.rowCount||!cuenta.rowCount){await client.query('ROLLBACK');res.status(404).json({message:'Cuenta u organización no disponible.'});return;}
+    const roles=await client.query(`SELECT r.nombre FROM usuarios_roles ur JOIN roles r ON r.id=ur.rol_id
+      WHERE ur.usuario_id=$1`,[usuarioId]);
+    if(roles.rows.some((r:{nombre:string})=>r.nombre==='SUPERADMINISTRADOR')){
+      await client.query('ROLLBACK');res.status(403).json({message:'Cuenta de plataforma protegida.'});return;
+    }
+    const retirada=await client.query(`SELECT 1 FROM bitacora_auditoria WHERE entidad_id=$1 AND
+      nombre_entidad='usuarios' AND accion='RETIRAR_USUARIO_ORGANIZACION' LIMIT 1`,[usuarioId]);
+    if(retirada.rowCount){await client.query('ROLLBACK');res.status(409).json({message:'La cuenta ya fue retirada.'});return;}
+    if(roles.rows.some((r:{nombre:string})=>r.nombre==='ADMINISTRADOR')) {
+      const otros=await client.query(`SELECT count(DISTINCT u.id)::int AS total FROM usuarios u
+        JOIN usuarios_roles ur ON ur.usuario_id=u.id JOIN roles r ON r.id=ur.rol_id AND r.activo
+        WHERE u.organizacion_id=$1 AND u.activo AND r.nombre='ADMINISTRADOR' AND u.id<>$2`,[organizacionId,usuarioId]);
+      if(!otros.rows[0].total){await client.query('ROLLBACK');
+        res.status(409).json({message:'La organización debe conservar al menos un administrador activo.'});return;}
+    }
+    await client.query('UPDATE usuarios SET activo=FALSE,actualizado_en=NOW() WHERE id=$1',[usuarioId]);
+    await client.query('UPDATE tokens_refresco SET revocado_en=COALESCE(revocado_en,NOW()) WHERE usuario_id=$1',[usuarioId]);
+    await client.query(`INSERT INTO bitacora_auditoria
+      (usuario_id,accion,nombre_entidad,entidad_id,valores_anteriores,valores_nuevos)
+      VALUES($1,'RETIRAR_USUARIO_ORGANIZACION','usuarios',$2,$3::jsonb,$4::jsonb)`,
+      [req.auth!.sub,usuarioId,JSON.stringify({activo:cuenta.rows[0].activo}),
+       JSON.stringify({activo:false,retirado:true,organizacionId,desdePlataforma:true})]);
+    await client.query('COMMIT');res.set('Cache-Control','no-store');res.json({id:usuarioId,activo:false,retirado:true});
+  }catch(error){await client.query('ROLLBACK');console.error('Error retirando cuenta desde plataforma:',errorHttp(error));
+    res.status(500).json({message:'No fue posible retirar la cuenta.'});
+  }finally{client.release();}
+});
+
 // El superadministrador puede corregir correos de cuentas de organizaciones, nunca el suyo.
 plataformaRouter.put('/organizaciones/:organizacionId/cuentas/:usuarioId/email', async (req,res) => {
   const { organizacionId, usuarioId } = req.params;
