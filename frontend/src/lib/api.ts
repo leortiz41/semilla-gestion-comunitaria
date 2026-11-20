@@ -536,6 +536,20 @@ export function reemitirCredencialTemporalPlataforma(token: string, organizacion
     });
 }
 
+export function cambiarNombreCuentaPlataforma(token: string, organizacionId: string, usuarioId: string, nombreVisible: string) {
+  return request<{ nombreVisible: string }>(
+    `/plataforma/organizaciones/${organizacionId}/cuentas/${usuarioId}/nombre`, {
+      method:'PUT',headers:{Authorization:`Bearer ${token}`},body:JSON.stringify({nombreVisible}),
+    });
+}
+
+export function retirarCuentaPlataforma(token: string, organizacionId: string, usuarioId: string) {
+  return request<{ id: string; activo: boolean; retirado: boolean }>(
+    `/plataforma/organizaciones/${organizacionId}/cuentas/${usuarioId}/retirar`, {
+      method:'POST',headers:{Authorization:`Bearer ${token}`},
+    });
+}
+
 export function cambiarCorreoCuentaPlataforma(token: string, organizacionId: string, usuarioId: string, email: string) {
   return request<{ email: string }>(`/plataforma/organizaciones/${organizacionId}/cuentas/${usuarioId}/email`, {
     method: 'PUT', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify({ email }),
