@@ -208,9 +208,14 @@ plataformaRouter.get('/organizaciones/:organizacionId/cuentas', async (req,res) 
 plataformaRouter.post('/organizaciones/:organizacionId/cuentas',async (req,res) => {
   const organizacionId=req.params.organizacionId;
   const email=typeof req.body?.email==='string'?req.body.email.trim().toLowerCase():'';
+  const nombre=typeof req.body?.nombre==='string'?req.body.nombre.trim().replace(/\s+/g,' '):'';
+  const apellido=typeof req.body?.apellido==='string'?req.body.apellido.trim().replace(/\s+/g,' '):'';
+  const nombreVisible=`${nombre} ${apellido}`.trim();
+  const nombreValido=(valor:string)=>valor.length>=2 && valor.length<=100 && !/[\x00-\x1f\x7f]/.test(valor);
   const roles=req.body?.roles;
-  if (!esUuid(organizacionId) || !esCorreo(email) || !rolesValidos(roles)) {
-    res.status(400).json({message:'Organización, correo o roles inválidos.'});return;
+  if (!esUuid(organizacionId) || !esCorreo(email) || !rolesValidos(roles) ||
+      !nombreValido(nombre) || !nombreValido(apellido) || nombreVisible.length>140) {
+    res.status(400).json({message:'Revisá organización, nombre, apellido, correo y roles.'});return;
   }
   const temporal='Aa1-'+randomBytes(18).toString('base64url');
   const hash=await hashPassword(temporal);
@@ -227,12 +232,15 @@ plataformaRouter.post('/organizaciones/:organizacionId/cuentas',async (req,res) 
     for(const rol of rs.rows) await client.query(
       'INSERT INTO usuarios_roles(usuario_id,rol_id) VALUES($1,$2)',[rows[0].id,rol.id]);
     await client.query(
+      'INSERT INTO perfiles_usuarios(usuario_id,organizacion_id,nombre_visible) VALUES($1,$2,$3)',
+      [rows[0].id,organizacionId,nombreVisible]);
+    await client.query(
       `INSERT INTO bitacora_auditoria(usuario_id,accion,nombre_entidad,entidad_id,valores_nuevos)
        VALUES($1,'PLATAFORMA_CREAR_CUENTA','usuarios',$2,$3::jsonb)`,
-      [req.auth!.sub,rows[0].id,JSON.stringify({ organizacionId,email,roles })]);
+      [req.auth!.sub,rows[0].id,JSON.stringify({ organizacionId,email,roles,nombreVisible })]);
     await client.query('COMMIT');
     res.set('Cache-Control','no-store');
-    res.status(201).json({cuenta:{...rows[0],roles},contrasenaTemporal:temporal});
+    res.status(201).json({cuenta:{...rows[0],roles,nombreVisible},contrasenaTemporal:temporal});
   } catch(error) {
     await client.query('ROLLBACK');
     if(nombreError(error)){res.status(409).json({message:'El correo ya está registrado.'});return;}
