@@ -156,6 +156,51 @@ plataformaRouter.put('/organizaciones/:organizacionId/accesos/cuentas/:usuarioId
  finally{client.release();}
 });
 
+// Ajustes de permisos del rol limitados exclusivamente al tenant solicitado.
+// La tabla de permisos base global nunca se modifica.
+plataformaRouter.put('/organizaciones/:organizacionId/accesos/roles/:nombre/permisos', async (req,res)=>{
+ const org=req.params.organizacionId, nombre=req.params.nombre, permitidos=req.body?.permisos;
+ if(!esUuid(org)||typeof nombre!=='string'||!['COORDINADOR','CAMPO','FINANZAS','DONANTE'].includes(nombre)||
+    !Array.isArray(permitidos)||permitidos.length>250||
+    !permitidos.every((p:unknown)=>typeof p==='string'&&p.length<=100)||
+    new Set(permitidos).size!==permitidos.length){
+   res.status(400).json({message:'Tenant, perfil o permisos inválidos.'});return;
+ }
+ const client=await databasePool!.connect();
+ try {
+   await client.query('BEGIN');
+   // Serializar modificaciones de permisos del mismo tenant.
+   const entidad=await client.query('SELECT id FROM organizaciones WHERE id=$1 AND activo FOR UPDATE',[org]);
+   if(!entidad.rowCount){await client.query('ROLLBACK');res.status(404).json({message:'Organización activa no encontrada.'});return;}
+   const rol=await client.query('SELECT id FROM roles WHERE nombre=$1 AND activo',[nombre]);
+   if(!rol.rowCount){await client.query('ROLLBACK');res.status(404).json({message:'Perfil no disponible.'});return;}
+   const id=rol.rows[0].id;
+   const base=await client.query('SELECT p.id,p.codigo FROM roles_permisos rp JOIN permisos p ON p.id=rp.permiso_id WHERE rp.rol_id=$1',[id]);
+   const autorizados=new Set(base.rows.map((p:{codigo:string})=>p.codigo));
+   if(permitidos.some((p:string)=>!autorizados.has(p))){
+     await client.query('ROLLBACK');res.status(400).json({message:'No se pueden conceder permisos fuera del rol base.'});return;
+   }
+   const anteriores=await client.query('SELECT p.codigo FROM organizaciones_roles_permisos_restringidos r JOIN permisos p ON p.id=r.permiso_id WHERE r.organizacion_id=$1 AND r.rol_id=$2',[org,id]);
+   await client.query('DELETE FROM organizaciones_roles_permisos_restringidos WHERE organizacion_id=$1 AND rol_id=$2',[org,id]);
+   for(const p of base.rows as {id:string;codigo:string}[]){
+     if(!permitidos.includes(p.codigo)){
+       await client.query('INSERT INTO organizaciones_roles_permisos_restringidos (organizacion_id,rol_id,permiso_id,actualizado_por_usuario_id) VALUES($1,$2,$3,$4)',[org,id,p.id,req.auth!.sub]);
+     }
+   }
+   await client.query('INSERT INTO bitacora_auditoria (usuario_id,accion,nombre_entidad,entidad_id,valores_anteriores,valores_nuevos) VALUES($1,$2,$3,$4,$5::jsonb,$6::jsonb)',[
+     req.auth!.sub,'PLATAFORMA_PERMISOS_ROL_TENANT','roles',id,
+     JSON.stringify({organizacionId:org,rol:nombre,restringidos:anteriores.rows.map((p:{codigo:string})=>p.codigo)}),
+     JSON.stringify({organizacionId:org,rol:nombre,permisos:permitidos})
+   ]);
+   await client.query('COMMIT');
+   res.set('Cache-Control','no-store');res.json({nombre,permisos:permitidos});
+ }catch(error){
+   await client.query('ROLLBACK');
+   console.error('Error actualizando permisos del rol por tenant:',errorHttp(error));
+   res.status(500).json({message:'No fue posible actualizar permisos del rol.'});
+ }finally{client.release();}
+});
+
 plataformaRouter.get('/organizaciones', async (_req, res) => {
   try {
     const { rows } = await databasePool!.query(
