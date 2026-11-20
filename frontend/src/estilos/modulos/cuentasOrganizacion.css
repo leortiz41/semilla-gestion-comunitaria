@@ -36,3 +36,9 @@
 .cuentas-org__error{padding:.75rem;border:1px solid #e2b7b7;border-radius:.6rem;background:#fff2f0;color:#a33232!important}
 .cuentas-org__mensaje{color:#28623a!important}
 @media(max-width:600px){.cuentas-org{padding:.8rem}.cuentas-org__formulario{padding:.8rem}.cuentas-org__cuenta{display:grid}}
+
+.cuentas-org__nombres,.cuentas-org__filtros{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.8rem}
+.cuentas-org__nombres label,.cuentas-org__filtros label{display:grid;gap:.35rem;font-weight:600}
+.cuentas-org__filtros{padding:.65rem 0}
+.cuentas-org__identidad span{font-size:.85rem;color:#647769}
+@media(max-width:600px){.cuentas-org__nombres,.cuentas-org__filtros{grid-template-columns:1fr}}
