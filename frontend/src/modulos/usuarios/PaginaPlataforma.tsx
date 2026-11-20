@@ -212,7 +212,7 @@ export default function PaginaPlataforma({ token }: { token: string }) {
             placeholder="contacto@organizacion.org" onChange={(e) => setEmailContacto(e.target.value)} />
         </label>
         <button type="submit" disabled={ocupado}>Crear organización</button>
-      </form></details>
+      </form></details>}
       <div className="cuentas-org__formulario plataforma-panel">
         <div className="cuentas-org__encabezado">
           <h2>{pestana === 'cuentas' ? 'Cuentas por organización' : 'Organización seleccionada'}</h2>
