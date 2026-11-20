@@ -55,6 +55,7 @@ function BarraLateral({
       <div className="barra-lateral__marca">
         <img
           className="barra-lateral__simbolo"
+          draggable={false}
           src={configuracion?.logo||logoSemilla}
           alt="Logo institucional"
         />
