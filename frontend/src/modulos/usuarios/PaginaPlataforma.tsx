@@ -22,6 +22,8 @@ export default function PaginaPlataforma({ token }: { token: string }) {
   const [slug, setSlug] = useState('');
   const [emailContacto, setEmailContacto] = useState('');
   const [correo, setCorreo] = useState('');
+  const [nombreUsuario, setNombreUsuario] = useState('');
+  const [apellidoUsuario, setApellidoUsuario] = useState('');
   const [roles, setRoles] = useState<string[]>(['ADMINISTRADOR']);
   const [edicionId, setEdicionId] = useState<string | null>(null);
   const [rolesEdicion, setRolesEdicion] = useState<string[]>([]);
@@ -86,10 +88,18 @@ export default function PaginaPlataforma({ token }: { token: string }) {
   async function registrarCuenta(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     if (ocupado || credencial || !organizacionId || !roles.length) return;
+    const nombreLimpio = nombreUsuario.trim().replace(/\s+/g, ' ');
+    const apellidoLimpio = apellidoUsuario.trim().replace(/\s+/g, ' ');
+    if (nombreLimpio.length < 2 || apellidoLimpio.length < 2 ||
+        `${nombreLimpio} ${apellidoLimpio}`.length > 140) {
+      setError('Ingresá un nombre y apellido válidos (mínimo 2 caracteres cada uno).'); return;
+    }
     setOcupado(true); setError(''); setMensaje('');
     try {
-      const respuesta = await crearCuentaPlataforma(token, organizacionId, correo, roles);
-      setCorreo(''); setRoles(['ADMINISTRADOR']);
+      const respuesta = await crearCuentaPlataforma(token, organizacionId, {
+        nombre: nombreLimpio, apellido: apellidoLimpio, email: correo, roles,
+      });
+      setNombreUsuario(''); setApellidoUsuario(''); setCorreo(''); setRoles(['ADMINISTRADOR']);
       setCredencial({
         email: respuesta.cuenta.email,
         temporal: respuesta.contrasenaTemporal,
@@ -302,6 +312,19 @@ export default function PaginaPlataforma({ token }: { token: string }) {
             <summary>Crear nueva cuenta</summary>
           <form className="cuentas-org__formulario" onSubmit={(e) => void registrarCuenta(e)}>
             <h3>Nueva cuenta</h3>
+            <p>Registrá a la persona que administrará o utilizará la organización seleccionada.</p>
+            <div className="cuentas-org__nombres">
+              <label>Nombre
+                <input type="text" required minLength={2} maxLength={100} autoComplete="given-name"
+                  value={nombreUsuario} disabled={ocupado || Boolean(credencial) || !seleccionada.activo}
+                  onChange={(e) => setNombreUsuario(e.target.value)} />
+              </label>
+              <label>Apellido
+                <input type="text" required minLength={2} maxLength={100} autoComplete="family-name"
+                  value={apellidoUsuario} disabled={ocupado || Boolean(credencial) || !seleccionada.activo}
+                  onChange={(e) => setApellidoUsuario(e.target.value)} />
+              </label>
+            </div>
             <label>Correo del usuario
               <input type="email" required maxLength={150} value={correo}
                 disabled={ocupado || Boolean(credencial) || !seleccionada.activo}
