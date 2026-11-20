@@ -421,6 +421,7 @@ export interface CuentaOrganizacion {
   email: string;
   nombreVisible?: string | null;
   activo: boolean;
+  retirado?: boolean;
   debeCambiarContrasena: boolean;
   roles: string[];
 }
@@ -458,6 +459,13 @@ export function cambiarCorreoCuenta(token: string, usuarioId: string, email: str
   return request<{ email: string }>(`/usuarios/cuentas/${usuarioId}/email`, {
     method: 'PUT', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify({ email }),
   });
+}
+
+export function retirarCuentaOrganizacion(token: string, usuarioId: string) {
+  return request<{ id: string; activo: boolean; retirado: boolean }>(
+    `/usuarios/cuentas/${encodeURIComponent(usuarioId)}/retirar`, {
+      method:'POST',headers:{Authorization:`Bearer ${token}`},
+    });
 }
 
 export function cambiarEstadoCuentaOrganizacion(token: string, usuarioId: string, activo: boolean) {
