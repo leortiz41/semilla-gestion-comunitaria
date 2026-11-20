@@ -188,6 +188,11 @@ plataformaRouter.get('/organizaciones/:organizacionId/cuentas', async (req,res) 
     if (!org.rows.length) { res.status(404).json({message:'Organización no encontrada.'});return; }
     const {rows}=await databasePool!.query(
       `SELECT u.id,u.email,u.activo,u.debe_cambiar_contrasena AS "debeCambiarContrasena",
+         (SELECT pf.nombre_visible FROM perfiles_usuarios pf
+           WHERE pf.usuario_id=u.id AND pf.organizacion_id=u.organizacion_id) AS "nombreVisible",
+         EXISTS (SELECT 1 FROM bitacora_auditoria b
+           WHERE b.entidad_id=u.id AND b.nombre_entidad='usuarios'
+             AND b.accion='RETIRAR_USUARIO_ORGANIZACION') AS retirado,
          COALESCE(array_agg(r.nombre ORDER BY r.nombre) FILTER(WHERE r.id IS NOT NULL),'{}'::text[]) AS roles
        FROM usuarios u LEFT JOIN usuarios_roles ur ON ur.usuario_id=u.id
        LEFT JOIN roles r ON r.id=ur.rol_id
