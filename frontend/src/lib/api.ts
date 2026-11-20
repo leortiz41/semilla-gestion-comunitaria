@@ -485,6 +485,26 @@ export function cambiarRolesCuenta(token: string, usuarioId: string, roles: stri
 }
 
 
+export interface IndicadoresSaas {
+  totales: {
+    organizaciones: number; activas: number; suspendidas: number;
+    usuariosVigentes: number; usuariosActivos: number; usuariosRetirados: number;
+    comunidades: number; proyectos: number; evidencias: number;
+  };
+  organizaciones: {
+    id: string; nombre: string; slug: string; activo: boolean; creadoEn: string;
+    usuariosVigentes: number; usuariosActivos: number; usuariosRetirados: number;
+    comunidades: number; proyectos: number; evidencias: number;
+    ultimoAcceso: string | null;
+  }[];
+  consultadoEn: string;
+}
+export function obtenerDashboardSaas(token: string) {
+  return request<IndicadoresSaas>('/plataforma/dashboard', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
 export interface OrganizacionPlataforma {
   id: string;
   nombre: string;
