@@ -103,3 +103,12 @@
     grid-template-columns: minmax(240px, .85fr) minmax(0, 1.65fr);
   }
 }
+
+/* Pestañas de alcance para permisos globales, sin superponer los controles. */
+.matriz-accesos__modos{display:flex;flex-wrap:wrap;gap:.5rem;padding:.4rem;background:#f3f7f2;border-radius:.75rem;border:1px solid #d7e4d8}
+.matriz-accesos__modos button{background:transparent;color:#315a3b;border:1px solid transparent}
+.matriz-accesos__modos button[aria-pressed=true]{background:#306842;color:#fff;border-color:#306842}
+.matriz-accesos--tenant .matriz-accesos__roles-institucionales{min-width:0}
+.matriz-accesos--tenant .matriz-accesos__grupo{min-width:0}
+.matriz-accesos--tenant .matriz-accesos__permiso{min-width:0;overflow-wrap:anywhere}
+@container (max-width:560px){.matriz-accesos--tenant .matriz-accesos__grupo{grid-template-columns:1fr}}
