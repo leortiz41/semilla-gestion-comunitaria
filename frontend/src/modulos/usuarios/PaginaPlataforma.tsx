@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import {
-  cambiarCorreoCuentaPlataforma, cambiarRolesCuentaPlataforma, cambiarEstadoOrganizacionPlataforma, cambiarEstadoCuentaPlataforma, crearCuentaPlataforma, crearOrganizacionPlataforma, obtenerCuentasPlataforma,
+  cambiarCorreoCuentaPlataforma, cambiarNombreCuentaPlataforma, retirarCuentaPlataforma, reemitirCredencialTemporalPlataforma,
+  cambiarRolesCuentaPlataforma, cambiarEstadoOrganizacionPlataforma, cambiarEstadoCuentaPlataforma, crearCuentaPlataforma, crearOrganizacionPlataforma, obtenerCuentasPlataforma,
   obtenerOrganizacionesPlataforma, type CuentaOrganizacion, type OrganizacionPlataforma,
 } from '../../lib/api';
 import PanelCredencialesTemporales from './PanelCredencialesTemporales';
@@ -27,6 +28,10 @@ export default function PaginaPlataforma({ token }: { token: string }) {
   const [roles, setRoles] = useState<string[]>(['ADMINISTRADOR']);
   const [edicionId, setEdicionId] = useState<string | null>(null);
   const [menuCuenta, setMenuCuenta] = useState<string | null>(null);
+  const [edicionNombre, setEdicionNombre] = useState<string | null>(null);
+  const [nombreEdicion, setNombreEdicion] = useState('');
+  const [confirmandoCredencial, setConfirmandoCredencial] = useState<string | null>(null);
+  const [confirmandoRetiro, setConfirmandoRetiro] = useState<string | null>(null);
   const [rolesEdicion, setRolesEdicion] = useState<string[]>([]);
   const [edicionCorreo, setEdicionCorreo] = useState<string | null>(null);
   const [correoEdicion, setCorreoEdicion] = useState('');
@@ -125,6 +130,46 @@ export default function PaginaPlataforma({ token }: { token: string }) {
     } catch (fallo) {
       setError(fallo instanceof Error ? fallo.message : 'No fue posible guardar los roles.');
     } finally { setOcupado(false); }
+  }
+
+  async function guardarNombre(cuenta: CuentaOrganizacion) {
+    if (!organizacionId || ocupado) return;
+    const nuevo=nombreEdicion.trim().replace(/\s+/g,' ');
+    if(nuevo.length<2||nuevo.length>140){setError('Ingresá un nombre de 2 a 140 caracteres.');return;}
+    setOcupado(true);setError('');setMensaje('');
+    try {
+      const {nombreVisible}=await cambiarNombreCuentaPlataforma(token,organizacionId,cuenta.id,nuevo);
+      setCuentas((actual)=>actual.map((item)=>item.id===cuenta.id?{...item,nombreVisible}:item));
+      setEdicionNombre(null);setNombreEdicion('');
+      setMensaje('Nombre visible actualizado correctamente.');
+    }catch(error){setError(error instanceof Error?error.message:'No se pudo editar el nombre.');}
+    finally{setOcupado(false);}
+  }
+
+  async function reemitirDesdeCuenta(cuenta: CuentaOrganizacion) {
+    if (!organizacionId || ocupado || credencial) return;
+    setOcupado(true);setError('');setMensaje('');
+    try {
+      const respuesta=await reemitirCredencialTemporalPlataforma(token,organizacionId,cuenta.id);
+      setCredencial({email:respuesta.cuenta.email,temporal:respuesta.contrasenaTemporal,titulo:'Nueva credencial emitida'});
+      setConfirmandoCredencial(null);
+      setVersion((v)=>v+1);
+      setMensaje('Credencial renovada. Entregala mediante un canal seguro.');
+    }catch(error){setError(error instanceof Error?error.message:'No se pudo reemitir la credencial.');}
+    finally{setOcupado(false);}
+  }
+
+  async function retirarDesdePlataforma(cuenta: CuentaOrganizacion) {
+    if(!organizacionId||ocupado)return;
+    setOcupado(true);setError('');setMensaje('');
+    try {
+      await retirarCuentaPlataforma(token,organizacionId,cuenta.id);
+      setCuentas((actual)=>actual.map((u)=>u.id===cuenta.id?{...u,activo:false,retirado:true}:u));
+      setConfirmandoRetiro(null);setMenuCuenta(null);
+      setMensaje('Cuenta retirada. Se revocó el acceso y se conservó el historial.');
+      setVersion((v)=>v+1);
+    }catch(error){setError(error instanceof Error?error.message:'No se pudo retirar la cuenta.');}
+    finally{setOcupado(false);}
   }
 
   async function guardarCorreo(cuenta: CuentaOrganizacion) {
@@ -232,7 +277,7 @@ export default function PaginaPlataforma({ token }: { token: string }) {
         </div>
         <label>Organización
           <select value={organizacionId} disabled={ocupado}
-            onChange={(e) => { setOrganizacionId(e.target.value); setEdicionId(null); setEdicionCorreo(null); setFiltroRol('TODOS'); setFiltroEstado('TODOS'); setBusqueda(''); setConfirmacion(null); setMenuCuenta(null); setError(''); setMensaje(''); }}>
+            onChange={(e) => { setOrganizacionId(e.target.value); setEdicionId(null); setEdicionCorreo(null); setFiltroRol('TODOS'); setFiltroEstado('TODOS'); setBusqueda(''); setConfirmacion(null); setConfirmandoRetiro(null); setConfirmandoCredencial(null); setEdicionNombre(null); setMenuCuenta(null); setError(''); setMensaje(''); }}>
             <option value="">Seleccioná una organización</option>
             {organizaciones.map((o) =>
               <option value={o.id} key={o.id}>{o.nombre}{!o.activo ? ' (inactiva)' : ''}</option>)}
@@ -397,24 +442,72 @@ export default function PaginaPlataforma({ token }: { token: string }) {
                               {cuenta.activo && (
                                 <>
                                   <button type="button" disabled={ocupado} onClick={() => {
+                                    setEdicionNombre(cuenta.id); setNombreEdicion(cuenta.nombreVisible || '');
+                                    setEdicionId(null); setEdicionCorreo(null); setMenuCuenta(null);
+                                  }}>Editar nombre</button>
+                                  <button type="button" disabled={ocupado} onClick={() => {
                                     setEdicionId(cuenta.id); setRolesEdicion(cuenta.roles);
-                                    setEdicionCorreo(null); setMenuCuenta(null);
+                                    setEdicionNombre(null); setEdicionCorreo(null); setMenuCuenta(null);
                                   }}>Editar perfiles</button>
                                   <button type="button" disabled={ocupado} onClick={() => {
                                     setEdicionCorreo(cuenta.id); setCorreoEdicion(cuenta.email);
-                                    setEdicionId(null); setMenuCuenta(null);
+                                    setEdicionNombre(null); setEdicionId(null); setMenuCuenta(null);
                                   }}>Editar correo</button>
+                                  <button type="button" disabled={ocupado || Boolean(credencial)} onClick={() => {
+                                    setConfirmandoCredencial(cuenta.id); setConfirmandoRetiro(null);
+                                    setEdicionNombre(null);setEdicionId(null);setEdicionCorreo(null);setMenuCuenta(null);
+                                  }}>Reemitir contraseña temporal</button>
                                 </>
                               )}
                               <button type="button" disabled={ocupado} onClick={() => {
                                 setConfirmacion({ tipo: 'cuenta', id: cuenta.id, nombre: cuenta.email, activo: !cuenta.activo });
-                                setEdicionId(null); setEdicionCorreo(null); setMenuCuenta(null);
+                                setEdicionNombre(null);setEdicionId(null);setEdicionCorreo(null);setMenuCuenta(null);
                               }}>{cuenta.activo ? 'Desactivar cuenta' : 'Activar cuenta'}</button>
+                              <button type="button" disabled={ocupado} onClick={() => {
+                                setConfirmandoRetiro(cuenta.id);setConfirmandoCredencial(null);
+                                setEdicionNombre(null);setEdicionId(null);setEdicionCorreo(null);setMenuCuenta(null);
+                              }}>Retirar de organización</button>
                             </div>
                           )}
                         </div>
                       ) : <span className="plataforma-directorio__sin-acciones">Solo historial</span>}
                     </div>
+                    {confirmandoCredencial === cuenta.id && !cuenta.retirado && (
+                      <div className="cuentas-org__confirmacion plataforma-directorio__editor" role="alert">
+                        <p>¿Reemitir contraseña temporal para {cuenta.email}? La anterior dejará de funcionar y se cerrarán sus sesiones renovables.</p>
+                        <div className="cuentas-org__acciones">
+                          <button type="button" disabled={ocupado || Boolean(credencial)}
+                            onClick={()=>void reemitirDesdeCuenta(cuenta)}>Sí, reemitir</button>
+                          <button type="button" className="cuentas-org__secundario" disabled={ocupado}
+                            onClick={()=>setConfirmandoCredencial(null)}>Cancelar</button>
+                        </div>
+                      </div>
+                    )}
+                    {confirmandoRetiro === cuenta.id && !cuenta.retirado && (
+                      <div className="cuentas-org__confirmacion plataforma-directorio__editor" role="alert">
+                        <p>¿Retirar a {cuenta.email} de la organización? Se bloqueará su acceso y su registro quedará en el historial. No podrá reactivarse desde los paneles habituales.</p>
+                        <div className="cuentas-org__acciones">
+                          <button type="button" disabled={ocupado} onClick={()=>void retirarDesdePlataforma(cuenta)}>Sí, retirar cuenta</button>
+                          <button type="button" className="cuentas-org__secundario" disabled={ocupado}
+                            onClick={()=>setConfirmandoRetiro(null)}>Cancelar</button>
+                        </div>
+                      </div>
+                    )}
+                    {edicionNombre === cuenta.id && !cuenta.retirado && (
+                      <form className="cuentas-org__editor plataforma-directorio__editor"
+                        onSubmit={(e)=>{e.preventDefault();void guardarNombre(cuenta);}}>
+                        <label>Nombre visible
+                          <input type="text" required minLength={2} maxLength={140}
+                            value={nombreEdicion} disabled={ocupado}
+                            onChange={(e)=>setNombreEdicion(e.target.value)} />
+                        </label>
+                        <div className="cuentas-org__acciones">
+                          <button type="submit" disabled={ocupado}>Guardar nombre</button>
+                          <button type="button" className="cuentas-org__secundario" disabled={ocupado}
+                            onClick={()=>setEdicionNombre(null)}>Cancelar</button>
+                        </div>
+                      </form>
+                    )}
                     {edicionCorreo === cuenta.id && !cuenta.retirado && (
                       <form className="cuentas-org__editor plataforma-directorio__editor"
                         onSubmit={(e) => { e.preventDefault(); void guardarCorreo(cuenta); }}>
