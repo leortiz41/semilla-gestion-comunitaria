@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import {
   cambiarCorreoCuentaPlataforma, cambiarNombreCuentaPlataforma, retirarCuentaPlataforma, reemitirCredencialTemporalPlataforma,
   cambiarRolesCuentaPlataforma, cambiarEstadoOrganizacionPlataforma, cambiarEstadoCuentaPlataforma, crearCuentaPlataforma, crearOrganizacionPlataforma, obtenerCuentasPlataforma,
-  obtenerOrganizacionesPlataforma, type CuentaOrganizacion, type OrganizacionPlataforma,
+  obtenerOrganizacionesPlataforma, obtenerDashboardSaas, type IndicadoresSaas, type CuentaOrganizacion, type OrganizacionPlataforma,
 } from '../../lib/api';
 import PanelCredencialesTemporales from './PanelCredencialesTemporales';
 import '../../estilos/modulos/cuentasOrganizacion.css';
@@ -40,7 +40,9 @@ export default function PaginaPlataforma({ token }: { token: string }) {
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
   const [version, setVersion] = useState(0);
-  const [pestana, setPestana] = useState<'cuentas' | 'organizaciones'>('cuentas');
+  const [pestana, setPestana] = useState<'dashboard' | 'cuentas' | 'organizaciones'>('dashboard');
+  const [indicadores, setIndicadores] = useState<IndicadoresSaas | null>(null);
+  const [errorIndicadores, setErrorIndicadores] = useState('');
   const [busqueda, setBusqueda] = useState('');
   const [filtroRol, setFiltroRol] = useState('TODOS');
   const [filtroEstado, setFiltroEstado] = useState('TODOS');
@@ -69,6 +71,15 @@ export default function PaginaPlataforma({ token }: { token: string }) {
     );
     return () => { vigente = false; };
   }, [token, organizacionId, version]);
+
+  useEffect(() => {
+    let vigente = true;
+    obtenerDashboardSaas(token).then(
+      (datos) => { if(vigente) { setIndicadores(datos); setErrorIndicadores(''); } },
+      (fallo: Error) => { if(vigente) setErrorIndicadores(fallo.message); },
+    );
+    return () => { vigente = false; };
+  }, [token, version]);
 
   async function registrarOrganizacion(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
@@ -237,11 +248,75 @@ export default function PaginaPlataforma({ token }: { token: string }) {
         <div><strong>{organizaciones.filter((o) => !o.activo).length}</strong><span>Suspendidas</span></div>
       </div>
       <nav className="plataforma-pestanas" aria-label="Secciones de Superadministración">
+        <button type="button" aria-current={pestana === 'dashboard' ? 'page' : undefined}
+          onClick={() => { setPestana('dashboard'); setConfirmacion(null); }}>Dashboard SaaS</button>
         <button type="button" aria-current={pestana === 'cuentas' ? 'page' : undefined} onClick={() => { setPestana('cuentas'); setConfirmacion(null); }}>Cuentas y accesos</button>
         <button type="button" aria-current={pestana === 'organizaciones' ? 'page' : undefined} onClick={() => { setPestana('organizaciones'); setConfirmacion(null); }}>Organizaciones</button>
       </nav>
       {error && <p role="alert" className="cuentas-org__error">{error}</p>}
       {mensaje && <p role="status" className="cuentas-org__mensaje">{mensaje}</p>}
+      {pestana === 'dashboard' && (
+        <section className="plataforma-dashboard" aria-label="Dashboard global del SaaS">
+          <div className="plataforma-dashboard__encabezado">
+            <div><h2>Estado general del SaaS</h2>
+              <p>Estadísticas reales de Neon PostgreSQL, agrupadas por organización.</p></div>
+            <button type="button" className="cuentas-org__secundario" disabled={ocupado}
+              onClick={() => setVersion((actual) => actual + 1)}>Actualizar indicadores</button>
+          </div>
+          {errorIndicadores && <p role="alert" className="cuentas-org__error">{errorIndicadores}</p>}
+          {!indicadores && !errorIndicadores && <p role="status">Consultando indicadores…</p>}
+          {indicadores && (
+            <>
+              <div className="plataforma-dashboard__metricas">
+                {([
+                  ['Organizaciones', indicadores.totales.organizaciones],
+                  ['Organizaciones activas', indicadores.totales.activas],
+                  ['Organizaciones suspendidas', indicadores.totales.suspendidas],
+                  ['Usuarios vigentes', indicadores.totales.usuariosVigentes],
+                  ['Usuarios activos', indicadores.totales.usuariosActivos],
+                  ['Usuarios retirados', indicadores.totales.usuariosRetirados],
+                  ['Comunidades', indicadores.totales.comunidades],
+                  ['Proyectos', indicadores.totales.proyectos],
+                  ['Evidencias', indicadores.totales.evidencias],
+                ] as [string, number][]).map(([etiqueta, total]) => (
+                  <div className="plataforma-dashboard__metrica" key={etiqueta}>
+                    <span>{etiqueta}</span><strong>{total}</strong>
+                  </div>
+                ))}
+              </div>
+              <h3>Organizaciones y uso de la plataforma</h3>
+              <div className="plataforma-dashboard__tenants">
+                {indicadores.organizaciones.map((tenant) => (
+                  <article className="plataforma-dashboard__tenant" key={tenant.id}>
+                    <div className="plataforma-dashboard__encabezado">
+                      <div><h4>{tenant.nombre}</h4><span>{tenant.activo ? 'Activa' : 'Suspendida'} · {tenant.slug}</span></div>
+                      <button type="button" className="cuentas-org__secundario"
+                        onClick={() => {setOrganizacionId(tenant.id);setPestana('organizaciones');}}>
+                        Ver ficha del tenant
+                      </button>
+                    </div>
+                    <div className="plataforma-dashboard__datos">
+                      <span>Usuarios vigentes: <strong>{tenant.usuariosVigentes}</strong></span>
+                      <span>Activos: <strong>{tenant.usuariosActivos}</strong></span>
+                      <span>Retirados: <strong>{tenant.usuariosRetirados}</strong></span>
+                      <span>Comunidades: <strong>{tenant.comunidades}</strong></span>
+                      <span>Proyectos: <strong>{tenant.proyectos}</strong></span>
+                      <span>Evidencias: <strong>{tenant.evidencias}</strong></span>
+                    </div>
+                    <details><summary>Detalles técnicos del tenant</summary>
+                      <p>Tenant ID: <code>{tenant.id}</code></p>
+                      <p>Último acceso de usuario: {tenant.ultimoAcceso
+                        ? new Date(tenant.ultimoAcceso).toLocaleString('es-HN')
+                        : 'Sin registro'}</p>
+                    </details>
+                  </article>
+                ))}
+              </div>
+              <p className="plataforma-dashboard__fecha">Actualizado: {new Date(indicadores.consultadoEn).toLocaleString('es-HN')}</p>
+            </>
+          )}
+        </section>
+      )}
       {pestana === 'organizaciones' && <div className="plataforma-organizaciones">
         {organizaciones.map((o) => (
           <button type="button" key={o.id} aria-pressed={organizacionId === o.id}
@@ -269,7 +344,7 @@ export default function PaginaPlataforma({ token }: { token: string }) {
         </label>
         <button type="submit" disabled={ocupado}>Crear organización</button>
       </form></details>}
-      <div className="cuentas-org__formulario plataforma-panel">
+      {pestana !== 'dashboard' && <div className="cuentas-org__formulario plataforma-panel">
         <div className="cuentas-org__encabezado">
           <h2>{pestana === 'cuentas' ? 'Cuentas por organización' : 'Organización seleccionada'}</h2>
           <button type="button" className="cuentas-org__secundario"
@@ -553,7 +628,7 @@ export default function PaginaPlataforma({ token }: { token: string }) {
             )}
           </section>
         )}
-      </div>
+      </div>}
     </section>
   );
 }
