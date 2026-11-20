@@ -26,6 +26,7 @@ export default function PaginaPlataforma({ token }: { token: string }) {
   const [apellidoUsuario, setApellidoUsuario] = useState('');
   const [roles, setRoles] = useState<string[]>(['ADMINISTRADOR']);
   const [edicionId, setEdicionId] = useState<string | null>(null);
+  const [menuCuenta, setMenuCuenta] = useState<string | null>(null);
   const [rolesEdicion, setRolesEdicion] = useState<string[]>([]);
   const [edicionCorreo, setEdicionCorreo] = useState<string | null>(null);
   const [correoEdicion, setCorreoEdicion] = useState('');
@@ -231,7 +232,7 @@ export default function PaginaPlataforma({ token }: { token: string }) {
         </div>
         <label>Organización
           <select value={organizacionId} disabled={ocupado}
-            onChange={(e) => { setOrganizacionId(e.target.value); setEdicionId(null); setEdicionCorreo(null); setFiltroRol('TODOS'); setFiltroEstado('TODOS'); setBusqueda(''); setConfirmacion(null); setError(''); setMensaje(''); }}>
+            onChange={(e) => { setOrganizacionId(e.target.value); setEdicionId(null); setEdicionCorreo(null); setFiltroRol('TODOS'); setFiltroEstado('TODOS'); setBusqueda(''); setConfirmacion(null); setMenuCuenta(null); setError(''); setMensaje(''); }}>
             <option value="">Seleccioná una organización</option>
             {organizaciones.map((o) =>
               <option value={o.id} key={o.id}>{o.nombre}{!o.activo ? ' (inactiva)' : ''}</option>)}
@@ -354,80 +355,111 @@ export default function PaginaPlataforma({ token }: { token: string }) {
           <code>{credencial.temporal}</code>
           <button type="button" onClick={() => setCredencial(null)}>Ocultar contraseña</button>
         </div>}
-        {pestana === 'cuentas' && <>
-        <div className="cuentas-org__encabezado"><h3>Usuarios ({cuentasFiltradas.length} mostrados)</h3>
-          <label>Buscar por nombre o correo
-            <input type="search" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar cuenta" />
-          </label>
-        </div>
-        {cuentasFiltradas.length===0 && <p>No hay usuarios para los filtros seleccionados.</p>}
-        {cuentasFiltradas.map((cuenta) => (
-          <div className="cuentas-org__cuenta" key={cuenta.id}>
-            <div className="cuentas-org__identidad">
-              <strong>{cuenta.nombreVisible || cuenta.email}</strong>
-              {cuenta.nombreVisible && <span>{cuenta.email}</span>}
-              <small>{cuenta.retirado ? 'Retirada · historial conservado' : cuenta.activo ? 'Activa' : 'Inactiva'} · {cuenta.roles.join(', ') || 'Sin roles'}</small>
+        {pestana === 'cuentas' && (
+          <section className="plataforma-directorio" aria-labelledby="directorio-usuarios">
+            <div className="plataforma-directorio__cabecera">
+              <div>
+                <h3 id="directorio-usuarios">Administrar usuarios</h3>
+                <p>{cuentasFiltradas.length} cuentas mostradas · {cuentasVigentes.length} vigentes</p>
+              </div>
+              <label>Buscar nombre o correo
+                <input type="search" value={busqueda} onChange={(e) => setBusqueda(e.target.value)}
+                  placeholder="Buscar cuenta" />
+              </label>
             </div>
-            {!cuenta.retirado && !cuenta.roles.includes('SUPERADMINISTRADOR') && (
-              <button type="button" className="cuentas-org__secundario" disabled={ocupado}
-                onClick={()=>setConfirmacion({tipo:'cuenta',id:cuenta.id,nombre:cuenta.email,activo:!cuenta.activo})}>
-                {cuenta.activo?'Desactivar cuenta':'Activar cuenta'}
-              </button>
-            )}
-            {edicionCorreo === cuenta.id && (
-              <form className="cuentas-org__editor" onSubmit={(e)=>{e.preventDefault();void guardarCorreo(cuenta);}}>
-                <label>Correo electrónico corregido
-                  <input type="email" required maxLength={150} value={correoEdicion} disabled={ocupado}
-                    onChange={(e)=>setCorreoEdicion(e.target.value)} />
-                </label>
-                <div className="cuentas-org__acciones">
-                  <button type="submit" disabled={ocupado}>Guardar correo</button>
-                  <button type="button" className="cuentas-org__secundario" disabled={ocupado}
-                    onClick={()=>setEdicionCorreo(null)}>Cancelar</button>
+            {cuentasFiltradas.length === 0 ? (
+              <p className="plataforma-directorio__vacio">No hay cuentas que coincidan con los filtros seleccionados.</p>
+            ) : (
+              <div className="plataforma-directorio__lista">
+                <div className="plataforma-directorio__titulos" aria-hidden="true">
+                  <span>Usuario</span><span>Perfil</span><span>Estado</span><span>Gestión</span>
                 </div>
-              </form>
-            )}
-            {!cuenta.retirado && !cuenta.roles.includes('SUPERADMINISTRADOR') && cuenta.activo && (
-              edicionId === cuenta.id ? (
-                <div className="cuentas-org__editor">
-                  <fieldset disabled={ocupado}>
-                    <legend>Editar perfiles de la cuenta</legend>
-                    <div className="cuentas-org__roles">
-                      {perfiles.map((rol) => (
-                        <label key={rol.codigo}>
-                          <input type="checkbox" checked={rolesEdicion.includes(rol.codigo)}
-                            onChange={() => setRolesEdicion((actual) => actual.includes(rol.codigo)
-                              ? actual.filter((r) => r !== rol.codigo)
-                              : rol.codigo === 'DONANTE' ? ['DONANTE']
-                              : [...actual.filter((r) => r !== 'DONANTE'), rol.codigo])} />
-                          {rol.etiqueta}
-                        </label>
-                      ))}
+                {cuentasFiltradas.map((cuenta) => (
+                  <div className="plataforma-directorio__fila" key={cuenta.id}>
+                    <div className="plataforma-directorio__identidad">
+                      <strong>{cuenta.nombreVisible || cuenta.email}</strong>
+                      {cuenta.nombreVisible && <small>{cuenta.email}</small>}
                     </div>
-                  </fieldset>
-                  <div className="cuentas-org__acciones">
-                    <button type="button" disabled={ocupado || !rolesEdicion.length}
-                      onClick={() => void guardarRoles(cuenta)}>Guardar perfiles</button>
-                    <button type="button" className="cuentas-org__secundario"
-                      onClick={() => setEdicionId(null)}>Cancelar</button>
+                    <div className="plataforma-directorio__perfil">{cuenta.roles.join(', ') || 'Sin roles'}</div>
+                    <div><span className={`plataforma-directorio__estado ${cuenta.retirado ? 'plataforma-directorio__estado--retirado' : cuenta.activo ? 'plataforma-directorio__estado--activo' : 'plataforma-directorio__estado--inactivo'}`}>
+                      {cuenta.retirado ? 'Retirada' : cuenta.activo ? 'Activa' : 'Inactiva'}
+                    </span></div>
+                    <div className="plataforma-directorio__accion">
+                      {!cuenta.retirado && !cuenta.roles.includes('SUPERADMINISTRADOR') ? (
+                        <div className="plataforma-directorio__menu">
+                          <button type="button" className="cuentas-org__secundario"
+                            disabled={ocupado} aria-expanded={menuCuenta === cuenta.id}
+                            onClick={() => setMenuCuenta((prev) => prev === cuenta.id ? null : cuenta.id)}>
+                            Acciones ···
+                          </button>
+                          {menuCuenta === cuenta.id && (
+                            <div className="plataforma-directorio__opciones">
+                              {cuenta.activo && (
+                                <>
+                                  <button type="button" disabled={ocupado} onClick={() => {
+                                    setEdicionId(cuenta.id); setRolesEdicion(cuenta.roles);
+                                    setEdicionCorreo(null); setMenuCuenta(null);
+                                  }}>Editar perfiles</button>
+                                  <button type="button" disabled={ocupado} onClick={() => {
+                                    setEdicionCorreo(cuenta.id); setCorreoEdicion(cuenta.email);
+                                    setEdicionId(null); setMenuCuenta(null);
+                                  }}>Editar correo</button>
+                                </>
+                              )}
+                              <button type="button" disabled={ocupado} onClick={() => {
+                                setConfirmacion({ tipo: 'cuenta', id: cuenta.id, nombre: cuenta.email, activo: !cuenta.activo });
+                                setEdicionId(null); setEdicionCorreo(null); setMenuCuenta(null);
+                              }}>{cuenta.activo ? 'Desactivar cuenta' : 'Activar cuenta'}</button>
+                            </div>
+                          )}
+                        </div>
+                      ) : <span className="plataforma-directorio__sin-acciones">Solo historial</span>}
+                    </div>
+                    {edicionCorreo === cuenta.id && !cuenta.retirado && (
+                      <form className="cuentas-org__editor plataforma-directorio__editor"
+                        onSubmit={(e) => { e.preventDefault(); void guardarCorreo(cuenta); }}>
+                        <label>Nuevo correo electrónico
+                          <input type="email" required maxLength={150} value={correoEdicion} disabled={ocupado}
+                            onChange={(e) => setCorreoEdicion(e.target.value)} />
+                        </label>
+                        <div className="cuentas-org__acciones">
+                          <button type="submit" disabled={ocupado}>Guardar correo</button>
+                          <button type="button" className="cuentas-org__secundario" disabled={ocupado}
+                            onClick={() => setEdicionCorreo(null)}>Cancelar</button>
+                        </div>
+                      </form>
+                    )}
+                    {edicionId === cuenta.id && cuenta.activo && !cuenta.retirado && (
+                      <div className="cuentas-org__editor plataforma-directorio__editor">
+                        <fieldset disabled={ocupado}>
+                          <legend>Editar perfiles</legend>
+                          <div className="cuentas-org__roles">
+                            {perfiles.map((rol) => (
+                              <label key={rol.codigo}>
+                                <input type="checkbox" checked={rolesEdicion.includes(rol.codigo)}
+                                  onChange={() => setRolesEdicion((actual) => actual.includes(rol.codigo)
+                                    ? actual.filter((r) => r !== rol.codigo)
+                                    : rol.codigo === 'DONANTE' ? ['DONANTE']
+                                    : [...actual.filter((r) => r !== 'DONANTE'), rol.codigo])} />
+                                {rol.etiqueta}
+                              </label>
+                            ))}
+                          </div>
+                        </fieldset>
+                        <div className="cuentas-org__acciones">
+                          <button type="button" disabled={ocupado || !rolesEdicion.length}
+                            onClick={() => void guardarRoles(cuenta)}>Guardar perfiles</button>
+                          <button type="button" className="cuentas-org__secundario"
+                            onClick={() => setEdicionId(null)}>Cancelar</button>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ) : (
-                <div className="cuentas-org__acciones">
-                  <button type="button" className="cuentas-org__secundario" disabled={ocupado || edicionCorreo===cuenta.id}
-                    onClick={() => { setEdicionId(cuenta.id); setEdicionCorreo(null); setRolesEdicion(cuenta.roles); }}>
-                    Editar perfiles
-                  </button>
-                  <button type="button" className="cuentas-org__secundario" disabled={ocupado || edicionCorreo===cuenta.id}
-                    onClick={() => { setEdicionCorreo(cuenta.id); setCorreoEdicion(cuenta.email); setEdicionId(null); }}>
-                    Editar correo
-                  </button>
-                </div>
-              )
+                ))}
+              </div>
             )}
-          </div>
-        ))}
-        </>}
+          </section>
+        )}
       </div>
     </section>
   );
