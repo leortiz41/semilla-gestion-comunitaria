@@ -51,6 +51,51 @@ const superadminActual: RequestHandler = async (req, res, next) => {
 
 plataformaRouter.use(authenticateAccessToken, superadminActual);
 
+// Resumen de la plataforma para superadministradores, con estadísticas reales.
+// Los conteos por tenant se derivan de sus relaciones y no incluyen datos personales.
+plataformaRouter.get('/dashboard', async (_req, res) => {
+  try {
+    const { rows } = await databasePool!.query(`
+      SELECT o.id, o.nombre, o.slug, o.activo, o.creado_en AS "creadoEn",
+        (SELECT count(*)::int FROM usuarios u WHERE u.organizacion_id=o.id
+          AND NOT EXISTS (SELECT 1 FROM bitacora_auditoria b WHERE b.entidad_id=u.id
+          AND b.nombre_entidad='usuarios' AND b.accion='RETIRAR_USUARIO_ORGANIZACION')) AS "usuariosVigentes",
+        (SELECT count(*)::int FROM usuarios u WHERE u.organizacion_id=o.id AND u.activo
+          AND NOT EXISTS (SELECT 1 FROM bitacora_auditoria b WHERE b.entidad_id=u.id
+          AND b.nombre_entidad='usuarios' AND b.accion='RETIRAR_USUARIO_ORGANIZACION')) AS "usuariosActivos",
+        (SELECT count(*)::int FROM usuarios u WHERE u.organizacion_id=o.id
+          AND EXISTS (SELECT 1 FROM bitacora_auditoria b WHERE b.entidad_id=u.id
+          AND b.nombre_entidad='usuarios' AND b.accion='RETIRAR_USUARIO_ORGANIZACION')) AS "usuariosRetirados",
+        (SELECT count(*)::int FROM comunidades c WHERE c.organizacion_id=o.id) AS "comunidades",
+        (SELECT count(*)::int FROM proyectos p JOIN comunidades c ON c.id=p.comunidad_id
+          WHERE c.organizacion_id=o.id) AS "proyectos",
+        (SELECT count(*)::int FROM evidencias e JOIN proyectos p ON p.id=e.proyecto_id
+          JOIN comunidades c ON c.id=p.comunidad_id WHERE c.organizacion_id=o.id) AS "evidencias",
+        (SELECT max(u.ultimo_acceso_en) FROM usuarios u
+          WHERE u.organizacion_id=o.id) AS "ultimoAcceso"
+      FROM organizaciones o ORDER BY o.nombre,o.id LIMIT 500
+    `);
+    const totales = rows.reduce((ac: {
+      organizaciones: number; activas: number; suspendidas: number;
+      usuariosVigentes: number; usuariosActivos: number; usuariosRetirados: number;
+      comunidades: number; proyectos: number; evidencias: number;
+    }, fila: Record<string,unknown>) => {
+      ac.organizaciones += 1;
+      if (fila.activo) ac.activas += 1; else ac.suspendidas += 1;
+      for (const campo of ['usuariosVigentes','usuariosActivos','usuariosRetirados','comunidades','proyectos','evidencias'] as const) {
+        ac[campo] += Number(fila[campo] ?? 0);
+      }
+      return ac;
+    }, {organizaciones:0,activas:0,suspendidas:0,usuariosVigentes:0,
+        usuariosActivos:0,usuariosRetirados:0,comunidades:0,proyectos:0,evidencias:0});
+    res.set('Cache-Control','no-store');
+    res.json({totales,organizaciones:rows,consultadoEn:new Date().toISOString()});
+  } catch(error) {
+    console.error('Error consultando métricas SaaS:',errorHttp(error));
+    res.status(500).json({message:'No fue posible consultar el dashboard de plataforma.'});
+  }
+});
+
 plataformaRouter.get('/organizaciones', async (_req, res) => {
   try {
     const { rows } = await databasePool!.query(
