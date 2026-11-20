@@ -115,6 +115,9 @@ administracionAccesosRouter.patch('/cuentas/:id/estado',async(req,res)=>{
   if(!entidad.rowCount||!admin.rowCount){await client.query('ROLLBACK');res.status(403).json({message:'Administración no autorizada.'});return;}
   const cuenta=await client.query('SELECT id,activo FROM usuarios WHERE id=$1 AND organizacion_id=$2 FOR UPDATE',[id,org]);
   if(!cuenta.rowCount){await client.query('ROLLBACK');res.status(404).json({message:'Cuenta no encontrada en tu organización.'});return;}
+  const retirada=await client.query(`SELECT 1 FROM bitacora_auditoria
+    WHERE entidad_id=$1 AND nombre_entidad='usuarios' AND accion='RETIRAR_USUARIO_ORGANIZACION' LIMIT 1`,[id]);
+  if(retirada.rowCount){await client.query('ROLLBACK');res.status(409).json({message:'Cuenta retirada: no puede reactivarse.'});return;}
   const r=await client.query(`SELECT r.nombre FROM usuarios_roles ur JOIN roles r ON r.id=ur.rol_id
     WHERE ur.usuario_id=$1`,[id]);
   if(r.rows.some((x:{nombre:string})=>x.nombre==='SUPERADMINISTRADOR')){
