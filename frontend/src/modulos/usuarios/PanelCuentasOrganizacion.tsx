@@ -18,7 +18,12 @@ export default function PanelCuentasOrganizacion({
   token, rolesActivos,
 }: { token: string; rolesActivos: string[] }) {
   const [cuentas, setCuentas] = useState<CuentaOrganizacion[] | null>(null);
+  const [nombre, setNombre] = useState('');
+  const [apellido, setApellido] = useState('');
   const [correo, setCorreo] = useState('');
+  const [crearVisible, setCrearVisible] = useState(false);
+  const [busqueda, setBusqueda] = useState('');
+  const [filtroEstado, setFiltroEstado] = useState<'todos' | 'activos' | 'inactivos'>('todos');
   const [seleccion, setSeleccion] = useState<string[]>(['CAMPO']);
   const [edicion, setEdicion] = useState<string | null>(null);
   const [rolesEdicion, setRolesEdicion] = useState<string[]>([]);
@@ -41,18 +46,20 @@ export default function PanelCuentasOrganizacion({
   }, [token, version]);
 
   function alternar(nombre: string, lista: string[], actualizar: (nueva: string[]) => void) {
-    actualizar(lista.includes(nombre) ? lista.filter((rol) => rol !== nombre) : [...lista, nombre]);
+    actualizar(lista.includes(nombre)
+      ? lista.filter((rol) => rol !== nombre)
+      : nombre === 'DONANTE' ? ['DONANTE'] : [...lista.filter((rol) => rol !== 'DONANTE'), nombre]);
   }
 
   async function crear(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
-    if (guardando || temporal || !seleccion.length) return;
+    if (guardando || temporal || !seleccion.length || !nombre.trim() || !apellido.trim()) return;
     setGuardando(true); setError(''); setMensaje('');
     try {
-      const respuesta = await crearCuentaOrganizacion(token, correo, seleccion);
+      const respuesta = await crearCuentaOrganizacion(token, { nombre: nombre.trim(), apellido: apellido.trim(), email: correo, roles: seleccion });
       setCuentas((actual) => actual ? [...actual, respuesta.cuenta].sort((a, b) => a.email.localeCompare(b.email)) : actual);
       setTemporal({ correo: respuesta.cuenta.email, clave: respuesta.contrasenaTemporal });
-      setCorreo(''); setSeleccion(['CAMPO']);
+      setNombre(''); setApellido(''); setCorreo(''); setSeleccion(['CAMPO']); setCrearVisible(false);
     } catch (fallo) {
       setError(fallo instanceof Error ? fallo.message : 'No se pudo crear la cuenta.');
     } finally { setGuardando(false); }
@@ -112,12 +119,29 @@ export default function PanelCuentasOrganizacion({
           <h2 id="cuentas-org-titulo">Cuentas de la organización</h2>
           <p>Creá accesos y asigná perfiles de Semilla. Solo se muestran usuarios de tu organización.</p>
         </div>
-        <button type="button" onClick={() => setVersion((v) => v + 1)} disabled={guardando}>Actualizar</button>
+        <div className="cuentas-org__acciones">
+          <button type="button" disabled={guardando || Boolean(temporal)} onClick={() => setCrearVisible((v) => !v)}>
+            {crearVisible ? 'Cancelar creación' : 'Nuevo usuario'}
+          </button>
+          <button type="button" onClick={() => setVersion((v) => v + 1)} disabled={guardando}>Actualizar</button>
+        </div>
       </div>
       {error && <p role="alert" className="cuentas-org__error">{error}</p>}
       {mensaje && <p role="status" className="cuentas-org__mensaje">{mensaje}</p>}
-      <form className="cuentas-org__formulario" onSubmit={(evento) => void crear(evento)}>
+      {crearVisible && <form className="cuentas-org__formulario" onSubmit={(evento) => void crear(evento)}>
         <h3>Crear nueva cuenta</h3>
+        <div className="cuentas-org__nombres">
+          <label>Nombre
+            <input type="text" required minLength={2} maxLength={100} value={nombre}
+              disabled={guardando || Boolean(temporal)} autoComplete="given-name"
+              onChange={(evento) => setNombre(evento.target.value)} />
+          </label>
+          <label>Apellido
+            <input type="text" required minLength={2} maxLength={100} value={apellido}
+              disabled={guardando || Boolean(temporal)} autoComplete="family-name"
+              onChange={(evento) => setApellido(evento.target.value)} />
+          </label>
+        </div>
         <label>Correo electrónico
           <input type="email" required maxLength={150} value={correo} disabled={guardando || Boolean(temporal)}
             placeholder="usuario@organizacion.org" onChange={(evento) => setCorreo(evento.target.value)} />
@@ -137,7 +161,7 @@ export default function PanelCuentasOrganizacion({
         <button type="submit" disabled={!seleccion.length || guardando || Boolean(temporal)}>
           {guardando ? 'Creando cuenta…' : 'Crear cuenta y contraseña temporal'}
         </button>
-      </form>
+      </form>}
       {temporal && (
         <div className="cuentas-org__temporal" role="status">
           <strong>Acceso creado: {temporal.correo}</strong>
@@ -148,12 +172,24 @@ export default function PanelCuentasOrganizacion({
       )}
       <div className="cuentas-org__listado">
         <h3>Usuarios registrados ({cuentas?.length ?? 0})</h3>
+        <div className="cuentas-org__filtros">
+          <label>Buscar usuario
+            <input type="text" value={busqueda} placeholder="Nombre o correo" onChange={(e) => setBusqueda(e.target.value)} />
+          </label>
+          <label>Estado
+            <select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value as typeof filtroEstado)}>
+              <option value="todos">Todos</option><option value="activos">Activos</option><option value="inactivos">Inactivos</option>
+            </select>
+          </label>
+        </div>
         {cuentas === null && !error && <p role="status">Consultando cuentas…</p>}
         {cuentas?.length === 0 && <p>Todavía no hay usuarios en esta organización.</p>}
-        {cuentas?.map((cuenta) => (
+        {cuentas?.filter((cuenta) => (cuenta.email + ' ' + (cuenta.nombreVisible ?? '')).toLowerCase().includes(busqueda.trim().toLowerCase()) &&
+          (filtroEstado === 'todos' || cuenta.activo === (filtroEstado === 'activos'))).map((cuenta) => (
           <article className="cuentas-org__cuenta" key={cuenta.id}>
             <div className="cuentas-org__identidad">
-              <strong>{cuenta.email}</strong>
+              <strong>{cuenta.nombreVisible || cuenta.email}</strong>
+              {cuenta.nombreVisible && <span>{cuenta.email}</span>}
               <small>{cuenta.activo ? 'Cuenta activa' : 'Cuenta inactiva'} · {cuenta.roles.join(', ') || 'Sin roles'}</small>
             </div>
             {confirmandoReemision === cuenta.id && (
