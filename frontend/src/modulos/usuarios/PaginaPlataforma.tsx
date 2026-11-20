@@ -5,6 +5,7 @@ import {
   obtenerOrganizacionesPlataforma, obtenerDashboardSaas, type IndicadoresSaas, type CuentaOrganizacion, type OrganizacionPlataforma,
 } from '../../lib/api';
 import PanelCredencialesTemporales from './PanelCredencialesTemporales';
+import PanelPermisosTenant from './PanelPermisosTenant';
 import '../../estilos/modulos/cuentasOrganizacion.css';
 
 const perfiles = [
@@ -40,7 +41,7 @@ export default function PaginaPlataforma({ token }: { token: string }) {
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
   const [version, setVersion] = useState(0);
-  const [pestana, setPestana] = useState<'dashboard' | 'cuentas' | 'organizaciones'>('dashboard');
+  const [pestana, setPestana] = useState<'dashboard' | 'cuentas' | 'organizaciones' | 'permisos'>('dashboard');
   const [indicadores, setIndicadores] = useState<IndicadoresSaas | null>(null);
   const [errorIndicadores, setErrorIndicadores] = useState('');
   const [busqueda, setBusqueda] = useState('');
@@ -252,6 +253,7 @@ export default function PaginaPlataforma({ token }: { token: string }) {
           onClick={() => { setPestana('dashboard'); setConfirmacion(null); }}>Dashboard SaaS</button>
         <button type="button" aria-current={pestana === 'cuentas' ? 'page' : undefined} onClick={() => { setPestana('cuentas'); setConfirmacion(null); }}>Cuentas y accesos</button>
         <button type="button" aria-current={pestana === 'organizaciones' ? 'page' : undefined} onClick={() => { setPestana('organizaciones'); setConfirmacion(null); }}>Organizaciones</button>
+        <button type="button" aria-current={pestana === 'permisos' ? 'page' : undefined} onClick={() => { setPestana('permisos'); setConfirmacion(null); }}>Roles y permisos</button>
       </nav>
       {error && <p role="alert" className="cuentas-org__error">{error}</p>}
       {mensaje && <p role="status" className="cuentas-org__mensaje">{mensaje}</p>}
@@ -344,7 +346,24 @@ export default function PaginaPlataforma({ token }: { token: string }) {
         </label>
         <button type="submit" disabled={ocupado}>Crear organización</button>
       </form></details>}
-      {pestana !== 'dashboard' && <div className="cuentas-org__formulario plataforma-panel">
+      {pestana === 'permisos' && (
+        <section className="plataforma-dashboard">
+          <div className="plataforma-dashboard__encabezado">
+            <div><h2>Permisos por organización</h2>
+              <p>Elegí el tenant para consultar y configurar restricciones individuales.</p></div>
+          </div>
+          <label>Organización
+            <select value={organizacionId} onChange={e=>setOrganizacionId(e.target.value)}>
+              <option value="">Seleccioná una organización</option>
+              {organizaciones.map(o=><option key={o.id} value={o.id}>{o.nombre}</option>)}
+            </select>
+          </label>
+          {organizacionId && <PanelPermisosTenant key={organizacionId} token={token}
+            organizacionId={organizacionId}
+            nombreOrganizacion={organizaciones.find(o=>o.id===organizacionId)?.nombre||'Organización'}/>}
+        </section>
+      )}
+      {(pestana === 'cuentas' || pestana === 'organizaciones') && <div className="cuentas-org__formulario plataforma-panel">
         <div className="cuentas-org__encabezado">
           <h2>{pestana === 'cuentas' ? 'Cuentas por organización' : 'Organización seleccionada'}</h2>
           <button type="button" className="cuentas-org__secundario"
