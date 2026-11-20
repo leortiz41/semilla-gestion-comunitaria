@@ -56,3 +56,50 @@
 .matriz-accesos__perfiles small{color:#607566;font-size:.77rem}
 .matriz-accesos__config-rol{display:grid;gap:.75rem;border-top:1px solid #dce9dc;padding-top:.85rem}
 .matriz-accesos__config-rol h4{color:#2a623a;margin:.1rem 0}
+
+/* Superadministración: matriz dentro de un panel anidado.
+   La disposición responde al espacio real del componente, no al ancho de la ventana. */
+.matriz-accesos--tenant {
+  container-type: inline-size;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.matriz-accesos--tenant .matriz-accesos__layout {
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+}
+.matriz-accesos--tenant .matriz-accesos__listado,
+.matriz-accesos--tenant .matriz-accesos__detalle {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.matriz-accesos--tenant .matriz-accesos__listado {
+  align-content: start;
+}
+.matriz-accesos--tenant .matriz-accesos__usuario,
+.matriz-accesos--tenant .matriz-accesos__usuario > button,
+.matriz-accesos--tenant .matriz-accesos__usuario strong,
+.matriz-accesos--tenant .matriz-accesos__usuario span,
+.matriz-accesos--tenant .matriz-accesos__usuario small {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  box-sizing: border-box;
+}
+.matriz-accesos--tenant .matriz-accesos__usuario > button[aria-pressed=true] {
+  background: #eff8ee;
+  box-shadow: inset 3px 0 #35764d;
+}
+.matriz-accesos--tenant .matriz-accesos__encabezado code,
+.matriz-accesos--tenant .matriz-accesos__detalle code {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+@container (min-width: 820px) {
+  .matriz-accesos--tenant .matriz-accesos__layout {
+    grid-template-columns: minmax(240px, .85fr) minmax(0, 1.65fr);
+  }
+}
