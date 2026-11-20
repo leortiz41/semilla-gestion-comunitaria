@@ -452,6 +452,14 @@ export function cambiarCorreoCuenta(token: string, usuarioId: string, email: str
   });
 }
 
+export function cambiarEstadoCuentaOrganizacion(token: string, usuarioId: string, activo: boolean) {
+  return request<{ id: string; activo: boolean }>(`/usuarios/administracion/cuentas/${encodeURIComponent(usuarioId)}/estado`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ activo }),
+  });
+}
+
 export function cambiarRolesCuenta(token: string, usuarioId: string, roles: string[]) {
   return request<{ roles: string[] }>(`/usuarios/cuentas/${usuarioId}/roles`, {
     method: 'PUT',
