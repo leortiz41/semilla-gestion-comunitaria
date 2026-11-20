@@ -186,6 +186,15 @@ export default function PaginaPlataforma({ token }: { token: string }) {
       </nav>
       {error && <p role="alert" className="cuentas-org__error">{error}</p>}
       {mensaje && <p role="status" className="cuentas-org__mensaje">{mensaje}</p>}
+      {pestana === 'organizaciones' && <div className="plataforma-organizaciones">
+        {organizaciones.map((o) => (
+          <button type="button" key={o.id} aria-pressed={organizacionId === o.id}
+            onClick={() => { setOrganizacionId(o.id); setConfirmacion(null); }}>
+            <strong>{o.nombre}</strong>
+            <span>{o.activo ? 'Activa' : 'Suspendida'} · {o.cantidadUsuarios} cuentas</span>
+          </button>
+        ))}
+      </div>}
       {pestana === 'organizaciones' && <details className="plataforma-desplegable"><summary>Registrar nueva organización</summary>
       <form className="cuentas-org__formulario" onSubmit={(e) => void registrarOrganizacion(e)}>
         <h2>Registrar organización</h2>
@@ -270,7 +279,9 @@ export default function PaginaPlataforma({ token }: { token: string }) {
             </div>
           </section>
         )}
-        {seleccionada && (
+        {pestana === 'cuentas' && seleccionada && (
+          <details className="plataforma-desplegable">
+            <summary>Credenciales temporales (operación sensible)</summary>
           <PanelCredencialesTemporales
             token={token}
             organizacion={seleccionada}
@@ -284,8 +295,11 @@ export default function PaginaPlataforma({ token }: { token: string }) {
             alActualizar={() => setVersion((v) => v + 1)}
             alError={setError}
           />
+          </details>
         )}
-        {seleccionada && (
+        {pestana === 'cuentas' && seleccionada && (
+          <details className="plataforma-desplegable">
+            <summary>Crear nueva cuenta</summary>
           <form className="cuentas-org__formulario" onSubmit={(e) => void registrarCuenta(e)}>
             <h3>Nueva cuenta</h3>
             <label>Correo del usuario
@@ -309,6 +323,7 @@ export default function PaginaPlataforma({ token }: { token: string }) {
               Crear cuenta y contraseña temporal
             </button>
           </form>
+          </details>
         )}
         {credencial && <div className="cuentas-org__temporal" role="status">
           <strong>{credencial.titulo}: {credencial.email}</strong>
