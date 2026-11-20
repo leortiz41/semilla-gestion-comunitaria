@@ -186,6 +186,79 @@ usuariosRouter.post('/cuentas/:usuarioId/credencial-temporal', authenticateAcces
     }
   });
 
+// La edición del nombre visible conserva fotografía, credenciales y roles.
+usuariosRouter.put('/cuentas/:usuarioId/nombre', authenticateAccessToken,
+  requireRole('ADMINISTRADOR'), requirePermission('usuarios.gestionar'), async (req, res) => {
+    const usuarioId = req.params.usuarioId;
+    const nombreVisible = normalizarNombre(req.body?.nombreVisible);
+    if (typeof usuarioId !== 'string' || !/^[0-9a-f-]{36}$/i.test(usuarioId) ||
+        nombreVisible.length < 2 || nombreVisible.length > 140 ||
+        /[\x00-\x1f\x7f]/.test(nombreVisible)) {
+      res.status(400).json({ message: 'Cuenta o nombre visible no válido (2 a 140 caracteres).' });
+      return;
+    }
+    if (!databasePool) {
+      res.status(503).json({ message: 'Gestión de cuentas no disponible.' });
+      return;
+    }
+    const client = await databasePool.connect();
+    try {
+      await client.query('BEGIN');
+      const org = req.auth!.organizacionId;
+      const organizacion = await client.query(
+        'SELECT id FROM organizaciones WHERE id=$1 AND activo FOR UPDATE', [org]);
+      const administrador = await client.query(`SELECT 1 FROM usuarios u
+        JOIN usuarios_roles ur ON ur.usuario_id=u.id
+        JOIN roles r ON r.id=ur.rol_id AND r.nombre='ADMINISTRADOR' AND r.activo
+        WHERE u.id=$1 AND u.organizacion_id=$2 AND u.activo LIMIT 1`,
+        [req.auth!.sub, org]);
+      if (!organizacion.rowCount || !administrador.rowCount) {
+        await client.query('ROLLBACK');
+        res.status(403).json({ message: 'Administración no autorizada.' });
+        return;
+      }
+      const cuenta = await client.query(`SELECT u.id, pf.nombre_visible AS "nombreVisible"
+        FROM usuarios u
+        LEFT JOIN perfiles_usuarios pf ON pf.usuario_id=u.id AND pf.organizacion_id=u.organizacion_id
+        WHERE u.id=$1 AND u.organizacion_id=$2 FOR UPDATE OF u`, [usuarioId, org]);
+      if (!cuenta.rowCount) {
+        await client.query('ROLLBACK');
+        res.status(404).json({ message: 'Cuenta no encontrada en tu organización.' });
+        return;
+      }
+      const protegida = await client.query(`SELECT 1 FROM usuarios_roles ur
+        JOIN roles r ON r.id=ur.rol_id
+        WHERE ur.usuario_id=$1 AND r.nombre='SUPERADMINISTRADOR' LIMIT 1`, [usuarioId]);
+      if (protegida.rowCount) {
+        await client.query('ROLLBACK');
+        res.status(403).json({ message: 'La cuenta global no puede modificarse desde una organización.' });
+        return;
+      }
+      const anterior = cuenta.rows[0].nombreVisible as string | null;
+      if (anterior !== nombreVisible) {
+        await client.query(`INSERT INTO perfiles_usuarios (usuario_id,organizacion_id,nombre_visible)
+          VALUES ($1,$2,$3) ON CONFLICT(usuario_id)
+          DO UPDATE SET nombre_visible=EXCLUDED.nombre_visible,actualizado_en=NOW()`,
+          [usuarioId, org, nombreVisible]);
+        await client.query(`INSERT INTO bitacora_auditoria
+          (usuario_id,accion,nombre_entidad,entidad_id,valores_anteriores,valores_nuevos)
+          VALUES ($1,'CAMBIAR_NOMBRE_USUARIO','usuarios',$2,$3::jsonb,$4::jsonb)`,
+          [req.auth!.sub, usuarioId,
+            JSON.stringify({ nombreVisible: anterior }),
+            JSON.stringify({ nombreVisible })]);
+      }
+      await client.query('COMMIT');
+      res.set('Cache-Control', 'no-store');
+      res.json({ nombreVisible });
+    } catch (error) {
+      await client.query('ROLLBACK');
+      console.error('Error actualizando nombre visible de cuenta:', error);
+      res.status(500).json({ message: 'No fue posible actualizar el nombre visible.' });
+    } finally {
+      client.release();
+    }
+  });
+
 // La corrección del correo no modifica roles ni credenciales.
 usuariosRouter.put('/cuentas/:usuarioId/email', authenticateAccessToken,
   requireRole('ADMINISTRADOR'), requirePermission('usuarios.gestionar'), async (req, res) => {
