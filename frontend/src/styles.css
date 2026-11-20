@@ -44,6 +44,16 @@ input {
   font: inherit;
 }
 
+/* Los controles de acción no son editores de texto: evitar el cursor de inserción
+   visible al hacer clic, incluso si el navegador tiene navegación por cursor. */
+button,
+[role="button"],
+summary {
+  caret-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
 button {
   transition: transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease, border-color 180ms ease;
 }
@@ -57,7 +67,14 @@ button:disabled {
   opacity: 0.62;
 }
 
-/* Los botones conservan un foco externo; los campos lo muestran dentro de su borde. */
+/* El clic con mouse no deja un contorno persistente; Tab sí mantiene foco accesible. */
+button:focus:not(:focus-visible),
+[role="button"]:focus:not(:focus-visible),
+summary:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Los botones conservan un foco externo al navegar con teclado. */
 button:focus-visible {
   outline: 3px solid rgba(217, 139, 54, 0.42);
   outline-offset: 3px;
