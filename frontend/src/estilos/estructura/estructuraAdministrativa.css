@@ -35,6 +35,10 @@
 }
 
 .barra-lateral__simbolo {
+  /* La marca es decorativa, no un destino de clic o de arrastre. */
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
   width: 54px;
   height: 54px;
   display: block;
@@ -190,7 +194,7 @@
 .bienvenida-institucional h2{margin:.3rem 0;color:var(--institucion-primario,#2d7545);font-size:clamp(1.2rem,2vw,1.65rem)}
 .bienvenida-institucional p{margin:.45rem 0;color:#344936;line-height:1.5}
 .bienvenida-institucional small{color:#647365}
-.bienvenida-institucional img{max-width:98px;max-height:98px;object-fit:contain}
+.bienvenida-institucional img{max-width:98px;max-height:98px;object-fit:contain;pointer-events:none;user-select:none;-webkit-user-drag:none}
 @media(max-width:560px){.bienvenida-institucional{align-items:flex-start}.bienvenida-institucional img{max-width:55px;max-height:55px}}
 
 /* En pantallas reducidas, priorizar el contenido sobre el menú institucional. */
