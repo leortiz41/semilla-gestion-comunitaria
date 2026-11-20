@@ -13,6 +13,9 @@ export default function PanelPermisosTenant({token,organizacionId,nombreOrganiza
   token:string;organizacionId:string;nombreOrganizacion:string;
 }){
   const [datos,setDatos]=useState<Config|null>(null);
+  const [modo,setModo]=useState<'cuentas'|'roles'>('cuentas');
+  const [rolSeleccionado,setRolSeleccionado]=useState('');
+  const [rolHabilitados,setRolHabilitados]=useState<string[]>([]);
   const [seleccion,setSeleccion]=useState('');
   const [habilitados,setHabilitados]=useState<string[]>([]);
   const [busqueda,setBusqueda]=useState('');
@@ -24,7 +27,9 @@ export default function PanelPermisosTenant({token,organizacionId,nombreOrganiza
 
   useEffect(()=>{
     let vigente=true;
-    setDatos(null);setSeleccion('');setHabilitados([]);setError('');setMensaje('');
+    setDatos(null);setSeleccion('');setHabilitados([]);
+    setRolSeleccionado('');setRolHabilitados([]);
+    setError('');setMensaje('');
     fetch(base,{headers:{Authorization:'Bearer '+token},cache:'no-store'})
       .then(async r=>{
         const respuesta=await r.json();
@@ -49,6 +54,33 @@ export default function PanelPermisosTenant({token,organizacionId,nombreOrganiza
     return [...mapa.entries()].sort((a,b)=>a[0].localeCompare(b[0]));
   },[permisos]);
   const protegido=!cuenta?.activo||cuenta.roles.some(r=>r==='ADMINISTRADOR'||r==='SUPERADMINISTRADOR');
+  const rol=datos?.roles.find(r=>r.nombre===rolSeleccionado);
+  const catalogo=useMemo(()=>datos?.permisos.filter(p=>rol?.permisos.includes(p.codigo))??[],[datos,rol]);
+  const modulosRol=useMemo(()=>{
+    const grupos=new Map<string,Permiso[]>();
+    for(const permiso of catalogo){
+      const modulo=permiso.modulo||permiso.codigo.split('.')[0];
+      grupos.set(modulo,[...(grupos.get(modulo)||[]),permiso]);
+    }
+    return [...grupos.entries()].sort((a,b)=>a[0].localeCompare(b[0]));
+  },[catalogo]);
+
+  async function guardarRol(){
+    if(!rol || ocupado || !['COORDINADOR','CAMPO','FINANZAS','DONANTE'].includes(rol.nombre))return;
+    if(!window.confirm('¿Aplicar los permisos del rol '+rol.nombre+' únicamente en '+nombreOrganizacion+'? El cambio afectará a todas las cuentas de este rol en ese tenant.'))return;
+    setOcupado(true);setError('');setMensaje('');
+    try{
+      const respuesta=await fetch(base+'/roles/'+encodeURIComponent(rol.nombre)+'/permisos',{
+        method:'PUT',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},
+        body:JSON.stringify({permisos:rolHabilitados}),
+      });
+      const cuerpo=await respuesta.json();
+      if(!respuesta.ok)throw Error(cuerpo.message||'No fue posible guardar el rol.');
+      setMensaje('Permisos del rol actualizados exclusivamente en '+nombreOrganizacion+'.');
+      setRolSeleccionado('');setRecarga(v=>v+1);
+    }catch(e){setError(e instanceof Error?e.message:'Error al guardar el rol.');}
+    finally{setOcupado(false);}
+  }
 
   async function guardar(){
     if(!cuenta||protegido||ocupado)return;
@@ -76,10 +108,48 @@ export default function PanelPermisosTenant({token,organizacionId,nombreOrganiza
       </div>
       <button type="button" disabled={ocupado} onClick={()=>setRecarga(n=>n+1)}>Actualizar matriz</button>
     </header>
+    <div className="matriz-accesos__modos" role="group" aria-label="Alcance de permisos">
+      <button type="button" aria-pressed={modo==='cuentas'}
+        onClick={()=>{setModo('cuentas');setError('');setMensaje('');}}>Permisos por usuario</button>
+      <button type="button" aria-pressed={modo==='roles'}
+        onClick={()=>{setModo('roles');setError('');setMensaje('');}}>Permisos por rol</button>
+    </div>
     {error&&<p role="alert" className="matriz-accesos__error">{error}</p>}
     {mensaje&&<p role="status" className="matriz-accesos__mensaje">{mensaje}</p>}
     {!datos&&!error&&<p role="status">Cargando permisos del tenant…</p>}
-    {datos&&<div className="matriz-accesos__layout">
+    {datos&&modo==='roles'&&<div className="matriz-accesos__roles-institucionales">
+      <h3>Perfiles disponibles en {nombreOrganizacion}</h3>
+      <p>Los cambios se aplican a quienes tengan el rol dentro de este tenant, sin modificar el catálogo global de roles.</p>
+      <div className="matriz-accesos__perfiles">
+        {datos.roles.filter(r=>['COORDINADOR','CAMPO','FINANZAS','DONANTE'].includes(r.nombre))
+          .map(r=><button type="button" key={r.nombre} aria-pressed={rolSeleccionado===r.nombre}
+            onClick={()=>{
+              setRolSeleccionado(r.nombre);
+              setRolHabilitados(r.permisos.filter(p=>!r.permisosRestringidos.includes(p)));
+              setError('');setMensaje('');
+            }}>
+            <strong>{r.nombre}</strong>
+            <small>{r.permisos.length-r.permisosRestringidos.length} de {r.permisos.length} permisos habilitados</small>
+          </button>)}
+      </div>
+      {!rol?<p>Seleccioná un rol para revisar sus permisos disponibles.</p>:
+        <div className="matriz-accesos__config-rol">
+          <h4>{rol.nombre} · Permisos de {nombreOrganizacion}</h4>
+          {modulosRol.map(([modulo,items])=><fieldset className="matriz-accesos__grupo"
+              key={modulo} disabled={ocupado}>
+            <legend>{modulo}</legend>
+            {items.map(p=><label className="matriz-accesos__permiso" key={p.codigo}>
+              <input type="checkbox" checked={rolHabilitados.includes(p.codigo)}
+                onChange={()=>setRolHabilitados(actual=>actual.includes(p.codigo)?
+                  actual.filter(c=>c!==p.codigo):[...actual,p.codigo])}/>
+              <span><strong>{p.descripcion||p.codigo}</strong><code>{p.codigo}</code></span>
+            </label>)}
+          </fieldset>)}
+          <button type="button" className="matriz-accesos__guardar" disabled={ocupado}
+            onClick={()=>void guardarRol()}>{ocupado?'Guardando…':'Guardar permisos del rol'}</button>
+        </div>}
+    </div>}
+    {datos&&modo==='cuentas'&&<div className="matriz-accesos__layout">
       <aside className="matriz-accesos__listado">
         <label htmlFor="buscar-permiso-tenant">Buscar cuenta</label>
         <input id="buscar-permiso-tenant" type="search" value={busqueda}
@@ -118,6 +188,6 @@ export default function PanelPermisosTenant({token,organizacionId,nombreOrganiza
         </>}
       </div>
     </div>}
-    <p className="matriz-accesos__aviso">Los permisos de roles compartidos por varios usuarios no se modifican desde esta primera versión. Los cambios individuales se registran en auditoría.</p>
+    <p className="matriz-accesos__aviso">Los cambios de roles e individuos quedan auditados. Ningún permiso puede superar su perfil base ni conceder acceso entre organizaciones.</p>
   </section>;
 }
