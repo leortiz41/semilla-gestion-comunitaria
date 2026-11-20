@@ -32,6 +32,8 @@ export default function PaginaPlataforma({ token }: { token: string }) {
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
   const [version, setVersion] = useState(0);
+  const [pestana, setPestana] = useState<'cuentas' | 'organizaciones'>('cuentas');
+  const [busqueda, setBusqueda] = useState('');
   const [filtroRol, setFiltroRol] = useState('TODOS');
   const [filtroEstado, setFiltroEstado] = useState('TODOS');
   const [confirmacion, setConfirmacion] = useState<{tipo:'organizacion'|'cuenta';id:string;nombre:string;activo:boolean}|null>(null);
@@ -69,6 +71,7 @@ export default function PaginaPlataforma({ token }: { token: string }) {
       setNombre(''); setSlug(''); setEmailContacto('');
       setOrganizacionId(organizacion.id);
       setVersion((v) => v + 1);
+      setPestana('cuentas');
       setMensaje('Organización registrada. Creá ahora su primera cuenta administradora.');
     } catch (fallo) {
       setError(fallo instanceof Error ? fallo.message : 'No fue posible crear la organización.');
@@ -151,12 +154,17 @@ export default function PaginaPlataforma({ token }: { token: string }) {
     } finally {setOcupado(false);}
   }
 
-  const cuentasFiltradas=cuentas.filter((cuenta)=>
-    (filtroRol==='TODOS'||cuenta.roles.includes(filtroRol)) &&
-    (filtroEstado==='TODOS'||(filtroEstado==='ACTIVOS' ? cuenta.activo : !cuenta.activo))
+  const cuentasVigentes = cuentas.filter((cuenta) => !cuenta.retirado);
+  const retiradas = cuentas.filter((cuenta) => cuenta.retirado);
+  const cuentasFiltradas = cuentas.filter((cuenta) =>
+    (filtroEstado === 'RETIRADOS' ? Boolean(cuenta.retirado) :
+      !cuenta.retirado && (filtroEstado === 'TODOS' ||
+        (filtroEstado === 'ACTIVOS' ? cuenta.activo : !cuenta.activo))) &&
+    (filtroRol === 'TODOS' || cuenta.roles.includes(filtroRol)) &&
+    (cuenta.email + ' ' + (cuenta.nombreVisible ?? '')).toLowerCase().includes(busqueda.trim().toLowerCase())
   );
-  const resumenRoles=perfiles.map((perfil)=>({
-    ...perfil,total:cuentas.filter((cuenta)=>cuenta.roles.includes(perfil.codigo)).length,
+  const resumenRoles = perfiles.map((perfil) => ({
+    ...perfil, total: cuentasVigentes.filter((cuenta) => cuenta.roles.includes(perfil.codigo)).length,
   }));
 
   const seleccionada = organizaciones.find((o) => o.id === organizacionId);
@@ -165,10 +173,20 @@ export default function PaginaPlataforma({ token }: { token: string }) {
       <div className="pagina-modulo__encabezado">
         <p className="pagina-modulo__etiqueta">Acceso exclusivo de plataforma</p>
         <h1 id="titulo-plataforma">Superadministración</h1>
-        <p>Administrá organizaciones independientes y creá sus cuentas de acceso. Los administradores de cada organización gestionarán sus equipos desde Usuarios.</p>
+        <p>Control de organizaciones, cuentas y seguridad. Cada organización administra sus equipos desde Usuarios.</p>
       </div>
+      <div className="plataforma-resumen" aria-label="Resumen de organizaciones">
+        <div><strong>{organizaciones.length}</strong><span>Organizaciones</span></div>
+        <div><strong>{organizaciones.filter((o) => o.activo).length}</strong><span>Activas</span></div>
+        <div><strong>{organizaciones.filter((o) => !o.activo).length}</strong><span>Suspendidas</span></div>
+      </div>
+      <nav className="plataforma-pestanas" aria-label="Secciones de Superadministración">
+        <button type="button" aria-current={pestana === 'cuentas' ? 'page' : undefined} onClick={() => { setPestana('cuentas'); setConfirmacion(null); }}>Cuentas y accesos</button>
+        <button type="button" aria-current={pestana === 'organizaciones' ? 'page' : undefined} onClick={() => { setPestana('organizaciones'); setConfirmacion(null); }}>Organizaciones</button>
+      </nav>
       {error && <p role="alert" className="cuentas-org__error">{error}</p>}
       {mensaje && <p role="status" className="cuentas-org__mensaje">{mensaje}</p>}
+      {pestana === 'organizaciones' && <details className="plataforma-desplegable"><summary>Registrar nueva organización</summary>
       <form className="cuentas-org__formulario" onSubmit={(e) => void registrarOrganizacion(e)}>
         <h2>Registrar organización</h2>
         <label>Nombre
@@ -185,16 +203,16 @@ export default function PaginaPlataforma({ token }: { token: string }) {
             placeholder="contacto@organizacion.org" onChange={(e) => setEmailContacto(e.target.value)} />
         </label>
         <button type="submit" disabled={ocupado}>Crear organización</button>
-      </form>
-      <div className="cuentas-org__formulario">
+      </form></details>
+      <div className="cuentas-org__formulario plataforma-panel">
         <div className="cuentas-org__encabezado">
-          <h2>Gestionar cuentas por organización</h2>
+          <h2>{pestana === 'cuentas' ? 'Cuentas por organización' : 'Organización seleccionada'}</h2>
           <button type="button" className="cuentas-org__secundario"
             disabled={ocupado} onClick={() => setVersion((v) => v + 1)}>Actualizar</button>
         </div>
         <label>Organización
           <select value={organizacionId} disabled={ocupado}
-            onChange={(e) => { setOrganizacionId(e.target.value); setEdicionId(null); setEdicionCorreo(null); setFiltroRol('TODOS'); setFiltroEstado('TODOS'); setConfirmacion(null); setError(''); setMensaje(''); }}>
+            onChange={(e) => { setOrganizacionId(e.target.value); setEdicionId(null); setEdicionCorreo(null); setFiltroRol('TODOS'); setFiltroEstado('TODOS'); setBusqueda(''); setConfirmacion(null); setError(''); setMensaje(''); }}>
             <option value="">Seleccioná una organización</option>
             {organizaciones.map((o) =>
               <option value={o.id} key={o.id}>{o.nombre}{!o.activo ? ' (inactiva)' : ''}</option>)}
@@ -202,9 +220,12 @@ export default function PaginaPlataforma({ token }: { token: string }) {
         </label>
         {seleccionada && (
           <div className="cuentas-org__formulario">
-            <p><strong>{seleccionada.nombre}</strong> · Tenant ID: <code>{seleccionada.id}</code> ·
-              {seleccionada.cantidadUsuarios} usuarios · {seleccionada.cantidadAdministradores} administradores ·
-              {seleccionada.activo?' Organización activa':' Organización inactiva'}</p>
+            <div className="plataforma-seleccion">
+              <strong>{seleccionada.nombre}</strong>
+              <span>{seleccionada.activo ? 'Organización activa' : 'Organización suspendida'}</span>
+              <span>{cuentasVigentes.length} cuentas vigentes · {retiradas.length} retiradas · {seleccionada.cantidadAdministradores} administradores activos</span>
+              <details><summary>Detalles técnicos</summary><code>{seleccionada.id}</code><p>Slug: {seleccionada.slug}</p></details>
+            </div>
             <button type="button" className="cuentas-org__secundario" disabled={ocupado}
               onClick={()=>setConfirmacion({tipo:'organizacion',id:seleccionada.id,nombre:seleccionada.nombre,activo:!seleccionada.activo})}>
               {seleccionada.activo?'Desactivar organización':'Reactivar organización'}
@@ -224,7 +245,7 @@ export default function PaginaPlataforma({ token }: { token: string }) {
             </div>
           </div>
         )}
-        {seleccionada && (
+        {pestana === 'cuentas' && seleccionada && (
           <section className="cuentas-org__formulario" aria-label="Roles y cuentas de la organización">
             <h3>Roles asociados a {seleccionada.nombre}</h3>
             <p>Se muestran las asignaciones de usuarios de esta organización, no los roles globales de otras organizaciones.</p>
@@ -240,9 +261,10 @@ export default function PaginaPlataforma({ token }: { token: string }) {
               </label>
               <label>Filtrar por estado
                 <select value={filtroEstado} onChange={(e)=>setFiltroEstado(e.target.value)}>
-                  <option value="TODOS">Todos los estados</option>
+                  <option value="TODOS">Cuentas vigentes</option>
                   <option value="ACTIVOS">Activos</option>
                   <option value="INACTIVOS">Inactivos</option>
+                  <option value="RETIRADOS">Retirados (historial)</option>
                 </select>
               </label>
             </div>
@@ -294,15 +316,21 @@ export default function PaginaPlataforma({ token }: { token: string }) {
           <code>{credencial.temporal}</code>
           <button type="button" onClick={() => setCredencial(null)}>Ocultar contraseña</button>
         </div>}
-        <h3>Usuarios de la organización ({cuentasFiltradas.length} de {cuentas.length})</h3>
+        {pestana === 'cuentas' && <>
+        <div className="cuentas-org__encabezado"><h3>Usuarios ({cuentasFiltradas.length} mostrados)</h3>
+          <label>Buscar por nombre o correo
+            <input type="search" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar cuenta" />
+          </label>
+        </div>
         {cuentasFiltradas.length===0 && <p>No hay usuarios para los filtros seleccionados.</p>}
         {cuentasFiltradas.map((cuenta) => (
           <div className="cuentas-org__cuenta" key={cuenta.id}>
             <div className="cuentas-org__identidad">
-              <strong>{cuenta.email}</strong>
-              <small>{cuenta.activo ? 'Activa' : 'Inactiva'} · {cuenta.roles.join(', ') || 'Sin roles'}</small>
+              <strong>{cuenta.nombreVisible || cuenta.email}</strong>
+              {cuenta.nombreVisible && <span>{cuenta.email}</span>}
+              <small>{cuenta.retirado ? 'Retirada · historial conservado' : cuenta.activo ? 'Activa' : 'Inactiva'} · {cuenta.roles.join(', ') || 'Sin roles'}</small>
             </div>
-            {!cuenta.roles.includes('SUPERADMINISTRADOR') && (
+            {!cuenta.retirado && !cuenta.roles.includes('SUPERADMINISTRADOR') && (
               <button type="button" className="cuentas-org__secundario" disabled={ocupado}
                 onClick={()=>setConfirmacion({tipo:'cuenta',id:cuenta.id,nombre:cuenta.email,activo:!cuenta.activo})}>
                 {cuenta.activo?'Desactivar cuenta':'Activar cuenta'}
@@ -321,7 +349,7 @@ export default function PaginaPlataforma({ token }: { token: string }) {
                 </div>
               </form>
             )}
-            {!cuenta.roles.includes('SUPERADMINISTRADOR') && cuenta.activo && (
+            {!cuenta.retirado && !cuenta.roles.includes('SUPERADMINISTRADOR') && cuenta.activo && (
               edicionId === cuenta.id ? (
                 <div className="cuentas-org__editor">
                   <fieldset disabled={ocupado}>
@@ -361,6 +389,7 @@ export default function PaginaPlataforma({ token }: { token: string }) {
             )}
           </div>
         ))}
+        </>}
       </div>
     </section>
   );
