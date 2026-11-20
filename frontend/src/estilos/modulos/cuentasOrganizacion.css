@@ -110,3 +110,21 @@
   .plataforma-directorio__fila>div:nth-child(3){grid-column:1}
   .plataforma-directorio__accion{grid-column:2;grid-row:1/4;align-self:center}
 }
+
+/* Dashboard SaaS: métricas reales y ficha por tenant */
+.plataforma-dashboard{display:grid;gap:1.2rem;min-width:0;padding:1rem;border:1px solid #d7e4d8;border-radius:.9rem;background:#fff}
+.plataforma-dashboard__encabezado{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.8rem}
+.plataforma-dashboard__encabezado h2,.plataforma-dashboard__encabezado h4{margin:0;color:#2e593a}
+.plataforma-dashboard__encabezado p{margin:.3rem 0 0;color:#687c6d}
+.plataforma-dashboard__metricas{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.75rem}
+.plataforma-dashboard__metrica{display:grid;gap:.45rem;padding:1rem;background:#f4f8f3;border:1px solid #d7e6d7;border-radius:.8rem}
+.plataforma-dashboard__metrica span{font-size:.82rem;color:#526c5b}
+.plataforma-dashboard__metrica strong{font-size:1.7rem;color:#28613c}
+.plataforma-dashboard__tenants{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:.75rem}
+.plataforma-dashboard__tenant{display:grid;gap:.8rem;padding:1rem;border:1px solid #d6e3d9;border-radius:.8rem;background:#fff;min-width:0}
+.plataforma-dashboard__tenant h4{font-size:1.1rem}
+.plataforma-dashboard__tenant span{font-size:.85rem;color:#627565}
+.plataforma-dashboard__datos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.5rem}
+.plataforma-dashboard__datos span{padding:.4rem;background:#f4f8f3;border-radius:.4rem}
+.plataforma-dashboard__tenant code{overflow-wrap:anywhere}
+.plataforma-dashboard__fecha{font-size:.8rem;color:#647669}
