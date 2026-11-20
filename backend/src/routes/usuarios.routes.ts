@@ -48,6 +48,10 @@ const validarRoles = (valor: unknown): string[] | null => {
 };
 const validarEmail = (valor: unknown) => typeof valor === 'string' &&
   valor.length <= 150 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valor);
+const normalizarNombre = (valor: unknown): string =>
+  typeof valor === 'string' ? valor.trim().replace(/\s+/g, ' ') : '';
+const validarNombre = (valor: string): boolean =>
+  valor.length >= 2 && valor.length <= 100 && !/[\x00-\x1f\x7f]/.test(valor);
 
 const verificarAdministradorActual = async (usuarioId: string, organizacionId: string) => {
   const result = await databasePool!.query(
@@ -71,6 +75,8 @@ usuariosRouter.get('/cuentas', authenticateAccessToken, requireRole('ADMINISTRAD
     try {
       const { rows } = await databasePool.query(
         `SELECT u.id, u.email, u.activo, u.debe_cambiar_contrasena AS "debeCambiarContrasena",
+           (SELECT pf.nombre_visible FROM perfiles_usuarios pf
+             WHERE pf.usuario_id=u.id AND pf.organizacion_id=u.organizacion_id) AS "nombreVisible",
            COALESCE(array_agg(r.nombre ORDER BY r.nombre) FILTER (WHERE r.id IS NOT NULL), '{}'::text[]) AS roles
          FROM usuarios u LEFT JOIN usuarios_roles ur ON ur.usuario_id=u.id
          LEFT JOIN roles r ON r.id=ur.rol_id
@@ -93,8 +99,12 @@ usuariosRouter.post('/cuentas', authenticateAccessToken, requireRole('ADMINISTRA
   requirePermission('usuarios.gestionar'), async (req, res) => {
     const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
     const roles = validarRoles(req.body?.roles);
-    if (!validarEmail(email) || !roles) {
-      res.status(400).json({ message: 'Ingresá un correo válido y al menos un rol existente.' }); return;
+    const nombre = normalizarNombre(req.body?.nombre);
+    const apellido = normalizarNombre(req.body?.apellido);
+    const nombreVisible = [nombre, apellido].join(' ');
+    if (!validarEmail(email) || !roles || !validarNombre(nombre) ||
+        !validarNombre(apellido) || nombreVisible.length > 140) {
+      res.status(400).json({ message: 'Revisá nombre, apellido, correo y roles seleccionados.' }); return;
     }
     if (!databasePool) { res.status(503).json({ message: 'Gestión de cuentas no disponible.' }); return; }
     try {
@@ -117,13 +127,17 @@ usuariosRouter.post('/cuentas', authenticateAccessToken, requireRole('ADMINISTRA
             [rows[0].id, rol.id]);
         }
         await client.query(
+          'INSERT INTO perfiles_usuarios (usuario_id,organizacion_id,nombre_visible) VALUES ($1,$2,$3)',
+          [rows[0].id, req.auth!.organizacionId, nombreVisible],
+        );
+        await client.query(
           `INSERT INTO bitacora_auditoria (usuario_id,accion,nombre_entidad,entidad_id,valores_nuevos)
            VALUES ($1,'CREAR_USUARIO','usuarios',$2,$3::jsonb)`,
-          [req.auth!.sub, rows[0].id, JSON.stringify({ email, roles })],
+          [req.auth!.sub, rows[0].id, JSON.stringify({ email, roles, nombreVisible })],
         );
         await client.query('COMMIT');
         res.set('Cache-Control', 'no-store');
-        res.status(201).json({ cuenta: { ...rows[0], roles }, contrasenaTemporal });
+        res.status(201).json({ cuenta: { ...rows[0], roles, nombreVisible }, contrasenaTemporal });
       } catch (error) {
         await client.query('ROLLBACK'); throw error;
       } finally { client.release(); }
