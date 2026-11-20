@@ -67,7 +67,7 @@ export default function PanelPermisosTenant({token,organizacionId,nombreOrganiza
     finally{setOcupado(false);}
   }
 
-  return <section className="matriz-accesos" aria-label="Permisos por Tenant ID">
+  return <section className="matriz-accesos matriz-accesos--tenant" aria-label="Permisos por Tenant ID">
     <header className="matriz-accesos__encabezado">
       <div><h2>Permisos individuales por tenant</h2>
         <p>Organización: <strong>{nombreOrganizacion}</strong></p>
@@ -85,14 +85,18 @@ export default function PanelPermisosTenant({token,organizacionId,nombreOrganiza
         <input id="buscar-permiso-tenant" type="search" value={busqueda}
           onChange={e=>setBusqueda(e.target.value)} placeholder="Correo electrónico"/>
         <p>{visibles.length} cuentas vigentes encontradas</p>
-        {visibles.map(c=><button type="button" key={c.id} aria-pressed={seleccion===c.id}
-          onClick={()=>{
-            setSeleccion(c.id);
-            setHabilitados(c.permisosBase.filter(p=>!c.permisosRestringidos.includes(p)));
-            setError('');setMensaje('');
-          }}>
-          <strong>{c.email}</strong><small>{c.roles.join(', ')}</small>
-        </button>)}
+        {visibles.map(c=><div className="matriz-accesos__usuario" key={c.id}>
+          <button type="button" aria-pressed={seleccion===c.id}
+            onClick={()=>{
+              setSeleccion(c.id);
+              setHabilitados(c.permisosBase.filter(p=>!c.permisosRestringidos.includes(p)));
+              setError('');setMensaje('');
+            }}>
+            <strong>{c.email}</strong>
+            <span>{c.roles.join(', ') || 'Sin perfil'}</span>
+            <small>{c.activo ? 'Activa' : 'Inactiva'}</small>
+          </button>
+        </div>)}
       </aside>
       <div className="matriz-accesos__detalle">
         {!cuenta?<p>Seleccioná una cuenta para consultar y gestionar sus permisos.</p>:<>
