@@ -155,6 +155,9 @@ plataformaRouter.patch('/organizaciones/:organizacionId/cuentas/:usuarioId/estad
     if(!org.rows.length||!usuario.rows.length) {
       await client.query('ROLLBACK');res.status(404).json({message:'Cuenta u organización no encontrada.'});return;
     }
+    const retirada=await client.query(`SELECT 1 FROM bitacora_auditoria
+      WHERE entidad_id=$1 AND nombre_entidad='usuarios' AND accion='RETIRAR_USUARIO_ORGANIZACION' LIMIT 1`,[usuarioId]);
+    if(retirada.rowCount){await client.query('ROLLBACK');res.status(409).json({message:'Cuenta retirada: no puede reactivarse.'});return;}
     const global=await client.query(`SELECT 1 FROM usuarios_roles ur JOIN roles r ON r.id=ur.rol_id
       WHERE ur.usuario_id=$1 AND r.nombre='SUPERADMINISTRADOR' LIMIT 1`,[usuarioId]);
     if(global.rows.length||usuarioId===req.auth!.sub) {
