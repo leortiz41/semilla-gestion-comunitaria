@@ -1,3 +1,5 @@
+.estructura-administrativa__navegacion-movil { display: none; }
+
 .estructura-administrativa {
   display: grid;
   grid-template-columns: 240px minmax(0, 1fr);
@@ -33,6 +35,10 @@
 }
 
 .barra-lateral__simbolo {
+  /* La marca es decorativa, no un destino de clic o de arrastre. */
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
   width: 54px;
   height: 54px;
   display: block;
@@ -152,6 +158,116 @@
 
 @media (max-width: 560px) {
   .barra-lateral__lista {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Personalización por tenant: sólo se activa con variables institucionales. */
+.page-shell[style*="--institucion-primario"] {
+ --brand:var(--institucion-primario);
+ --brand-deep:var(--institucion-primario);
+ --accent:var(--institucion-secundario);
+}
+.page-shell[style*="--institucion-primario"] .barra-lateral{
+ border-color:color-mix(in srgb,var(--institucion-primario) 24%,transparent);
+ background:linear-gradient(160deg,#fff,color-mix(in srgb,var(--institucion-fondo) 75%,#fff));
+}
+.page-shell[style*="--institucion-primario"] .barra-lateral__marca strong{
+ color:var(--institucion-primario);
+}
+.page-shell[style*="--institucion-primario"] .barra-lateral__opcion:hover{
+ border-color:var(--institucion-primario);
+}
+.page-shell[style*="--institucion-primario"] .barra-lateral__opcion--activa{
+ color:var(--institucion-primario);
+ background:color-mix(in srgb,var(--institucion-primario) 9%,#fff);
+ border-color:color-mix(in srgb,var(--institucion-primario) 26%,#fff);
+ box-shadow:inset 3px 0 0 var(--institucion-secundario);
+}
+.page-shell[style*="--institucion-primario"] .config-institucional__guardar,
+.page-shell[style*="--institucion-primario"] .matriz-accesos__guardar{
+ background:var(--institucion-primario)!important;
+ color:var(--institucion-texto-primario)!important;
+}
+.bienvenida-institucional{display:flex;align-items:center;justify-content:space-between;gap:1.5rem;margin:0 0 1.2rem;padding:1.25rem 1.5rem;background:linear-gradient(100deg,color-mix(in srgb,var(--institucion-fondo,#f5f8f2) 85%,white),#fff);border:1px solid color-mix(in srgb,var(--institucion-primario,#2d7545) 26%,white);border-left:5px solid var(--institucion-secundario,#d98b36);border-radius:1rem}
+.bienvenida-institucional span{display:block;color:var(--institucion-primario,#2d7545);font-size:.8rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase}
+.bienvenida-institucional h2{margin:.3rem 0;color:var(--institucion-primario,#2d7545);font-size:clamp(1.2rem,2vw,1.65rem)}
+.bienvenida-institucional p{margin:.45rem 0;color:#344936;line-height:1.5}
+.bienvenida-institucional small{color:#647365}
+.bienvenida-institucional img{max-width:98px;max-height:98px;object-fit:contain;pointer-events:none;user-select:none;-webkit-user-drag:none}
+@media(max-width:560px){.bienvenida-institucional{align-items:flex-start}.bienvenida-institucional img{max-width:55px;max-height:55px}}
+
+/* En pantallas reducidas, priorizar el contenido sobre el menú institucional. */
+@media (max-width: 980px) {
+  .estructura-administrativa--menu-plegable {
+    gap: 12px;
+  }
+
+  .estructura-administrativa--menu-plegable .estructura-administrativa__navegacion-movil {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-width: 0;
+    gap: 12px;
+  }
+
+  .estructura-administrativa--menu-plegable .estructura-administrativa__alternar-menu {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 44px;
+    padding: 9px 14px;
+    border: 1px solid color-mix(in srgb, var(--institucion-primario, #2d7545) 25%, #fff);
+    border-radius: 12px;
+    color: var(--institucion-primario, #2d7545);
+    background: #fff;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .estructura-administrativa--menu-plegable .estructura-administrativa__alternar-menu:focus-visible {
+    outline: 3px solid var(--institucion-secundario, #d98b36);
+    outline-offset: 2px;
+  }
+
+  .estructura-administrativa--menu-plegable .estructura-administrativa__modulo-actual {
+    font-size: .75rem;
+    font-weight: 650;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: #6b806e;
+  }
+
+  .estructura-administrativa--menu-plegable .estructura-administrativa__lateral {
+    display: none;
+    position: static;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .estructura-administrativa--menu-plegable .estructura-administrativa__lateral--abierta {
+    display: block;
+  }
+
+  .estructura-administrativa--menu-plegable .estructura-administrativa__lateral .barra-lateral {
+    gap: 15px;
+    padding: 15px;
+    border-radius: 16px;
+  }
+
+  .estructura-administrativa--menu-plegable .estructura-administrativa__lateral .barra-lateral__lista {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .estructura-administrativa--menu-plegable .estructura-administrativa__modulo-actual {
+    display: none;
+  }
+
+  .estructura-administrativa--menu-plegable .estructura-administrativa__lateral .barra-lateral__lista {
     grid-template-columns: 1fr;
   }
 }

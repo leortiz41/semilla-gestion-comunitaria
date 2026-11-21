@@ -3,6 +3,7 @@ import { hashPassword } from '../security/password.js';
 import { Router, type RequestHandler } from 'express';
 import { esUuid } from '../domain/expediente.js';
 import { databasePool } from '../config/database.js';
+import { firmarObjetoR2, r2Disponible } from '../services/r2-evidencias.service.js';
 import { authenticateAccessToken, requirePermission, requireRole } from '../middleware/auth.middleware.js';
 
 export const donantesRouter = Router();
@@ -90,6 +91,150 @@ donantesRouter.get(
     } catch (error) {
       console.error('Error consultando seguimiento del donante:', error);
       res.status(500).json({ message: 'No fue posible consultar los proyectos autorizados.' });
+    }
+  },
+);
+
+
+// Mapa del donante: las asignaciones se comprueban contra proyectos_donantes
+// y la organización de su sesión en cada solicitud. Nunca usa la ruta institucional.
+donantesRouter.get(
+  '/mapa/proyectos/:proyectoId',
+  authenticateAccessToken,
+  requireRole('DONANTE'),
+  requirePermission('proyectos.ver'),
+  async (req, res) => {
+    const proyectoId = req.params.proyectoId;
+    const acceso = req.auth;
+    if (!esUuid(proyectoId)) {
+      res.status(400).json({ message: 'Proyecto inválido.' });
+      return;
+    }
+    if (!databasePool || !acceso) {
+      res.status(503).json({ message: 'Mapa de avances no disponible.' });
+      return;
+    }
+    try {
+      const { rows: proyectos } = await databasePool.query(
+        `SELECT p.id, p.nombre, p.descripcion, p.estado, p.tipo,
+                c.id AS "comunidadId", c.nombre AS comunidad
+           FROM proyectos_donantes pd
+           JOIN usuarios u ON u.id = pd.usuario_id AND u.activo
+           JOIN proyectos p ON p.id = pd.proyecto_id
+           JOIN comunidades c ON c.id = p.comunidad_id
+          WHERE pd.usuario_id = $1 AND pd.proyecto_id = $2
+            AND u.organizacion_id = $3 AND c.organizacion_id = $3
+            AND EXISTS (SELECT 1 FROM usuarios_roles ur
+                         JOIN roles r ON r.id = ur.rol_id
+                         WHERE ur.usuario_id = u.id
+                           AND r.nombre = 'DONANTE' AND r.activo)
+          LIMIT 1`,
+        [acceso.sub, proyectoId, acceso.organizacionId],
+      );
+      if (!proyectos.length) {
+        res.status(404).json({ message: 'Proyecto no disponible para tu cuenta.' });
+        return;
+      }
+      const [actividades, avances, evidencias] = await Promise.all([
+        databasePool.query(
+          `SELECT a.id, a.nombre, a.descripcion, a.estado
+             FROM actividades_programadas a
+            WHERE a.proyecto_id = $1
+            ORDER BY a.fecha_inicio NULLS LAST, a.nombre, a.id LIMIT 100`,
+          [proyectoId],
+        ),
+        databasePool.query(
+          `SELECT av.id, av.actividad_id AS "actividadId",
+                  av.fecha_avance::text AS fecha,
+                  av.comentarios AS descripcion,
+                  NULL::text AS observaciones,
+                  av.cantidad_reportada::float8 AS "cantidadReportada",
+                  av.porcentaje_avance::float8 AS "porcentajeAvance",
+                  av.estado_revision AS estado
+             FROM avances_proyecto av
+            WHERE av.proyecto_id = $1 AND av.estado_revision = 'VALIDADO'
+            ORDER BY av.fecha_avance DESC, av.creado_en DESC, av.id DESC LIMIT 500`,
+          [proyectoId],
+        ),
+        databasePool.query(
+          `SELECT e.id, e.avance_proyecto_id AS "avanceId",
+                  e.titulo, e.descripcion, e.tipo_mime AS "tipoMime",
+                  e.archivo_url AS url
+             FROM evidencias e
+             JOIN avances_proyecto av ON av.id = e.avance_proyecto_id
+                AND av.proyecto_id = e.proyecto_id
+            WHERE e.proyecto_id = $1 AND $2::boolean
+              AND av.estado_revision = 'VALIDADO'
+              AND e.visible_para_donantes = TRUE
+              AND e.solicitud_pago_id IS NULL
+              AND e.tipo_mime IN ('image/jpeg', 'image/png', 'image/webp')
+              AND (e.archivo_url LIKE 'https://%' OR e.archivo_url LIKE 'r2:%')
+            ORDER BY e.creado_en DESC, e.id DESC LIMIT 1000`,
+          [proyectoId, acceso.permisos.includes('evidencias.ver')],
+        ),
+      ]);
+      res.set('Cache-Control', 'no-store');
+      res.json({
+        proyecto: proyectos[0],
+        actividades: actividades.rows,
+        avances: avances.rows,
+        evidencias: await Promise.all(evidencias.rows.map(async (foto) => ({
+          ...foto,
+          url: typeof foto.url === 'string' && foto.url.startsWith('r2:')
+            ? (r2Disponible() ? await firmarObjetoR2(foto.url.slice(3), 'GET', undefined, 900) : null)
+            : typeof foto.url === 'string' && foto.url.startsWith('https://') ? foto.url : null,
+        }))),
+      });
+    } catch (error) {
+      console.error('Error consultando mapa del donante:', error);
+      res.status(500).json({ message: 'No fue posible consultar el mapa del donante.' });
+    }
+  },
+);
+
+// Resumen público para la cuenta DONANTE: sin nombres ni datos personales de familias.
+// Requiere permiso del proyecto y correspondencia con la ficha de la organización donante.
+donantesRouter.get(
+  '/mapa/proyectos/:proyectoId/familias',
+  authenticateAccessToken,
+  requireRole('DONANTE'),
+  requirePermission('proyectos.ver'),
+  async (req, res) => {
+    const proyectoId = req.params.proyectoId;
+    if (!esUuid(proyectoId)) {
+      res.status(400).json({ message: 'Proyecto inválido.' }); return;
+    }
+    try {
+      if (!databasePool) { res.status(503).json({ message: 'Base de datos no disponible.' }); return; }
+      const { rows } = await databasePool.query(
+        `SELECT b.id AS "brigadaId", b.lider, d.nombre AS patrocinador,
+                count(pf.id)::int AS "familiasAsignadas",
+                count(pf.id) FILTER (WHERE pf.estado IN ('PENDIENTE','EVALUADO'))::int AS "enEspera",
+                count(pf.id) FILTER (WHERE pf.estado = 'SELECCIONADO')::int AS aprobadas,
+                count(pf.id) FILTER (WHERE pf.estado = 'FINALIZADO')::int AS beneficiadas
+         FROM usuarios u
+         JOIN proyectos_donantes pd ON pd.usuario_id=u.id AND pd.proyecto_id=$2
+         JOIN proyectos p ON p.id=pd.proyecto_id
+         JOIN comunidades c ON c.id=p.comunidad_id AND c.organizacion_id=u.organizacion_id
+         JOIN cuentas_brigadas_donantes cbd ON cbd.usuario_id=u.id
+         JOIN brigadas_donantes b ON b.id=cbd.brigada_id AND b.activo
+         JOIN donantes d ON d.id=b.donante_id AND d.organizacion_id=u.organizacion_id AND d.activo
+         JOIN brigadas_donantes_proyectos bp ON bp.brigada_id=b.id AND bp.proyecto_id=p.id
+         LEFT JOIN asignaciones_familias_brigadas afb ON afb.brigada_id=b.id
+         LEFT JOIN perfiles_familia pf ON pf.id=afb.perfil_id AND pf.proyecto_id=p.id
+         WHERE u.id=$1 AND u.organizacion_id=$3 AND u.activo
+           AND EXISTS (SELECT 1 FROM usuarios_roles ur JOIN roles r ON r.id=ur.rol_id
+                       WHERE ur.usuario_id=u.id AND r.nombre='DONANTE' AND r.activo)
+         GROUP BY b.id,b.lider,d.nombre
+         ORDER BY d.nombre,b.lider,b.id`,
+        [req.auth!.sub, proyectoId, req.auth!.organizacionId],
+      );
+      // No exponer identificaciones, direcciones, miembros ni documentos de las familias.
+      res.set('Cache-Control', 'no-store');
+      res.json({ brigadas: rows });
+    } catch (error) {
+      console.error('Error consultando resumen de familias de brigada:', error);
+      res.status(500).json({ message: 'No fue posible consultar el impacto familiar.' });
     }
   },
 );

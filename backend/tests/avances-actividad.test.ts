@@ -9,7 +9,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { validarAvanceActividad } from '../src/domain/avances-actividad.js';
 import { crearRouterActividades } from '../src/routes/proyectos.routes.js';
-import { authenticateAccessToken, requirePermission } from '../src/middleware/auth.middleware.js';
+import { crearAutenticacion, requirePermission } from '../src/middleware/auth.middleware.js';
 import { createAccessToken } from '../src/security/token.js';
 
 const migracionesPrevias = [
@@ -153,6 +153,8 @@ test('HU-12: conserva avances legados y audita estados, permisos, resultados e a
     )).rows[0].id;
     await aplicarMigracion(db, '020_planificacion_ejecucion_resultados');
     await aplicarMigracion(db, '021_autorrevision_avances');
+    await aplicarMigracion(db, '034_restricciones_permisos_usuarios_tenant');
+    await aplicarMigracion(db, '035_permisos_roles_tenant');
 
     const legadoMigrado = (await db.query<{ estado_revision: string }>(
       'SELECT estado_revision FROM avances_proyecto WHERE id = $1',
@@ -186,6 +188,30 @@ test('HU-12: conserva avances legados y audita estados, permisos, resultados e a
     )).rows.map((fila) => fila.nombre);
     assert.deepEqual(rolesRevisores, ['ADMINISTRADOR', 'COORDINADOR']);
 
+    // Las capacidades deben provenir de PostgreSQL, no de las afirmaciones del JWT.
+    // Estos roles de prueba permiten aislar permisos sin alterar el catálogo real.
+    async function perfilPrueba(nombre: string, permisos: string[]) {
+      await db.query('INSERT INTO roles (nombre) VALUES ($1)', [nombre]);
+      await db.query(
+        'INSERT INTO roles_permisos (rol_id, permiso_id) SELECT r.id,p.id FROM roles r CROSS JOIN permisos p WHERE r.nombre=$1 AND p.codigo=ANY($2::text[])',
+        [nombre, permisos],
+      );
+    }
+    async function asignarPerfil(id: string, nombre: string) {
+      await db.query('DELETE FROM usuarios_roles WHERE usuario_id=$1', [id]);
+      await db.query(
+        'INSERT INTO usuarios_roles (usuario_id, rol_id) SELECT $1,id FROM roles WHERE nombre=$2',
+        [id, nombre],
+      );
+    }
+    await perfilPrueba('PRUEBA_LECTURA', ['proyectos.ver']);
+    await perfilPrueba('PRUEBA_REVISOR', ['proyectos.ver', 'actividades.avance.revisar']);
+    await perfilPrueba('PRUEBA_CAMPO_REVISION', ['proyectos.ver', 'actividades.avance.gestionar', 'actividades.avance.revisar']);
+    await perfilPrueba('PRUEBA_CORRECTOR', ['proyectos.ver', 'actividades.avance.corregir']);
+    await asignarPerfil(usuario, 'CAMPO');
+    await asignarPerfil(revisor, 'PRUEBA_REVISOR');
+    await asignarPerfil(usuarioOtraOrg, 'CAMPO');
+
     const query = async (sql: string, parametros?: unknown[]) => {
       const resultado = await db.query(sql, parametros);
       return { ...resultado, rowCount: resultado.rows.length || resultado.affectedRows || 0 };
@@ -195,7 +221,7 @@ test('HU-12: conserva avances legados y audita estados, permisos, resultados e a
     app.use(express.json());
     app.use(
       '/proyectos',
-      authenticateAccessToken,
+      crearAutenticacion(pool),
       requirePermission('proyectos.ver'),
       crearRouterActividades(pool),
     );
@@ -224,7 +250,6 @@ test('HU-12: conserva avances legados y audita estados, permisos, resultados e a
     const permisosCampo = ['proyectos.ver', 'actividades.avance.gestionar'];
     const tokenCampo = crearToken(usuario, org, permisosCampo);
     const tokenCampoRevisor = crearToken(usuario, org, [...permisosCampo, 'actividades.avance.revisar']);
-    const tokenSoloConsulta = crearToken(usuario, org, ['proyectos.ver']);
     const tokenRevisor = crearToken(revisor, org, ['proyectos.ver', 'actividades.avance.revisar']);
     const tokenCorrector = crearToken(usuario, org, ['proyectos.ver', 'actividades.avance.corregir']);
     const tokenCoordinador = crearToken(revisor, org, ['proyectos.ver', 'actividades.avance.gestionar', 'actividades.avance.revisar'], ['COORDINADOR']);
@@ -264,8 +289,11 @@ test('HU-12: conserva avances legados y audita estados, permisos, resultados e a
         ...(accion === 'devolver' ? { body: JSON.stringify({ motivo }) } : {}),
       });
 
-    const sinPermiso = await crearAvance(actividad, tokenSoloConsulta, datosEstimacion(5));
+    await asignarPerfil(usuario, 'PRUEBA_LECTURA');
+    // Incluso un token que afirma tener permiso de gestión debe quedar bloqueado.
+    const sinPermiso = await crearAvance(actividad, tokenCampo, datosEstimacion(5));
     assert.equal(sinPermiso.status, 403);
+    await asignarPerfil(usuario, 'CAMPO');
 
     const consultaInicial = await consultar();
     assert.equal(consultaInicial.status, 200);
@@ -313,7 +341,9 @@ test('HU-12: conserva avances legados y audita estados, permisos, resultados e a
     assert.equal(duplicado.status, 409);
 
     assert.equal((await enviar(actividad, primerAvance.id)).status, 204);
+    await asignarPerfil(usuario, 'PRUEBA_CAMPO_REVISION');
     assert.equal((await revisar(actividad, primerAvance.id, 'validar', tokenCampoRevisor)).status, 409);
+    await asignarPerfil(usuario, 'CAMPO');
     assert.equal((await revisar(actividad, primerAvance.id, 'devolver', tokenRevisor, 'Aclarar los hitos logrados.')).status, 204);
 
     const devuelto = await consultar();
@@ -375,12 +405,14 @@ test('HU-12: conserva avances legados y audita estados, permisos, resultados e a
     assert.equal(persistida.porcentajeProyecto, 75);
     assert.ok((resultadoManual?.avances.find((avance) => avance.id === segundoAvance.id)?.historial.length ?? 0) >= 2);
 
+    await asignarPerfil(usuario, 'PRUEBA_CORRECTOR');
     const correccion = await fetch(`${rutaActividad(actividad)}/avances/${segundoAvance.id}/corregir`, {
       method: 'POST',
       headers: headers(tokenCorrector, true),
       body: JSON.stringify({ ...datosEstimacion(90), motivoCorreccion: 'Se corrigió la estimación según nueva medición.' }),
     });
     assert.equal(correccion.status, 204);
+    await asignarPerfil(usuario, 'CAMPO');
     assert.equal((await revisar(actividad, segundoAvance.id, 'validar', tokenRevisor)).status, 204);
     const consultaCorregida = await consultar();
     const corregida = await consultaCorregida.json() as {
@@ -395,12 +427,15 @@ test('HU-12: conserva avances legados y audita estados, permisos, resultados e a
 
     // Los permisos aislados no habilitan la revisión propia sin rol autorizado.
     for (const [rol, token] of [['COORDINADOR', tokenCoordinador], ['ADMINISTRADOR', tokenAdministrador]] as const) {
+      await asignarPerfil(revisor, rol);
       const respuesta = await crearAvance(actividad, token, datosEstimacion(33));
       assert.equal(respuesta.status, 201);
       const propio = await respuesta.json() as { id: string };
       assert.equal((await enviar(actividad, propio.id, token)).status, 204);
       if (rol === 'COORDINADOR') {
+        await asignarPerfil(revisor, 'PRUEBA_REVISOR');
         assert.equal((await revisar(actividad, propio.id, 'validar', tokenRevisor)).status, 409);
+        await asignarPerfil(revisor, rol);
         assert.equal((await revisar(actividad, propio.id, 'validar', token)).status, 204);
       } else {
         assert.equal((await revisar(actividad, propio.id, 'devolver', token, 'Corregir visita.')).status, 204);
@@ -426,7 +461,7 @@ test('HU-12: conserva avances legados y audita estados, permisos, resultados e a
     for (const [proyectoSolicitado, actividadSolicitada, token, estadosEsperados] of [
       [proyecto, actividadOtroProyecto, tokenCampo, [404]],
       [proyectoOtraOrg, actividadOtraOrg, tokenCampo, [404]],
-      [proyecto, actividad, crearToken(usuarioOtraOrg, org, permisosCampo), [409, 404]],
+      [proyecto, actividad, crearToken(usuarioOtraOrg, org, permisosCampo), [403]],
     ] as const) {
       const noAutorizado = await crearAvance(
         actividadSolicitada,

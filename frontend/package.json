@@ -17,7 +17,11 @@
     "echarts": "^6.0.0",
     "gridstack": "^14.1.0",
     "@xyflow/react": "^12.9.0",
-    "lucide-react": "^1.70.0"
+    "lucide-react": "^1.70.0",
+    "@tiptap/react": "3.34.0",
+    "@tiptap/pm": "3.34.0",
+    "@tiptap/starter-kit": "3.34.0",
+    "@tiptap/core": "3.34.0"
   },
   "devDependencies": {
     "@types/react": "latest",

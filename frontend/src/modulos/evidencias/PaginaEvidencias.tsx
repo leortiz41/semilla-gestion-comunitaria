@@ -213,8 +213,8 @@ export default function PaginaEvidencias({
         </section>
       )}
       <div className="evidencias-centro__filtros" aria-label="Filtros del expediente documental">
-        <label><Search size={15} aria-hidden="true"/> Buscar
-          <input value={busqueda} onChange={(e) => setBusqueda(e.target.value)}
+        <label htmlFor="evidencias-buscar"><Search size={15} aria-hidden="true"/> Buscar
+          <input id="evidencias-buscar" type="search" value={busqueda} onChange={(e) => setBusqueda(e.target.value)}
             placeholder="Actividad, descripción, responsable…" />
         </label>
         <label><Filter size={15} aria-hidden="true"/> Comunidad

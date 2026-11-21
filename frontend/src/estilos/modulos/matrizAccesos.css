@@ -1,0 +1,114 @@
+.matriz-accesos{display:grid;gap:1.15rem;margin:1.2rem 0;padding:clamp(1rem,2vw,1.5rem);background:#fbfdfa;border:1px solid #d7e6d7;border-radius:1.1rem;color:#294a34}
+.matriz-accesos__encabezado{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.matriz-accesos__encabezado h2{font-size:1.45rem;color:#265b37;margin:.15rem 0}
+.matriz-accesos__encabezado p{line-height:1.5;color:#617662;margin:.2rem 0}
+.matriz-accesos__eyebrow{font-size:.72rem!important;letter-spacing:.11em;text-transform:uppercase;font-weight:700}
+.matriz-accesos button{font:inherit;border:1px solid #c5ddc7;border-radius:.6rem;padding:.6rem .85rem;background:#fff;color:#2e613f;cursor:pointer}
+.matriz-accesos button:disabled{opacity:.5;cursor:not-allowed}
+.matriz-accesos__indicadores{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.7rem}
+.matriz-accesos__indicadores>div{background:#f0f7ef;border:1px solid #d7e8d5;border-radius:.8rem;padding:1rem;display:grid;gap:.2rem}
+.matriz-accesos__indicadores strong{font-size:1.6rem;color:#246136}
+.matriz-accesos__indicadores span{font-size:.8rem;color:#627465}
+.matriz-accesos__layout{display:grid;grid-template-columns:minmax(225px,.85fr) minmax(0,2fr);gap:1rem;align-items:start}
+.matriz-accesos__listado,.matriz-accesos__detalle{padding:1rem;border:1px solid #d7e6d7;border-radius:.9rem;background:#fff;min-width:0}
+.matriz-accesos__listado{display:grid;gap:.65rem}
+.matriz-accesos__listado>label{font-weight:650;font-size:.85rem}
+.matriz-accesos input[type=search],.matriz-accesos select{padding:.7rem .8rem;border:1px solid #cbdccc;border-radius:.6rem;width:100%;min-width:0;background:#fff;color:#294b33;font:inherit;box-sizing:border-box}
+.matriz-accesos__contador{font-size:.78rem;color:#6a7b6d;margin:0}
+.matriz-accesos__usuario{border:1px solid #dce8dc;border-radius:.65rem;padding:.35rem;background:#fff}
+.matriz-accesos__usuario.seleccionado{background:#eff8ee;border-color:#7cad83}
+.matriz-accesos__usuario>button:first-child{width:100%;display:grid;gap:.2rem;text-align:left;border:0;background:transparent;padding:.55rem .55rem}
+.matriz-accesos__usuario strong{font-size:.86rem;overflow-wrap:anywhere}
+.matriz-accesos__usuario span,.matriz-accesos__usuario small{font-size:.76rem;color:#617466}
+.matriz-accesos__estado{padding:.35rem .5rem!important;font-size:.76rem!important;width:100%}
+.matriz-accesos__detalle{display:grid;gap:1rem;min-height:16rem}
+.matriz-accesos__detalle h3{margin:0;color:#295d39;overflow-wrap:anywhere}
+.matriz-accesos__detalle header p{margin:.3rem 0;color:#637565}
+.matriz-accesos__pestanas{display:flex;flex-wrap:wrap;gap:.5rem;padding:.4rem;background:#f0f6ef;border-radius:.7rem}
+.matriz-accesos__pestanas button[aria-pressed=true]{background:#2d7545;border-color:#2d7545;color:#fff}
+.matriz-accesos__aviso{font-size:.86rem;line-height:1.6;color:#5c715e;background:#f3f8f1;padding:.7rem;border-radius:.55rem;margin:0}
+.matriz-accesos__grupo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.55rem;border:1px solid #d9e7d8;border-radius:.75rem;padding:.9rem}
+.matriz-accesos__grupo legend{font-weight:700;color:#295f38;padding:0 .4rem}
+.matriz-accesos__permiso{display:flex;align-items:flex-start;gap:.55rem;padding:.65rem;border:1px solid #e0eae0;border-radius:.55rem;cursor:pointer}
+.matriz-accesos__permiso>input{margin-top:.25rem;accent-color:#2b7846}
+.matriz-accesos__permiso span{display:grid;gap:.2rem;min-width:0}
+.matriz-accesos__permiso strong{font-size:.85rem}
+.matriz-accesos__permiso small{color:#657667;font-size:.75rem;line-height:1.35}
+.matriz-accesos__permiso code{color:#798b7a;font-size:.68rem;overflow-wrap:anywhere}
+.matriz-accesos__guardar{background:#2a7545!important;border-color:#2a7545!important;color:white!important;justify-self:end}
+.matriz-accesos__perfil{padding:.8rem 1rem;border:1px solid #dce8da;border-radius:.75rem}
+.matriz-accesos__perfil p{color:#68796b;font-size:.86rem}
+.matriz-accesos__perfil small{color:#58755f}
+.matriz-accesos__error,.matriz-accesos__mensaje{padding:.85rem;border-radius:.65rem}
+.matriz-accesos__error{background:#fff0eb;color:#9e3825}
+.matriz-accesos__mensaje{background:#edf7ed;color:#27613a}
+.roles-panel__administracion-cuentas{margin:1rem 0;padding:1rem;border:1px solid #d5e5d3;border-radius:1rem;background:#f8fbf7}
+.roles-panel__administracion-cuentas>summary{cursor:pointer;color:#275b39;font-weight:700}
+@media(max-width:900px){.matriz-accesos__layout{grid-template-columns:1fr}.matriz-accesos__grupo{grid-template-columns:1fr}}
+@media(max-width:600px){.matriz-accesos__indicadores{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.matriz-accesos__roles-institucionales{display:grid;gap:.9rem;padding:1rem;background:#fff;border:1px solid #d8e7d7;border-radius:.85rem}
+.matriz-accesos__roles-institucionales h3{color:#285d3b;margin:0;font-size:1.2rem}
+.matriz-accesos__roles-institucionales header p,.matriz-accesos__config-rol>p{font-size:.86rem;color:#687b69;line-height:1.55;margin:.35rem 0}
+.matriz-accesos__perfiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:.6rem}
+.matriz-accesos__perfiles button{display:grid;text-align:left;gap:.3rem}
+.matriz-accesos__perfiles button[aria-pressed=true]{background:#e6f4e5;border-color:#7aaf83}
+.matriz-accesos__perfiles small{color:#607566;font-size:.77rem}
+.matriz-accesos__config-rol{display:grid;gap:.75rem;border-top:1px solid #dce9dc;padding-top:.85rem}
+.matriz-accesos__config-rol h4{color:#2a623a;margin:.1rem 0}
+
+/* Superadministración: matriz dentro de un panel anidado.
+   La disposición responde al espacio real del componente, no al ancho de la ventana. */
+.matriz-accesos--tenant {
+  container-type: inline-size;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.matriz-accesos--tenant .matriz-accesos__layout {
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+}
+.matriz-accesos--tenant .matriz-accesos__listado,
+.matriz-accesos--tenant .matriz-accesos__detalle {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.matriz-accesos--tenant .matriz-accesos__listado {
+  align-content: start;
+}
+.matriz-accesos--tenant .matriz-accesos__usuario,
+.matriz-accesos--tenant .matriz-accesos__usuario > button,
+.matriz-accesos--tenant .matriz-accesos__usuario strong,
+.matriz-accesos--tenant .matriz-accesos__usuario span,
+.matriz-accesos--tenant .matriz-accesos__usuario small {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  box-sizing: border-box;
+}
+.matriz-accesos--tenant .matriz-accesos__usuario > button[aria-pressed=true] {
+  background: #eff8ee;
+  box-shadow: inset 3px 0 #35764d;
+}
+.matriz-accesos--tenant .matriz-accesos__encabezado code,
+.matriz-accesos--tenant .matriz-accesos__detalle code {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+@container (min-width: 820px) {
+  .matriz-accesos--tenant .matriz-accesos__layout {
+    grid-template-columns: minmax(240px, .85fr) minmax(0, 1.65fr);
+  }
+}
+
+/* Pestañas de alcance para permisos globales, sin superponer los controles. */
+.matriz-accesos__modos{display:flex;flex-wrap:wrap;gap:.5rem;padding:.4rem;background:#f3f7f2;border-radius:.75rem;border:1px solid #d7e4d8}
+.matriz-accesos__modos button{background:transparent;color:#315a3b;border:1px solid transparent}
+.matriz-accesos__modos button[aria-pressed=true]{background:#306842;color:#fff;border-color:#306842}
+.matriz-accesos--tenant .matriz-accesos__roles-institucionales{min-width:0}
+.matriz-accesos--tenant .matriz-accesos__grupo{min-width:0}
+.matriz-accesos--tenant .matriz-accesos__permiso{min-width:0;overflow-wrap:anywhere}
+@container (max-width:560px){.matriz-accesos--tenant .matriz-accesos__grupo{grid-template-columns:1fr}}

@@ -1,0 +1,47 @@
+.config-institucional{display:grid;gap:1.3rem;max-width:1300px;margin:0 auto;color:#273d2f}
+.config-institucional__header{display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap}
+.config-institucional__header h1{margin:0;color:#2b603b;font-size:clamp(1.6rem,3vw,2.4rem)}
+.config-institucional__header p{color:#617265;line-height:1.55;margin:.3rem 0}
+.config-institucional__eyebrow{font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;font-weight:700}
+.config-institucional button{border:1px solid #c8dcc9;background:#fff;border-radius:.6rem;padding:.68rem .9rem;color:#2a6040;font:inherit;cursor:pointer}
+.config-institucional button:disabled{opacity:.55;cursor:not-allowed}
+.config-institucional .config-institucional__guardar{background:var(--institucion-primario,#2d7545);color:var(--institucion-texto-primario,#fff);border-color:transparent;font-weight:700}
+.config-institucional__layout{display:grid;grid-template-columns:minmax(200px,275px) minmax(0,1fr);gap:1rem;align-items:start}
+.config-institucional__menu{background:#fff;border:1px solid #d8e6d8;border-radius:1rem;padding:.65rem;display:grid;gap:.4rem}
+.config-institucional__menu button{text-align:left;display:grid;gap:.2rem;border-color:transparent;min-width:0}
+.config-institucional__menu button strong{font-size:.9rem}
+.config-institucional__menu button small{color:#637568;font-size:.76rem;line-height:1.4}
+.config-institucional__menu button.activo{background:#eff6ec;border-color:#c7dfc4;box-shadow:inset 3px 0 0 var(--institucion-secundario,#d98b36)}
+.config-institucional__contenido,.config-institucional__panel{min-width:0}
+.config-institucional__panel{padding:clamp(1rem,2.5vw,1.7rem);border:1px solid #d8e6d8;background:white;border-radius:1rem;display:grid;gap:1.2rem}
+.config-institucional__panel h2{margin:0;color:#2c603e;font-size:1.35rem}
+.config-institucional__panel>p{margin:0;color:#66796a;line-height:1.6}
+.config-institucional__panel label{display:grid;gap:.4rem;color:#385b42;font-weight:650;font-size:.9rem}
+.config-institucional__panel label>small{color:#728073;font-weight:400;line-height:1.4}
+.config-institucional__panel input:not([type=color]):not([type=checkbox]):not([type=file]),.config-institucional__panel textarea,.config-institucional__panel select{width:100%;box-sizing:border-box;min-width:0;border:1px solid #c8dac7;border-radius:.65rem;padding:.72rem;background:#fff;color:#243d2c;font:inherit}
+.config-institucional__panel input[type=file]{max-width:100%;font-size:.8rem}
+.config-institucional__logo{display:flex;align-items:center;gap:1.2rem;padding:1rem;border:1px solid #d8e5d4;background:#f8faf7;border-radius:.8rem}
+.config-institucional__logo img{width:105px;height:105px;object-fit:contain;flex-shrink:0;background:#fff;border-radius:.8rem;padding:.45rem;border:1px solid #e0e9df}
+.config-institucional__logo>div{display:grid;gap:.5rem;min-width:0}
+.config-institucional__logo small{color:#617566;line-height:1.45}
+.config-institucional__colores,.config-institucional__campos-dobles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.9rem}
+.config-institucional__color-input{display:flex;align-items:center;gap:.7rem;padding:.5rem;border:1px solid #dce7da;border-radius:.7rem}
+.config-institucional__color-input input{width:48px;height:38px;border:0;background:transparent;cursor:pointer}
+.config-institucional__color-input code{font-size:.83rem}
+.config-institucional__preview{border:1px solid #dee6dd;border-radius:.8rem;padding:1rem;display:grid;gap:.6rem;max-width:500px}
+.config-institucional__preview>div{border-radius:.5rem;padding:1rem;font-weight:700}
+.config-institucional__preview>p{font-size:1.1rem;font-weight:700;margin:0}
+.config-institucional__preview>span{display:inline-block;justify-self:start;border-radius:.5rem;padding:.5rem .8rem}
+.config-institucional__bienvenida-preview{background:#f3f8f2;padding:1.25rem;border-radius:.85rem;border:1px solid #d6e6d4}
+.config-institucional__bienvenida-preview>span{color:#728172;font-size:.78rem}
+.config-institucional__bienvenida-preview h3{margin:.6rem 0;color:#315d3c}
+.config-institucional__bienvenida-preview p{margin:.4rem 0;line-height:1.6}
+.config-institucional__bienvenida-preview small{color:#617967}
+.config-institucional__panel .config-institucional__check{display:flex;align-items:center;gap:.65rem}
+.config-institucional__check input{accent-color:var(--institucion-primario,#2d7545);width:18px;height:18px}
+.config-institucional__nota{background:#f4f8f1;border-radius:.6rem;padding:1rem;color:#627362;font-size:.85rem;line-height:1.6}
+.config-institucional__error,.config-institucional__exito{padding:.9rem;border-radius:.7rem}
+.config-institucional__error{background:#fff0eb;color:#9e3925}
+.config-institucional__exito{background:#ecf6ec;color:#235a36}
+@media(max-width:850px){.config-institucional__layout{grid-template-columns:1fr}.config-institucional__menu{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.config-institucional__menu,.config-institucional__colores,.config-institucional__campos-dobles{grid-template-columns:1fr}.config-institucional__logo{flex-direction:column;align-items:flex-start}}

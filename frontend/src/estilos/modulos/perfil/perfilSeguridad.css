@@ -40,3 +40,44 @@
     flex-direction: column;
   }
 }
+
+/* Diseño profesional de perfil personal */
+.perfil-hero{display:flex;align-items:center;gap:1.5rem;padding:clamp(1.1rem,2vw,1.8rem)!important;background:linear-gradient(110deg,#f6faf5,#fff);border:1px solid #dbe8d8}
+.perfil-hero__foto{width:118px;height:118px;flex:0 0 118px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,#2e7547,#74a575);display:grid;place-items:center;border:4px solid #fff;box-shadow:0 5px 18px #24422e25}
+.perfil-hero__foto img{width:100%;height:100%;object-fit:cover}
+.perfil-hero__foto span{font-size:2.25rem;letter-spacing:.04em;font-weight:800;color:#fff}
+.perfil-hero__contenido{flex:1;min-width:0}
+.perfil-hero__contenido h2{font-size:clamp(1.45rem,2.6vw,2.15rem);line-height:1.15;color:#275737;margin:.2rem 0 .35rem;overflow-wrap:anywhere}
+.perfil-hero__contenido>p{margin:.25rem 0;color:#607063;overflow-wrap:anywhere}
+.perfil-hero__metadatos{display:flex;flex-wrap:wrap;align-items:center;gap:.45rem;margin-top:.7rem}
+.perfil-estado{border-radius:1rem;background:#e5f2e5;color:#28683e;font-weight:700;font-size:.77rem;padding:.35rem .6rem}
+.perfil-hero__organizacion{font-size:.85rem;font-weight:650}
+.perfil-hero__accion{display:grid;gap:.55rem;min-width:145px}
+.perfil-hero__accion input[type=file]{position:absolute;left:-10000px;width:1px;height:1px}
+.perfil-hero__subir{border-radius:.65rem;background:#2d7446;padding:.7rem 1rem;color:white;text-align:center;font-weight:700;cursor:pointer}
+.perfil-hero__accion input[type=file]:focus-visible+.perfil-hero__subir{outline:2px solid #f1b441}
+.perfil-hero__accion button{width:100%}
+.perfil-contenido-grid{display:grid;grid-template-columns:1.05fr .95fr;align-items:start;gap:1.1rem}
+.perfil-datos,.perfil-seguridad-card{display:grid;gap:1.1rem;padding:clamp(1rem,2vw,1.5rem)!important}
+.perfil-datos h2,.perfil-seguridad-card h2{color:#2d5638;margin:.2rem 0;font-size:1.3rem}
+.perfil-card__descripcion{font-size:.86rem;color:#6a796d;line-height:1.5;margin:.35rem 0 0}
+.perfil-datos label{display:grid;gap:.4rem;font-size:.88rem;font-weight:650;color:#355943}
+.perfil-datos input{width:100%;min-width:0;box-sizing:border-box;padding:.77rem .9rem;border:1px solid #c9ddcc;border-radius:.6rem;background:#fff;color:#243f2e;font:inherit}
+.perfil-datos input:disabled{background:#f2f5f0;color:#68766a}
+.perfil-datos label small{font-size:.75rem;color:#68796a;font-weight:400;line-height:1.4}
+.perfil-datos .primary-button{justify-self:start}
+.perfil-seguridad-card__item{display:flex;justify-content:space-between;gap:1rem;padding:.85rem 0;border-bottom:1px solid #e4ece3}
+.perfil-seguridad-card__item span{color:#657569}
+.perfil-seguridad-card__item strong{color:#2a613c;text-align:right;font-size:.88rem}
+.perfil-seguridad-card__acciones{display:flex;flex-wrap:wrap;gap:.55rem}
+.perfil-seguridad-card__acciones button{font:inherit}
+.perfil-permisos{padding:1.2rem!important}
+.perfil-permisos summary{display:flex;align-items:center;justify-content:space-between;gap:1rem;cursor:pointer;list-style:none}
+.perfil-permisos summary::-webkit-details-marker{display:none}
+.perfil-permisos summary>span:first-child{display:grid;gap:.35rem}
+.perfil-permisos summary strong{font-size:1.13rem;color:#2d583a}
+.perfil-permisos summary small{color:#617365}
+.perfil-permisos .permission-list{margin-top:1.2rem}
+.perfil-seguridad-card .primary-button,.perfil-datos .primary-button{background:var(--institucion-primario,#2d7545);color:var(--institucion-texto-primario,#fff)}
+@media(max-width:850px){.perfil-contenido-grid{grid-template-columns:1fr}}
+@media(max-width:580px){.perfil-hero{flex-direction:column;align-items:flex-start}.perfil-hero__foto{width:95px;height:95px;flex-basis:95px}.perfil-hero__accion{width:100%}.perfil-seguridad-card__item{flex-direction:column;gap:.25rem}.perfil-seguridad-card__item strong{text-align:left}}

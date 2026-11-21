@@ -1,6 +1,6 @@
 import '../../estilos/modulos/paginaModuloBase.css';
 
-function PaginaAuditoria() {
+function PaginaAuditoria({ token: _token }: { token?: string }) {
   return (
     <section className="pagina-modulo" aria-labelledby="titulo-auditoria">
       <div className="pagina-modulo__encabezado">

@@ -171,8 +171,8 @@ export default function PaginaMapaImpacto({ token, usuarioId }: { token: string;
               <option key={comunidad} value={comunidad}>{comunidad}</option>)}
           </select>
         </label>
-        <label>Buscar proyectos
-          <input value={busqueda} onChange={(e) => {
+        <label htmlFor="mapa-impacto-buscar-proyectos">Buscar proyectos
+          <input id="mapa-impacto-buscar-proyectos" type="search" value={busqueda} onChange={(e) => {
             const texto = e.target.value;
             setBusqueda(texto);
             const encontrados = proyectos.filter((p) =>

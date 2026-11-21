@@ -87,6 +87,19 @@ async function loadAuthorization(usuarioId: string, runner: QueryRunner): Promis
        JOIN roles_permisos rp ON rp.rol_id = r.id
        JOIN permisos p ON p.id = rp.permiso_id
       WHERE ur.usuario_id = $1
+        AND NOT EXISTS (
+          SELECT 1 FROM organizaciones_roles_permisos_restringidos bloqueado
+          JOIN usuarios u ON u.id=ur.usuario_id
+          WHERE bloqueado.organizacion_id=u.organizacion_id
+            AND bloqueado.rol_id=r.id AND bloqueado.permiso_id=p.id
+        )
+        AND NOT EXISTS (
+          SELECT 1 FROM usuarios_permisos_restringidos restr
+          JOIN usuarios u ON u.id=ur.usuario_id
+          WHERE restr.usuario_id=ur.usuario_id
+            AND restr.organizacion_id=u.organizacion_id
+            AND restr.permiso_id=p.id
+        )
       ORDER BY p.codigo`,
     [usuarioId],
   );

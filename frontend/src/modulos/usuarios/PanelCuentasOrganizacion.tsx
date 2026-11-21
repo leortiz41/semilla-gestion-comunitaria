@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import {
-  cambiarCorreoCuenta, cambiarRolesCuenta, crearCuentaOrganizacion, obtenerCuentasOrganizacion,
-  reemitirCredencialTemporalCuenta,
+  cambiarCorreoCuenta, cambiarNombreCuenta, cambiarRolesCuenta, cambiarEstadoCuentaOrganizacion, crearCuentaOrganizacion, obtenerCuentasOrganizacion,
+  reemitirCredencialTemporalCuenta, retirarCuentaOrganizacion,
   type CuentaOrganizacion,
 } from '../../lib/api';
 import '../../estilos/modulos/cuentasOrganizacion.css';
@@ -18,13 +18,23 @@ export default function PanelCuentasOrganizacion({
   token, rolesActivos,
 }: { token: string; rolesActivos: string[] }) {
   const [cuentas, setCuentas] = useState<CuentaOrganizacion[] | null>(null);
+  const [nombre, setNombre] = useState('');
+  const [apellido, setApellido] = useState('');
   const [correo, setCorreo] = useState('');
+  const [crearVisible, setCrearVisible] = useState(false);
+  const [busqueda, setBusqueda] = useState('');
+  const [filtroEstado, setFiltroEstado] = useState<'todos' | 'activos' | 'inactivos' | 'retirados'>('todos');
   const [seleccion, setSeleccion] = useState<string[]>(['CAMPO']);
   const [edicion, setEdicion] = useState<string | null>(null);
   const [rolesEdicion, setRolesEdicion] = useState<string[]>([]);
+  const [edicionNombre, setEdicionNombre] = useState<string | null>(null);
+  const [nombreEdicion, setNombreEdicion] = useState('');
   const [edicionCorreo, setEdicionCorreo] = useState<string | null>(null);
   const [correoEdicion, setCorreoEdicion] = useState('');
   const [confirmandoReemision, setConfirmandoReemision] = useState<string | null>(null);
+  const [confirmandoEstado, setConfirmandoEstado] = useState<string | null>(null);
+  const [confirmandoRetiro, setConfirmandoRetiro] = useState<string | null>(null);
+  const [menuCuenta, setMenuCuenta] = useState<string | null>(null);
   const [temporal, setTemporal] = useState<{ correo: string; clave: string } | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
@@ -41,18 +51,20 @@ export default function PanelCuentasOrganizacion({
   }, [token, version]);
 
   function alternar(nombre: string, lista: string[], actualizar: (nueva: string[]) => void) {
-    actualizar(lista.includes(nombre) ? lista.filter((rol) => rol !== nombre) : [...lista, nombre]);
+    actualizar(lista.includes(nombre)
+      ? lista.filter((rol) => rol !== nombre)
+      : nombre === 'DONANTE' ? ['DONANTE'] : [...lista.filter((rol) => rol !== 'DONANTE'), nombre]);
   }
 
   async function crear(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
-    if (guardando || temporal || !seleccion.length) return;
+    if (guardando || temporal || !seleccion.length || !nombre.trim() || !apellido.trim()) return;
     setGuardando(true); setError(''); setMensaje('');
     try {
-      const respuesta = await crearCuentaOrganizacion(token, correo, seleccion);
+      const respuesta = await crearCuentaOrganizacion(token, { nombre: nombre.trim(), apellido: apellido.trim(), email: correo, roles: seleccion });
       setCuentas((actual) => actual ? [...actual, respuesta.cuenta].sort((a, b) => a.email.localeCompare(b.email)) : actual);
       setTemporal({ correo: respuesta.cuenta.email, clave: respuesta.contrasenaTemporal });
-      setCorreo(''); setSeleccion(['CAMPO']);
+      setNombre(''); setApellido(''); setCorreo(''); setSeleccion(['CAMPO']); setCrearVisible(false);
     } catch (fallo) {
       setError(fallo instanceof Error ? fallo.message : 'No se pudo crear la cuenta.');
     } finally { setGuardando(false); }
@@ -72,6 +84,25 @@ export default function PanelCuentasOrganizacion({
     } finally { setGuardando(false); }
   }
 
+  async function guardarNombre(cuenta: CuentaOrganizacion) {
+    if (guardando) return;
+    const nuevo = nombreEdicion.trim().replace(/\s+/g, ' ');
+    if (nuevo.length < 2 || nuevo.length > 140) {
+      setError('Ingresá un nombre de 2 a 140 caracteres.'); return;
+    }
+    setGuardando(true); setError(''); setMensaje('');
+    try {
+      const { nombreVisible } = await cambiarNombreCuenta(token, cuenta.id, nuevo);
+      setCuentas((actual) => actual?.map((item) => item.id === cuenta.id
+        ? { ...item, nombreVisible } : item) ?? null);
+      setEdicionNombre(null);
+      setNombreEdicion('');
+      setMensaje('Nombre visible actualizado correctamente.');
+    } catch (fallo) {
+      setError(fallo instanceof Error ? fallo.message : 'No fue posible actualizar el nombre.');
+    } finally { setGuardando(false); }
+  }
+
   async function guardarCorreo(cuenta: CuentaOrganizacion) {
     if (guardando) return;
     const nuevo = correoEdicion.trim().toLowerCase();
@@ -88,6 +119,33 @@ export default function PanelCuentasOrganizacion({
     } catch (fallo) {
       setError(fallo instanceof Error ? fallo.message : 'No se pudo actualizar el correo.');
     } finally { setGuardando(false); }
+  }
+
+  async function actualizarEstado(cuenta: CuentaOrganizacion) {
+    if (guardando) return;
+    setGuardando(true); setError(''); setMensaje('');
+    try {
+      const { activo } = await cambiarEstadoCuentaOrganizacion(token, cuenta.id, !cuenta.activo);
+      setCuentas((actual) => actual?.map((item) => item.id === cuenta.id ? { ...item, activo } : item) ?? null);
+      setConfirmandoEstado(null);
+      setMenuCuenta(null);
+      setMensaje(activo ? 'Cuenta reactivada correctamente.' : 'Cuenta desactivada; sus sesiones de renovación fueron revocadas.');
+    } catch (fallo) {
+      setError(fallo instanceof Error ? fallo.message : 'No fue posible cambiar el estado de la cuenta.');
+    } finally { setGuardando(false); }
+  }
+
+  async function retirar(cuenta: CuentaOrganizacion) {
+    if(guardando)return;
+    setGuardando(true);setError('');setMensaje('');
+    try{
+      await retirarCuentaOrganizacion(token,cuenta.id);
+      setCuentas((actual)=>actual?.map((item)=>item.id===cuenta.id
+        ? {...item,activo:false,retirado:true}:item)??null);
+      setConfirmandoRetiro(null);setMenuCuenta(null);
+      setMensaje('Cuenta retirada. El acceso fue revocado y se conservó el historial.');
+    }catch(error){setError(error instanceof Error?error.message:'No se pudo retirar la cuenta.');}
+    finally{setGuardando(false);}
   }
 
   async function reemitir(cuenta: CuentaOrganizacion) {
@@ -112,12 +170,35 @@ export default function PanelCuentasOrganizacion({
           <h2 id="cuentas-org-titulo">Cuentas de la organización</h2>
           <p>Creá accesos y asigná perfiles de Semilla. Solo se muestran usuarios de tu organización.</p>
         </div>
-        <button type="button" onClick={() => setVersion((v) => v + 1)} disabled={guardando}>Actualizar</button>
+        <div className="cuentas-org__acciones">
+          <button type="button" disabled={guardando || Boolean(temporal)} onClick={() => setCrearVisible(true)}>
+            Nuevo usuario
+          </button>
+          <button type="button" onClick={() => setVersion((v) => v + 1)} disabled={guardando}>Actualizar</button>
+        </div>
       </div>
       {error && <p role="alert" className="cuentas-org__error">{error}</p>}
       {mensaje && <p role="status" className="cuentas-org__mensaje">{mensaje}</p>}
-      <form className="cuentas-org__formulario" onSubmit={(evento) => void crear(evento)}>
-        <h3>Crear nueva cuenta</h3>
+      {crearVisible && <div className="cuentas-org__modal-fondo" onMouseDown={(e) => { if (e.target === e.currentTarget && !guardando) setCrearVisible(false); }}>
+        <div className="cuentas-org__modal" role="dialog" aria-modal="true" aria-labelledby="titulo-crear-cuenta">
+          <div className="cuentas-org__modal-encabezado">
+            <div><h3 id="titulo-crear-cuenta">Crear nueva cuenta</h3><p>La cuenta pertenecerá a tu organización actual.</p></div>
+            <button type="button" className="cuentas-org__secundario" disabled={guardando} onClick={() => setCrearVisible(false)} aria-label="Cerrar formulario">Cerrar</button>
+          </div>
+          <form className="cuentas-org__formulario" onSubmit={(evento) => void crear(evento)}>
+        {error && <p role="alert" className="cuentas-org__error">{error}</p>}
+        <div className="cuentas-org__nombres">
+          <label>Nombre
+            <input type="text" required minLength={2} maxLength={100} value={nombre}
+              disabled={guardando || Boolean(temporal)} autoComplete="given-name"
+              onChange={(evento) => setNombre(evento.target.value)} />
+          </label>
+          <label>Apellido
+            <input type="text" required minLength={2} maxLength={100} value={apellido}
+              disabled={guardando || Boolean(temporal)} autoComplete="family-name"
+              onChange={(evento) => setApellido(evento.target.value)} />
+          </label>
+        </div>
         <label>Correo electrónico
           <input type="email" required maxLength={150} value={correo} disabled={guardando || Boolean(temporal)}
             placeholder="usuario@organizacion.org" onChange={(evento) => setCorreo(evento.target.value)} />
@@ -137,7 +218,10 @@ export default function PanelCuentasOrganizacion({
         <button type="submit" disabled={!seleccion.length || guardando || Boolean(temporal)}>
           {guardando ? 'Creando cuenta…' : 'Crear cuenta y contraseña temporal'}
         </button>
-      </form>
+          <div className="cuentas-org__acciones"><button type="button" className="cuentas-org__secundario" disabled={guardando} onClick={() => setCrearVisible(false)}>Cancelar</button></div>
+          </form>
+        </div>
+      </div>}
       {temporal && (
         <div className="cuentas-org__temporal" role="status">
           <strong>Acceso creado: {temporal.correo}</strong>
@@ -147,15 +231,50 @@ export default function PanelCuentasOrganizacion({
         </div>
       )}
       <div className="cuentas-org__listado">
-        <h3>Usuarios registrados ({cuentas?.length ?? 0})</h3>
+        <h3>Usuarios registrados ({cuentas?.filter((c)=>!c.retirado).length ?? 0})</h3>
+        <div className="cuentas-org__filtros">
+          <label>Buscar usuario
+            <input type="text" value={busqueda} placeholder="Nombre o correo" onChange={(e) => setBusqueda(e.target.value)} />
+          </label>
+          <label>Estado
+            <select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value as typeof filtroEstado)}>
+              <option value="todos">Todos</option><option value="activos">Activos</option><option value="inactivos">Inactivos</option><option value="retirados">Retirados (historial)</option>
+            </select>
+          </label>
+        </div>
         {cuentas === null && !error && <p role="status">Consultando cuentas…</p>}
         {cuentas?.length === 0 && <p>Todavía no hay usuarios en esta organización.</p>}
-        {cuentas?.map((cuenta) => (
+        {cuentas?.filter((cuenta) => (cuenta.email + ' ' + (cuenta.nombreVisible ?? '')).toLowerCase().includes(busqueda.trim().toLowerCase()) &&
+          (filtroEstado === 'retirados' ? Boolean(cuenta.retirado) :
+            !cuenta.retirado && (filtroEstado === 'todos' || cuenta.activo === (filtroEstado === 'activos')))).map((cuenta) => (
           <article className="cuentas-org__cuenta" key={cuenta.id}>
             <div className="cuentas-org__identidad">
-              <strong>{cuenta.email}</strong>
-              <small>{cuenta.activo ? 'Cuenta activa' : 'Cuenta inactiva'} · {cuenta.roles.join(', ') || 'Sin roles'}</small>
+              <strong>{cuenta.nombreVisible || cuenta.email}</strong>
+              {cuenta.nombreVisible && <span>{cuenta.email}</span>}
+              <small>{cuenta.retirado ? 'Cuenta retirada' : cuenta.activo ? 'Cuenta activa' : 'Cuenta inactiva'} · {cuenta.roles.join(', ') || 'Sin roles'}</small>
             </div>
+            {confirmandoRetiro === cuenta.id && (
+              <div className="cuentas-org__confirmacion" role="alert">
+                <p>¿Retirar {cuenta.email}? Su acceso se bloqueará y dejará de aparecer en la lista habitual. Se conservarán correo e historial. No se puede revertir desde este panel.</p>
+                <div className="cuentas-org__acciones">
+                  <button type="button" disabled={guardando} onClick={()=>void retirar(cuenta)}>Sí, retirar cuenta</button>
+                  <button type="button" className="cuentas-org__secundario" disabled={guardando}
+                    onClick={()=>setConfirmandoRetiro(null)}>Cancelar</button>
+                </div>
+              </div>
+            )}
+            {confirmandoEstado === cuenta.id && (
+              <div className="cuentas-org__confirmacion" role="alert">
+                <p>¿Querés {cuenta.activo ? 'desactivar' : 'reactivar'} la cuenta de {cuenta.email}?</p>
+                <div className="cuentas-org__acciones">
+                  <button type="button" disabled={guardando} onClick={() => void actualizarEstado(cuenta)}>
+                    Sí, {cuenta.activo ? 'desactivar' : 'reactivar'}
+                  </button>
+                  <button type="button" className="cuentas-org__secundario" disabled={guardando}
+                    onClick={() => setConfirmandoEstado(null)}>Cancelar</button>
+                </div>
+              </div>
+            )}
             {confirmandoReemision === cuenta.id && (
               <div className="cuentas-org__confirmacion" role="alert">
                 <p>¿Generar una nueva contraseña temporal para {cuenta.email}? La anterior dejará de funcionar.</p>
@@ -166,6 +285,20 @@ export default function PanelCuentasOrganizacion({
                     onClick={()=>setConfirmandoReemision(null)}>Cancelar</button>
                 </div>
               </div>
+            )}
+            {edicionNombre === cuenta.id && (
+              <form className="cuentas-org__editor" onSubmit={(e) => { e.preventDefault(); void guardarNombre(cuenta); }}>
+                <label>Nombre visible
+                  <input type="text" required minLength={2} maxLength={140}
+                    value={nombreEdicion} disabled={guardando}
+                    onChange={(e) => setNombreEdicion(e.target.value)} />
+                </label>
+                <div className="cuentas-org__acciones">
+                  <button type="submit" disabled={guardando}>Guardar nombre</button>
+                  <button type="button" className="cuentas-org__secundario" disabled={guardando}
+                    onClick={() => setEdicionNombre(null)}>Cancelar</button>
+                </div>
+              </form>
             )}
             {edicionCorreo === cuenta.id && (
               <form className="cuentas-org__editor" onSubmit={(e) => { e.preventDefault(); void guardarCorreo(cuenta); }}>
@@ -201,25 +334,40 @@ export default function PanelCuentasOrganizacion({
                     onClick={() => setEdicion(null)}>Cancelar</button>
                 </div>
               </div>
-            ) : (
-              <div className="cuentas-org__acciones">
-                <button type="button" className="cuentas-org__secundario"
-                  disabled={guardando || !cuenta.activo || edicionCorreo === cuenta.id}
-                  onClick={() => { setEdicion(cuenta.id); setEdicionCorreo(null); setRolesEdicion(cuenta.roles); }}>
-                  Editar roles
+            ) : !cuenta.retirado ? (
+              <div className="cuentas-org__menu-contenedor">
+                <button type="button" className="cuentas-org__secundario" aria-expanded={menuCuenta === cuenta.id}
+                  aria-controls={`acciones-cuenta-${cuenta.id}`} disabled={guardando}
+                  onClick={() => setMenuCuenta((actual) => actual === cuenta.id ? null : cuenta.id)}>
+                  Acciones ···
                 </button>
-                <button type="button" className="cuentas-org__secundario"
-                  disabled={guardando || !cuenta.activo || edicionCorreo === cuenta.id}
-                  onClick={() => { setEdicionCorreo(cuenta.id); setCorreoEdicion(cuenta.email); setEdicion(null); }}>
-                  Editar correo
-                </button>
-                <button type="button" className="cuentas-org__secundario"
-                  disabled={guardando || !cuenta.activo || Boolean(temporal) || edicionCorreo === cuenta.id}
-                  onClick={()=>{setConfirmandoReemision(cuenta.id);setEdicion(null);setEdicionCorreo(null);}}>
-                  Reemitir contraseña temporal
-                </button>
+                {menuCuenta === cuenta.id && (
+                  <div className="cuentas-org__menu" id={`acciones-cuenta-${cuenta.id}`}>
+                    <button type="button" disabled={guardando} onClick={() => {
+                      setEdicionNombre(cuenta.id); setNombreEdicion(cuenta.nombreVisible || '');
+                      setEdicion(null); setEdicionCorreo(null); setMenuCuenta(null);
+                    }}>Editar nombre</button>
+                    <button type="button" disabled={guardando || !cuenta.activo} onClick={() => {
+                      setEdicion(cuenta.id); setEdicionNombre(null); setEdicionCorreo(null); setRolesEdicion(cuenta.roles); setMenuCuenta(null);
+                    }}>Editar roles</button>
+                    <button type="button" disabled={guardando || !cuenta.activo} onClick={() => {
+                      setEdicionCorreo(cuenta.id); setCorreoEdicion(cuenta.email); setEdicion(null); setEdicionNombre(null); setMenuCuenta(null);
+                    }}>Editar correo</button>
+                    <button type="button" disabled={guardando || !cuenta.activo || Boolean(temporal)} onClick={() => {
+                      setConfirmandoReemision(cuenta.id); setEdicion(null); setEdicionCorreo(null); setEdicionNombre(null); setMenuCuenta(null);
+                    }}>Reemitir contraseña temporal</button>
+                    <button type="button" disabled={guardando} onClick={() => {
+                      setConfirmandoEstado(cuenta.id); setConfirmandoReemision(null); setMenuCuenta(null);
+                    }}>{cuenta.activo ? 'Desactivar cuenta' : 'Reactivar cuenta'}</button>
+                    <button type="button" disabled={guardando} onClick={()=>{
+                      setConfirmandoRetiro(cuenta.id);setConfirmandoEstado(null);
+                      setConfirmandoReemision(null);setMenuCuenta(null);setEdicion(null);
+                      setEdicionCorreo(null);setEdicionNombre(null);
+                    }}>Retirar de organización</button>
+                  </div>
+                )}
               </div>
-            )}
+            ) : <span>Historial conservado</span>}
           </article>
         ))}
       </div>

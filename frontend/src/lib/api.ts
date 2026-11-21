@@ -419,7 +419,9 @@ export function obtenerRoles(tokenAcceso: string) {
 export interface CuentaOrganizacion {
   id: string;
   email: string;
+  nombreVisible?: string | null;
   activo: boolean;
+  retirado?: boolean;
   debeCambiarContrasena: boolean;
   roles: string[];
 }
@@ -430,11 +432,11 @@ export function obtenerCuentasOrganizacion(token: string) {
   });
 }
 
-export function crearCuentaOrganizacion(token: string, email: string, roles: string[]) {
+export function crearCuentaOrganizacion(token: string, datos: { nombre: string; apellido: string; email: string; roles: string[] }) {
   return request<{ cuenta: CuentaOrganizacion; contrasenaTemporal: string }>('/usuarios/cuentas', {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ email, roles }),
+    body: JSON.stringify(datos),
   });
 }
 
@@ -445,9 +447,32 @@ export function reemitirCredencialTemporalCuenta(token: string, usuarioId: strin
     });
 }
 
+export function cambiarNombreCuenta(token: string, usuarioId: string, nombreVisible: string) {
+  return request<{ nombreVisible: string }>(`/usuarios/cuentas/${encodeURIComponent(usuarioId)}/nombre`, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ nombreVisible }),
+  });
+}
+
 export function cambiarCorreoCuenta(token: string, usuarioId: string, email: string) {
   return request<{ email: string }>(`/usuarios/cuentas/${usuarioId}/email`, {
     method: 'PUT', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify({ email }),
+  });
+}
+
+export function retirarCuentaOrganizacion(token: string, usuarioId: string) {
+  return request<{ id: string; activo: boolean; retirado: boolean }>(
+    `/usuarios/cuentas/${encodeURIComponent(usuarioId)}/retirar`, {
+      method:'POST',headers:{Authorization:`Bearer ${token}`},
+    });
+}
+
+export function cambiarEstadoCuentaOrganizacion(token: string, usuarioId: string, activo: boolean) {
+  return request<{ id: string; activo: boolean }>(`/usuarios/administracion/cuentas/${encodeURIComponent(usuarioId)}/estado`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ activo }),
   });
 }
 
@@ -459,6 +484,26 @@ export function cambiarRolesCuenta(token: string, usuarioId: string, roles: stri
   });
 }
 
+
+export interface IndicadoresSaas {
+  totales: {
+    organizaciones: number; activas: number; suspendidas: number;
+    usuariosVigentes: number; usuariosActivos: number; usuariosRetirados: number;
+    comunidades: number; proyectos: number; evidencias: number;
+  };
+  organizaciones: {
+    id: string; nombre: string; slug: string; activo: boolean; creadoEn: string;
+    usuariosVigentes: number; usuariosActivos: number; usuariosRetirados: number;
+    comunidades: number; proyectos: number; evidencias: number;
+    ultimoAcceso: string | null;
+  }[];
+  consultadoEn: string;
+}
+export function obtenerDashboardSaas(token: string) {
+  return request<IndicadoresSaas>('/plataforma/dashboard', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
 
 export interface OrganizacionPlataforma {
   id: string;
@@ -495,10 +540,12 @@ export function obtenerCuentasPlataforma(token: string, organizacionId: string) 
     headers: { Authorization: `Bearer ${token}` },
   });
 }
-export function crearCuentaPlataforma(token: string, organizacionId: string, email: string, roles: string[]) {
+export function crearCuentaPlataforma(token: string, organizacionId: string, datos: {
+  nombre: string; apellido: string; email: string; roles: string[];
+}) {
   return request<{ cuenta: CuentaOrganizacion; contrasenaTemporal: string }>(
     `/plataforma/organizaciones/${organizacionId}/cuentas`, {
-      method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify({ email, roles }),
+      method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify(datos),
     });
 }
 
@@ -506,6 +553,20 @@ export function reemitirCredencialTemporalPlataforma(token: string, organizacion
   return request<{ cuenta: CuentaOrganizacion; contrasenaTemporal: string }>(
     `/plataforma/organizaciones/${organizacionId}/cuentas/${usuarioId}/credencial-temporal`, {
       method: 'POST', headers: { Authorization: `Bearer ${token}` },
+    });
+}
+
+export function cambiarNombreCuentaPlataforma(token: string, organizacionId: string, usuarioId: string, nombreVisible: string) {
+  return request<{ nombreVisible: string }>(
+    `/plataforma/organizaciones/${organizacionId}/cuentas/${usuarioId}/nombre`, {
+      method:'PUT',headers:{Authorization:`Bearer ${token}`},body:JSON.stringify({nombreVisible}),
+    });
+}
+
+export function retirarCuentaPlataforma(token: string, organizacionId: string, usuarioId: string) {
+  return request<{ id: string; activo: boolean; retirado: boolean }>(
+    `/plataforma/organizaciones/${organizacionId}/cuentas/${usuarioId}/retirar`, {
+      method:'POST',headers:{Authorization:`Bearer ${token}`},
     });
 }
 
@@ -700,44 +761,77 @@ export interface EvidenciaFotografica {
 const rutaFotos = (proyectoId: string, actividadId: string, avanceId: string) =>
   `/proyectos/${proyectoId}/actividades/${actividadId}/avances/${avanceId}/evidencias`;
 
-export function obtenerFotosAvance(token: string, proyectoId: string, actividadId: string, avanceId: string) {
-  return request<{ evidencias: EvidenciaFotografica[] }>(rutaFotos(proyectoId, actividadId, avanceId), {
-    headers: { Authorization: `Bearer ${token}` },
+
+// Cache acotada de fotos privadas ya autorizadas; los Blob URL se revocan al salir del caché.
+const fotosPrivadasCache=new Map<string,string>();
+function agregarFotoPrivada(id:string,url:string){
+  const anterior=fotosPrivadasCache.get(id);
+  if(anterior&&anterior!==url)URL.revokeObjectURL(anterior);
+  fotosPrivadasCache.delete(id);
+  fotosPrivadasCache.set(id,url);
+  while(fotosPrivadasCache.size>40){
+    const masAntigua=fotosPrivadasCache.keys().next().value;
+    if(!masAntigua)break;
+    URL.revokeObjectURL(fotosPrivadasCache.get(masAntigua)!);
+    fotosPrivadasCache.delete(masAntigua);
+  }
+}
+export async function obtenerFotosAvance(token:string,proyectoId:string,actividadId:string,avanceId:string){
+  const ruta=rutaFotos(proyectoId,actividadId,avanceId);
+  const listado=await request<{evidencias:EvidenciaFotografica[]}>(ruta,{
+    headers:{Authorization:`Bearer ${token}`},
   });
+  const evidencias=await Promise.all(listado.evidencias.map(async evidencia=>{
+    // Los archivos legados con URL públicas mantienen su acceso existente.
+    if(!evidencia.url || !evidencia.url.includes('.r2.cloudflarestorage.com'))return evidencia;
+    const cache=fotosPrivadasCache.get(evidencia.id);
+    if(cache)return {...evidencia,url:cache};
+    try{
+      const respuesta=await fetch(`${API_URL}${ruta}/${encodeURIComponent(evidencia.id)}/imagen`,{
+        headers:{Authorization:`Bearer ${token}`},cache:'no-store',
+      });
+      if(!respuesta.ok)throw Error('Fotografía no disponible');
+      const imagen=await respuesta.blob();
+      if(!['image/jpeg','image/png','image/webp'].includes(imagen.type))throw Error('Tipo de imagen inválido');
+      const temporal=URL.createObjectURL(imagen);
+      agregarFotoPrivada(evidencia.id,temporal);
+      return {...evidencia,url:temporal};
+    }catch{
+      return {...evidencia,url:null};
+    }
+  }));
+  return {evidencias};
 }
 
 export async function subirFotoAvance(
   token: string, proyectoId: string, actividadId: string, avanceId: string,
   foto: File,
 ) {
-  const permitidos = ['image/jpeg', 'image/png', 'image/webp'];
-  if (!permitidos.includes(foto.type)) throw new Error('Solo se permiten fotografías JPG, PNG y WebP.');
-  if (!foto.size || foto.size > 10 * 1024 * 1024) throw new Error('La fotografía debe pesar entre 1 byte y 10 MB.');
-  const ruta = rutaFotos(proyectoId, actividadId, avanceId);
-  const preparacion = await request<{ url: string; clave: string; tipoMime: string }>(ruta + '/preparar', {
-    method: 'POST', headers: { Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ tipoMime: foto.type }),
-  });
-  let carga: Response;
-  try {
-    carga = await fetch(preparacion.url, {
-      method: 'PUT', headers: { 'Content-Type': preparacion.tipoMime }, body: foto,
+  const permitidos=['image/jpeg','image/png','image/webp'];
+  if(!permitidos.includes(foto.type))throw Error('Solo se permiten fotografías JPG, PNG y WebP.');
+  if(!foto.size||foto.size>10*1024*1024)throw Error('La fotografía debe pesar entre 1 byte y 10 MB.');
+  const ruta=rutaFotos(proyectoId,actividadId,avanceId);
+  let respuesta:Response;
+  try{
+    respuesta=await fetch(`${API_URL}${ruta}/subir?titulo=${encodeURIComponent(foto.name.slice(0,180))}`,{
+      method:'POST',
+      headers:{Authorization:`Bearer ${token}`,'Content-Type':foto.type},
+      body:foto,
+      credentials:'include',
     });
-  } catch {
-    throw new Error('El navegador no pudo completar la carga en R2. Revisá el resultado de la solicitud PUT en Network; podría ser un rechazo de firma o permisos.');
+  }catch{
+    throw Error('No se pudo comunicar con el servidor de Semilla para subir la fotografía.');
   }
-  if (!carga.ok) {
-    throw new Error(`R2 rechazó la fotografía (HTTP ${carga.status}). Verificá las credenciales, el bucket y la firma de carga.`);
+  if(!respuesta.ok){
+    const detalle=await respuesta.json().catch(()=>({})) as {
+      message?:string;diagnostico?:string;codigo?:string;
+    };
+    if(respuesta.status===502&&detalle.diagnostico){
+      throw Error(`${detalle.message||'Error de almacenamiento.'} Diagnóstico: ${detalle.diagnostico} (${detalle.codigo||'sin código'}).`);
+    }
+    throw Error(detalle.message||`Error de carga HTTP ${respuesta.status}.`);
   }
-  try {
-    return await request<{ id: string }>(ruta + '/confirmar', {
-      method: 'POST', headers: { Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ clave: preparacion.clave, tipoMime: foto.type, titulo: foto.name }),
-    });
-  } catch (fallo) {
-    throw new Error('La foto se envió a R2, pero no pudo confirmarse en Neon: ' +
-      (fallo instanceof Error ? fallo.message : 'Error desconocido.'));
-  }
+  return await respuesta.json() as {id:string};
 }
 
 export interface AvancePendienteRevision {

@@ -192,12 +192,12 @@ function PaginaProyectos({
           {verPendientes && (
             <>
               <div className="revision-centro__filtros">
-                <label>Buscar avance
-                  <input type="search" value={busquedaRevision} onChange={(evento) => setBusquedaRevision(evento.target.value)}
+                <label htmlFor="proyectos-buscar-avance">Buscar avance
+                  <input id="proyectos-buscar-avance" type="search" value={busquedaRevision} onChange={(evento) => setBusquedaRevision(evento.target.value)}
                     placeholder="Actividad, comunidad o responsable" />
                 </label>
-                <label>Mostrar
-                  <select value={filtroRevision} onChange={(evento) => setFiltroRevision(evento.target.value)}>
+                <label htmlFor="proyectos-filtrar-revision">Mostrar
+                  <select id="proyectos-filtrar-revision" value={filtroRevision} onChange={(evento) => setFiltroRevision(evento.target.value)}>
                     <option value="todos">Todos los pendientes</option>
                     <option value="propios">Mis avances</option>
                     <option value="otros">Avances de otros</option>

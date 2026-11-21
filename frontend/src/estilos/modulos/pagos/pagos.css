@@ -1,0 +1,83 @@
+.pagos-pagina{display:grid;gap:1.1rem}.pagos-pestanas{display:flex;gap:.6rem;flex-wrap:wrap;padding:.6rem;background:#edf4eb;border-radius:.8rem}
+.pagos-pestanas button,.pagos-herramientas button,.pagos-listado button,.pagos-modal button{border:1px solid #c9dfc9;border-radius:.65rem;padding:.7rem 1rem;background:#fff;color:#315d3c;font:inherit;cursor:pointer}
+.pagos-pestanas button[aria-pressed=true]{background:#2b7245;color:#fff}.pagos-indicadores{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem}
+.pagos-indicadores article,.pagos-listado article{background:#fff;border:1px solid #dce9d9;border-radius:.9rem;padding:1.1rem;display:grid;gap:.4rem}
+.pagos-indicadores span,.pagos-listado span{color:#59725e}.pagos-indicadores strong{font-size:1.65rem;color:#285d39}
+.pagos-listado{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:.8rem}
+.pagos-pagina h2{color:#295e3c;font-size:1.25rem}.pagos-herramientas{display:flex;align-items:end;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.pagos-herramientas label,.pagos-modal label{display:grid;gap:.4rem;color:#315d3c;font-weight:650}
+.pagos-herramientas input,.pagos-modal input,.pagos-modal select{box-sizing:border-box;width:100%;padding:.7rem;border:1px solid #cedfcb;border-radius:.6rem;font:inherit;background:#fff;color:#22472e}
+.pagos-modal-fondo{position:fixed;inset:0;z-index:1200;display:grid;place-items:center;background:#16301c99;padding:1rem}
+.pagos-modal{background:white;border-radius:1rem;padding:1.5rem;width:min(100%,630px);max-height:90vh;overflow:auto}
+.pagos-modal form{display:grid;gap:.85rem}.pagos-modal footer{display:flex;justify-content:flex-end;gap:.7rem}.pagos-modal footer button[type=submit],.pagos-herramientas button{background:#2e7847;color:white}
+.pagos-error,.pagos-aviso{padding:1rem;border-radius:.7rem;background:#f2f8ef;color:#315e3a}.pagos-error{background:#fff1ed;color:#9b3424}
+@media(max-width:680px){.pagos-indicadores{grid-template-columns:1fr}.pagos-herramientas label{width:100%}}
+
+.pagos-ayuda{display:block;color:#677e6b;font-size:.78rem;font-weight:400;line-height:1.45}
+.pagos-nuevo-tipo{display:grid;gap:.8rem;padding:1rem;background:#f2f8ef;border:1px solid #cce1ca;border-radius:.85rem}
+.pagos-nuevo-tipo h3{margin:0;color:#285d39;font-size:1.03rem}
+.pagos-acciones-tipo{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:.55rem}
+.pagos-acciones-tipo button:last-child{background:#2e7847;color:#fff}
+.pagos-modal input:focus-visible,.pagos-modal select:focus-visible{outline:2px solid #367f51;outline-offset:2px}
+
+.pagos-flujo{display:grid;gap:1rem;margin:1.2rem 0}
+.pagos-flujo__cabecera{padding:1rem;border:1px solid #d4e5d1;background:#f5faf4;border-radius:.85rem}
+.pagos-flujo__cabecera h2{margin:0 0 .4rem}
+.pagos-flujo__cabecera p{margin:.3rem 0 1rem;color:#57715b}
+.pagos-flujo__acciones{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.7rem}
+.pagos-flujo__acciones button{border:1px solid #c8dfcb;border-radius:.65rem;background:#fff;color:#2c603e;padding:.7rem .85rem;font:inherit;cursor:pointer}
+.pagos-flujo__acciones button:first-child{background:#2d7547;color:#fff}
+.pagos-flujo__acciones button:disabled{opacity:.5;cursor:default}
+.pagos-flujo__formulario{background:#fff;border:1px solid #cddfcd;border-radius:1rem;padding:1.25rem}
+.pagos-flujo__formulario h3{margin:.1rem 0 1rem;color:#2a603d}
+.pagos-flujo__formulario form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}
+.pagos-flujo__formulario form label,.pagos-listado label{display:grid;gap:.4rem;color:#375d41;font-weight:650;font-size:.9rem}
+.pagos-flujo__formulario form input,.pagos-flujo__formulario form select,.pagos-listado label input{width:100%;min-width:0;box-sizing:border-box;padding:.75rem;border:1px solid #c9dec7;border-radius:.6rem;background:#fff;color:#284932;font:inherit}
+.pagos-flujo__formulario form .pagos-nota,.pagos-flujo__formulario form .pagos-flujo__acciones{grid-column:1/-1}
+.pagos-nota{color:#5a705f;font-size:.86rem;line-height:1.5}
+@media(max-width:680px){.pagos-flujo__formulario form{grid-template-columns:1fr}}
+
+/* Bandeja de revisión de solicitudes */
+.pagos-bandeja{display:grid;gap:1.1rem;background:#f9fcf8;border:1px solid #d5e6d4;border-radius:1rem;padding:clamp(1rem,2.5vw,1.5rem)}
+.pagos-bandeja header h2{margin:0 0 .4rem;color:#285d3a}
+.pagos-bandeja header p{margin:0;color:#5b7160;line-height:1.55}
+.pagos-bandeja__tabs{display:flex;gap:.55rem;flex-wrap:wrap}
+.pagos-bandeja__tabs button{border:1px solid #c8dec7;background:#fff;color:#2b5e3c;border-radius:.65rem;font:inherit;padding:.65rem .9rem;cursor:pointer}
+.pagos-bandeja__tabs button[aria-pressed=true]{background:#2d7447;color:#fff;border-color:#2d7447}
+.pagos-bandeja>label,.pagos-bandeja__revision label{display:grid;gap:.45rem;color:#315d3b;font-weight:600}
+.pagos-bandeja input,.pagos-bandeja textarea{width:100%;box-sizing:border-box;font:inherit;border:1px solid #cbdccb;border-radius:.6rem;padding:.75rem;background:#fff;color:#254a31}
+.pagos-bandeja__solicitud{gap:.5rem!important}
+.pagos-bandeja__solicitud p{margin:.1rem 0;font-size:.9rem}
+.pagos-bandeja__cabecera{display:flex;justify-content:space-between;gap:.65rem;flex-wrap:wrap;align-items:center}
+.pagos-bandeja__cabecera span{border-radius:1rem;padding:.25rem .65rem;background:#eaf2e7;color:#285937;font-size:.75rem}
+.pagos-bandeja__revision{display:grid;gap:.75rem;border-top:1px solid #dae7d8;padding-top:.9rem}
+.pagos-bandeja__revision small{color:#5d7162;line-height:1.45}
+.pagos-bandeja__acciones{display:flex;flex-wrap:wrap;gap:.6rem}
+.pagos-bandeja__acciones button{padding:.7rem .95rem;background:#2b7544;border:1px solid #2b7544;color:#fff;border-radius:.6rem;font:inherit;cursor:pointer}
+.pagos-bandeja__acciones button+button{background:#fff;color:#8c4332;border-color:#e2bbb0}
+.pagos-bandeja__acciones button:disabled{opacity:.55;cursor:not-allowed}
+
+/* Búsqueda accesible en selectores extensos */
+.pagos-selector-buscable{display:grid;gap:.4rem;align-content:start;min-width:0}
+.pagos-selector-buscable>label{font-size:.9rem;font-weight:650;color:#375d41;cursor:pointer}
+.pagos-selector-buscable>input,.pagos-selector-buscable>select{
+ width:100%;min-width:0;box-sizing:border-box;padding:.75rem;
+ border:1px solid #c9dec7;border-radius:.6rem;background:#fff;color:#284932;font:inherit
+}
+.pagos-selector-buscable>input:focus-visible,.pagos-selector-buscable>select:focus-visible{
+ outline:2px solid #388450;outline-offset:2px
+}
+.pagos-selector-buscable__vacio{color:#9b5731;font-size:.8rem;line-height:1.5}
+
+/* Selector único con resultados sobrepuestos, sin duplicar altura del formulario. */
+.pagos-selector-buscable{position:relative;display:flex;flex-direction:column;gap:.4rem;min-width:0;align-self:start}
+.pagos-selector-buscable__control{position:relative}
+.pagos-selector-buscable__control>input{width:100%;min-width:0;height:49px;padding:.7rem 2.4rem .7rem .85rem;box-sizing:border-box;border:1px solid #c9dec7;border-radius:.65rem;background:#fff;color:#284932;font:inherit}
+.pagos-selector-buscable__control>input:focus-visible{outline:2px solid #d9a15a;outline-offset:2px;border-color:#49855b}
+.pagos-selector-buscable__control>input:disabled{background:#eef2ee;cursor:not-allowed}
+.pagos-selector-buscable__chevron{pointer-events:none;position:absolute;right:1rem;top:50%;transform:translateY(-50%);color:#52765a}
+.pagos-selector-buscable__opciones{position:absolute;top:calc(100% - .15rem);left:0;right:0;z-index:45;max-height:240px;overflow-y:auto;background:#fff;border:1px solid #aacdab;border-radius:.65rem;box-shadow:0 10px 28px #183f222b;padding:.35rem}
+.pagos-selector-buscable__opciones>button{display:block;width:100%;padding:.72rem .8rem;text-align:left;white-space:normal;border:0;border-radius:.45rem;background:#fff;color:#264b31;font:inherit;cursor:pointer}
+.pagos-selector-buscable__opciones>button:hover,.pagos-selector-buscable__opciones>button.activo{background:#e9f3e8;color:#1d5430}
+.pagos-selector-buscable__opciones>button[aria-selected=true]{font-weight:700}
+.pagos-selector-buscable__sin-resultados,.pagos-selector-buscable__opciones>small{display:block;padding:.8rem;color:#6a756b;font-size:.85rem}

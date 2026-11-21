@@ -27,7 +27,12 @@ function clienteR2() {
       region: 'auto',
       endpoint: `https://${config.accountId}.r2.cloudflarestorage.com`,
       credentials: { accessKeyId: config.accessKeyId, secretAccessKey: config.secretAccessKey },
-      forcePathStyle: false,
+      // Cloudflare R2: usar /bucket/clave sobre el dominio de cuenta.
+      // Evita el host bucket.account.r2.cloudflarestorage.com que puede fallar TLS.
+      forcePathStyle: true,
+      // Evitar CRC32 de carga vacía al firmar PUT sin disponer aún del archivo.
+      // El checksum opcional generado por defecto provoca 403 en R2 con URLs prefirmadas.
+      requestChecksumCalculation: 'WHEN_REQUIRED',
       maxAttempts: 2,
     }),
   };
@@ -91,4 +96,77 @@ export async function verificarObjetoR2(clave: string, mime: string, maxBytes = 
   } finally {
     cliente.destroy();
   }
+}
+
+
+// Transferencia privada desde el backend: evita conexiones directas navegador → R2.
+export async function cargarObjetoR2(clave: string, mime: string, datos: Buffer) {
+  validarClave(clave);
+  if (!['image/jpeg','image/png','image/webp'].includes(mime) ||
+      !datos.length || datos.length > 10 * 1024 * 1024) {
+    throw new Error('Archivo de evidencia inválido.');
+  }
+  const {cliente,bucket}=clienteR2();
+  try {
+    await cliente.send(new PutObjectCommand({
+      Bucket:bucket,Key:clave,Body:datos,ContentType:mime,
+    }));
+  } finally {cliente.destroy();}
+}
+
+export async function leerObjetoR2(clave: string): Promise<{datos:Uint8Array;mime:string}> {
+  validarClave(clave);
+  const {cliente,bucket}=clienteR2();
+  try {
+    const salida=await cliente.send(new GetObjectCommand({Bucket:bucket,Key:clave}));
+    if (!salida.Body || !['image/jpeg','image/png','image/webp'].includes(
+      salida.ContentType?.split(';')[0]?.trim().toLowerCase() || ''
+    ) || (salida.ContentLength??0)>10*1024*1024) {
+      throw new Error('Objeto de imagen no válido.');
+    }
+    const datos=await salida.Body.transformToByteArray();
+    if (!datos.length || datos.length>10*1024*1024)throw new Error('Imagen demasiado grande.');
+    return {datos,mime:salida.ContentType!.split(';')[0].trim().toLowerCase()};
+  } finally {cliente.destroy();}
+}
+
+
+// Diagnóstico sin secretos: examina causas anidadas de los errores del SDK S3.
+export function diagnosticarErrorR2(error: unknown): {categoria:string;codigo:string;estado:number|null} {
+  const visitar=(valor:unknown,nivel:number):{codigos:string[];estado:number|null}=>{
+    if(!valor||typeof valor!=='object'||nivel>5)return {codigos:[],estado:null};
+    const e=valor as {
+      name?:unknown;code?:unknown;cause?:unknown;errors?:unknown;
+      $metadata?:{httpStatusCode?:number};
+    };
+    const propios=[e.code,e.name].filter((v):v is string=>typeof v==='string');
+    const anidados=[e.cause,...(Array.isArray(e.errors)?e.errors.slice(0,5):[])]
+      .map(x=>visitar(x,nivel+1));
+    return {
+      codigos:[...anidados.flatMap(x=>x.codigos),...propios],
+      estado:typeof e.$metadata?.httpStatusCode==='number'?e.$metadata.httpStatusCode
+        :anidados.find(x=>x.estado!==null)?.estado??null,
+    };
+  };
+  const inspeccion=visitar(error,0);
+  const patrones={
+    TLS_CERTIFICADO:/ERR_SSL|CERT_|TLS|SSL|EPROTO|UNABLE_TO_VERIFY|SELF_SIGNED|WRONG_VERSION|HANDSHAKE/i,
+    DNS:/ENOTFOUND|EAI_AGAIN|ENODATA|DNS/i,
+    RED:/ECONN|ETIMEDOUT|EHOSTUNREACH|UND_ERR|TimeoutError|AbortError/i,
+    CREDENCIALES_O_PERMISOS:/AccessDenied|InvalidAccessKey|SignatureDoesNotMatch|InvalidToken|Forbidden/i,
+    BUCKET:/NoSuchBucket|NotFound/i,
+  };
+  const pista=inspeccion.codigos.find(c=>Object.values(patrones).some(p=>p.test(c)))
+    ||inspeccion.codigos.find(c=>c!=='Error')||'DESCONOCIDO';
+  let categoria='ALMACENAMIENTO';
+  for(const [grupo,patron] of Object.entries(patrones)){
+    if(inspeccion.codigos.some(c=>patron.test(c))){categoria=grupo;break;}
+  }
+  if(categoria==='ALMACENAMIENTO'){
+    if([401,403].includes(inspeccion.estado??0))categoria='CREDENCIALES_O_PERMISOS';
+    if(inspeccion.estado===404)categoria='BUCKET';
+  }
+  // Whitelist: no publicar mensajes, hosts, rutas, objetos, firmas o secretos.
+  const seguro=/^[A-Za-z][A-Za-z0-9_]{0,79}$/.test(pista)?pista:'DESCONOCIDO';
+  return {categoria,codigo:seguro,estado:inspeccion.estado};
 }

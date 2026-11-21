@@ -166,7 +166,10 @@ export default function DetalleProyecto({
     if (metaCantidad !== null && !unidadMedida) errores.unidadMedida = 'Ingresá la unidad de medida.';
     if (metaCantidad === null && unidadMedida && !errores.metaCantidad)
       errores.metaCantidad = 'Ingresá la meta o eliminá la unidad de medida.';
-    const presupuestoEstimado = numero('presupuestoEstimado', 2, 0, presupuestoProyecto);
+    const presupuestoEstimado = numero('presupuestoEstimado', 2, 0);
+    if (presupuestoEstimado !== null && presupuestoEstimado > presupuestoDisponible + 0.00001) {
+      errores.presupuestoEstimado = `El presupuesto de esta actividad supera el saldo disponible del proyecto (${formatoCantidad(presupuestoDisponible)} ${moneda}). Reducí el importe o ajustá el presupuesto del proyecto.`;
+    }
     const pesoResultado = numero('pesoResultado', 2, 0, 100);
     for (const elemento of Array.from(formulario.elements)) {
       if (!(elemento instanceof HTMLInputElement ||
@@ -178,7 +181,9 @@ export default function DetalleProyecto({
     setErroresCamposPlan(errores);
     if (Object.keys(errores).length) {
       setErrorPlanificacion('No se guardó la actividad. Revisá los campos señalados.');
-      const primero = formulario.elements.namedItem(Object.keys(errores)[0]);
+      const primerCampo = Object.keys(errores)[0] === 'unidadMedida' && unidadSeleccionada !== 'OTRA'
+        ? 'unidadCatalogo' : Object.keys(errores)[0];
+      const primero = formulario.elements.namedItem(primerCampo);
       if (primero instanceof HTMLElement) primero.focus();
       return;
     }
@@ -204,7 +209,16 @@ export default function DetalleProyecto({
       setErroresCamposPlan({});
       refrescar();
     } catch (fallo) {
-      setErrorPlanificacion(fallo instanceof Error ? fallo.message : 'No fue posible guardar la planificación.');
+      const detalle = fallo instanceof Error ? fallo.message : 'No fue posible guardar la planificación.';
+      setErrorPlanificacion(detalle);
+      const campo = /presupuesto|saldo disponible|asignaciones/i.test(detalle)
+        ? 'presupuestoEstimado'
+        : /responsable/i.test(detalle) ? 'responsableAsignadoId' : null;
+      if (campo) {
+        setErroresCamposPlan((actual) => ({ ...actual, [campo]: detalle }));
+        const elemento = formulario.elements.namedItem(campo);
+        if (elemento instanceof HTMLElement) elemento.focus();
+      }
     } finally {
       setGuardando(false);
     }
@@ -304,12 +318,15 @@ export default function DetalleProyecto({
                 <small>Especificá una tarea concreta dentro del proyecto.</small>
               </label>
               <label>Responsable asignado
-                <select name="responsableAsignadoId" defaultValue={actividad?.responsableAsignadoId ?? ''}>
+                <select name="responsableAsignadoId" defaultValue={actividad?.responsableAsignadoId ?? ''}
+                  aria-invalid={Boolean(erroresCamposPlan.responsableAsignadoId)}>
                   <option value="">Sin asignar</option>
                   {responsables.map((responsable) => (
                     <option key={responsable.id} value={responsable.id}>{responsable.nombre}</option>
                   ))}
                 </select>
+                {erroresCamposPlan.responsableAsignadoId &&
+                  <small className="actividad-plan-form__campo-error">{erroresCamposPlan.responsableAsignadoId}</small>}
               </label>
               <label>Inicio previsto<input name="fechaInicio" type="date" defaultValue={actividad?.fechaInicio ?? ''} /></label>
               <label>Finalización prevista
@@ -478,6 +495,14 @@ export default function DetalleProyecto({
           </>
         ) : (
           <>
+            <div className="ejecucion-progreso__actividad">
+              <div className="ejecucion-progreso__actividad-encabezado">
+                <span>Avance físico validado</span>
+                <strong>{formatoCantidad(Math.max(0, Math.min(100, actividad.porcentajeResultado)))}%</strong>
+              </div>
+              <progress value={Math.max(0, Math.min(100, actividad.porcentajeResultado))} max={100}
+                aria-label={`Avance validado de ${actividad.nombre}`} />
+            </div>
             <section className="actividad-avances" aria-label={`Historial de avances de ${actividad.nombre}`}>
               <header className="actividad-avances__encabezado"><h5>Registro de ejecución</h5><span>{actividad.avances.length}</span></header>
               {!actividad.avances.length && <p className="actividad-avances__vacio">Aún no hay avances registrados.</p>}
@@ -651,6 +676,31 @@ export default function DetalleProyecto({
             {vista === 'ejecucion' && (
               <>
                 <h3>Ejecución</h3>
+                <section className="ejecucion-progreso" aria-label="Progreso validado del proyecto">
+                  <div className="ejecucion-progreso__encabezado">
+                    <div>
+                      <span className="ejecucion-progreso__etiqueta">Seguimiento del proyecto</span>
+                      <h4>Avance general de ejecución</h4>
+                      <p>Calculado con las actividades y reportes validados.</p>
+                    </div>
+                    <strong className="ejecucion-progreso__valor">
+                      {porcentajeProyecto === null
+                        ? 'Pendiente'
+                        : `${formatoCantidad(Math.max(0, Math.min(100, porcentajeProyecto)))}%`}
+                    </strong>
+                  </div>
+                  <progress
+                    value={porcentajeProyecto === null ? 0 : Math.max(0, Math.min(100, porcentajeProyecto))}
+                    max={100}
+                    aria-label="Progreso general validado del proyecto"
+                    aria-valuetext={porcentajeProyecto === null ? 'Pendiente de ponderación' : undefined}
+                  />
+                  <div className="ejecucion-progreso__pie">
+                    <span>{actividades.length} actividades planificadas</span>
+                    <span>{actividades.filter((a) => a.estado === 'EN_PROCESO').length} en proceso</span>
+                    {porcentajeProyecto === null && <span>Definí los pesos de las actividades para obtener el porcentaje global.</span>}
+                  </div>
+                </section>
                 <p>Las cantidades son incrementales. Las estimaciones no cuantificables son acumuladas y justificadas.</p>
                 <div className="proyecto-detalle__lista proyecto-detalle__lista--ejecucion">
                   {actividades.map((actividad) => tarjetaActividad(actividad, 'ejecucion'))}
