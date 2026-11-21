@@ -50,3 +50,37 @@ La comparación original `main...develop` tenía **220 commits** y **87 archivos
 ## Nota de seguridad
 
 La creación de la rama, estos commits y el PR borrador no implican despliegue ni modificación de datos de producción. Los resultados funcionales deben verificarse antes de cualquier merge.
+
+## Validación automática del PR #50 — 21 de noviembre de 2026
+
+Se revisaron **los resultados y los logs reales** de las ejecuciones GitHub Actions asociadas al commit `0af3988`:
+
+| Comprobación | Resultado | Evidencia |
+| --- | --- | --- |
+| Frontend CI | **Correcto** | Ejecución de GitHub Actions (conclusión success) |
+| Vercel | **Correcto** | Estado del commit success |
+| Instalación de dependencias backend | **Correcto** | `npm ci` finalizó |
+| Compilación TypeScript backend | **Correcto** | `npm run build` (tsc) finalizó |
+| Pruebas backend `npm run test:expedientes` | **Falló** | 12 de 13 pruebas superadas |
+| Pruebas funcionales del registro y retiro contra Neon desarrollo | **Pendientes** | No se ejecutaron |
+| Aplicación de SQL 037 en Neon desarrollo / producción | **No verificada** | No se modificó la base de datos |
+
+### Incidencia concreta detectada
+
+Falló la prueba `HU-12: conserva avances legados y audita estados, permisos, resultados e aislamiento`, en `backend/tests/avances-actividad.test.ts:268`. La aserción esperaba **HTTP 403** y obtuvo **HTTP 503** para una solicitud de creación de avance sin permiso. Las otras **12 pruebas pasaron**. La compilación del backend **sí pasó**.
+
+Este caso involucra HU-12/Proyectos y un middleware compartido. **No se ha demostrado aún si se trata de una falla preexistente de la base `main`, una condición de la prueba o una regresión del PR #50**. Se debe investigar su causa antes de declarar aprobada la CI. No cambiar expectativas de la prueba para ocultar el error.
+
+Los logs también indicaron **3 vulnerabilidades de severidad alta** en dependencias npm del backend. Requieren `npm audit` y revisión de dependencias antes del despliegue; no aplicar `npm audit fix --force` automáticamente.
+
+### Decisión
+
+El PR #50 **permanece en borrador, sin merge**, y la issue #19 continúa abierta.
+
+### Próximas verificaciones
+
+- [ ] Diagnosticar HTTP 503 inesperado en `avances-actividad.test.ts:268`, comparar el resultado contra `main`.
+- [ ] Crear/agregar pruebas específicas de cuentas: nombres, aislamiento, retiro, último administrador, credenciales.
+- [ ] Revisar `npm audit` del backend y corregir dependencias afectadas con cambios compatibles.
+- [ ] Verificar migración SQL 037 en una base de desarrollo antes de cualquier despliegue.
+- [ ] Revisar la API de login y usuarios para confirmar que se muestra el nombre y el estado de retiro.
