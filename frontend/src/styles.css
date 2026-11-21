@@ -44,10 +44,41 @@ input {
   font: inherit;
 }
 
+/* El puntero comunica la acción disponible, no la posibilidad de editar la interfaz. */
+body {
+  cursor: default;
+}
+
+/* Marca institucional y logotipos informativos: no son controles de edición. */
+:where(.barra-lateral__marca, .brand-inline, .brand-mark, .brand-dot, .bienvenida-institucional img) {
+  cursor: default;
+  caret-color: transparent;
+}
+
+:where(button:not(:disabled), a[href], [role="button"]:not([aria-disabled="true"]),
+       [role="tab"]:not([aria-disabled="true"]), summary, select:not(:disabled),
+       input:is([type="checkbox"], [type="radio"], [type="button"], [type="submit"], [type="reset"]):not(:disabled)) {
+  cursor: pointer;
+}
+
+:where(input:disabled, select:disabled, textarea:disabled, [aria-disabled="true"]) {
+  cursor: not-allowed;
+}
+
+/* Mantener la selección de texto y el cursor de escritura en controles editables. */
+:where(input:not([type]), input:is([type="text"], [type="email"], [type="password"],
+       [type="search"], [type="url"], [type="tel"], [type="number"]), textarea,
+       [contenteditable="true"], [contenteditable="plaintext-only"]) {
+  cursor: text;
+  caret-color: auto;
+}
+
 /* Los controles de acción no son editores de texto: evitar el cursor de inserción
    visible al hacer clic, incluso si el navegador tiene navegación por cursor. */
 button,
 [role="button"],
+[role="tab"],
+a[href],
 summary {
   caret-color: transparent;
   user-select: none;
