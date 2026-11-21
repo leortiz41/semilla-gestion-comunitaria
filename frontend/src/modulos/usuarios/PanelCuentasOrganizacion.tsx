@@ -19,6 +19,8 @@ export default function PanelCuentasOrganizacion({
 }: { token: string; rolesActivos: string[] }) {
   const [cuentas, setCuentas] = useState<CuentaOrganizacion[] | null>(null);
   const [correo, setCorreo] = useState('');
+  const [nombre, setNombre] = useState('');
+  const [apellido, setApellido] = useState('');
   const [seleccion, setSeleccion] = useState<string[]>(['CAMPO']);
   const [edicion, setEdicion] = useState<string | null>(null);
   const [rolesEdicion, setRolesEdicion] = useState<string[]>([]);
@@ -49,10 +51,12 @@ export default function PanelCuentasOrganizacion({
     if (guardando || temporal || !seleccion.length) return;
     setGuardando(true); setError(''); setMensaje('');
     try {
-      const respuesta = await crearCuentaOrganizacion(token, correo, seleccion);
+      const respuesta = await crearCuentaOrganizacion(token, {
+        nombre: nombre.trim(), apellido: apellido.trim(), email: correo, roles: seleccion,
+      });
       setCuentas((actual) => actual ? [...actual, respuesta.cuenta].sort((a, b) => a.email.localeCompare(b.email)) : actual);
       setTemporal({ correo: respuesta.cuenta.email, clave: respuesta.contrasenaTemporal });
-      setCorreo(''); setSeleccion(['CAMPO']);
+      setCorreo(''); setNombre(''); setApellido(''); setSeleccion(['CAMPO']);
     } catch (fallo) {
       setError(fallo instanceof Error ? fallo.message : 'No se pudo crear la cuenta.');
     } finally { setGuardando(false); }
@@ -118,6 +122,18 @@ export default function PanelCuentasOrganizacion({
       {mensaje && <p role="status" className="cuentas-org__mensaje">{mensaje}</p>}
       <form className="cuentas-org__formulario" onSubmit={(evento) => void crear(evento)}>
         <h3>Crear nueva cuenta</h3>
+        <div className="cuentas-org__nombres">
+          <label>Nombre
+            <input type="text" required minLength={2} maxLength={100} autoComplete="given-name"
+              value={nombre} disabled={guardando || Boolean(temporal)}
+              onChange={(evento) => setNombre(evento.target.value)} />
+          </label>
+          <label>Apellido
+            <input type="text" required minLength={2} maxLength={100} autoComplete="family-name"
+              value={apellido} disabled={guardando || Boolean(temporal)}
+              onChange={(evento) => setApellido(evento.target.value)} />
+          </label>
+        </div>
         <label>Correo electrónico
           <input type="email" required maxLength={150} value={correo} disabled={guardando || Boolean(temporal)}
             placeholder="usuario@organizacion.org" onChange={(evento) => setCorreo(evento.target.value)} />
