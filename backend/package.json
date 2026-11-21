@@ -34,5 +34,8 @@
     "prisma": "7.10.1",
     "tsx": "latest",
     "typescript": "latest"
+  },
+  "overrides": {
+    "effect": "3.22.1"
   }
 }
