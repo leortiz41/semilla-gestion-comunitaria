@@ -4,7 +4,8 @@ import { databasePool } from '../config/database.js';
 import { verifyAccessToken } from '../security/token.js';
 
 // Confirmar el estado actual en la base, no confiar solo en el JWT emitido.
-export async function authenticateAccessToken(req: Request, res: Response, next: NextFunction): Promise<void> {
+export function crearAutenticacion(pool: typeof databasePool = databasePool) {
+ return async function authenticateAccessToken(req: Request, res: Response, next: NextFunction): Promise<void> {
   const authorization = req.header('authorization');
   if (!authorization?.startsWith('Bearer ')) {
     res.status(401).json({ message: 'Se requiere autenticación.' }); return;
@@ -15,11 +16,11 @@ export async function authenticateAccessToken(req: Request, res: Response, next:
   } catch {
     res.status(401).json({ message: 'Token inválido o expirado.' }); return;
   }
-  if (!databasePool) {
+  if (!pool) {
     res.status(503).json({ message: 'La autenticación no está disponible.' }); return;
   }
   try {
-    const resultado = await databasePool.query(
+    const resultado = await pool.query(
       `SELECT
          ARRAY(SELECT DISTINCT r.nombre FROM usuarios_roles ur
            JOIN roles r ON r.id=ur.rol_id AND r.activo
@@ -53,7 +54,10 @@ export async function authenticateAccessToken(req: Request, res: Response, next:
     console.error('No se pudo verificar el estado de la sesión:', error);
     res.status(503).json({ message: 'No fue posible verificar la sesión.' });
   }
+ };
 }
+
+export const authenticateAccessToken = crearAutenticacion();
 
 export function requirePermission(permission: string) {
   return (req: Request, res: Response, next: NextFunction): void => {
