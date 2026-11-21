@@ -27,9 +27,10 @@ test('SDK R2: firma PUT con bucket, clave, tipo, región y expiración', async (
     const clave = 'organizaciones/demo/proyectos/123/avances/456/imagen 1.png';
     const enlace = new URL(await firmarObjetoR2(clave, 'PUT', 'image/png', 300));
     assert.equal(enlace.protocol, 'https:');
+    // El cliente R2 usa forcePathStyle: el bucket va en la ruta, no en el host.
     assert.equal(enlace.hostname,
-      'semilla-evidencias-production.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.r2.cloudflarestorage.com');
-    assert.equal(decodeURIComponent(enlace.pathname), '/' + clave);
+      'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.r2.cloudflarestorage.com');
+    assert.equal(decodeURIComponent(enlace.pathname), '/semilla-evidencias-production/' + clave);
     assert.equal(enlace.searchParams.get('X-Amz-Algorithm'), 'AWS4-HMAC-SHA256');
     assert.match(enlace.searchParams.get('X-Amz-Credential') ?? '',
       /^FAKEKEY123\/\d{8}\/auto\/s3\/aws4_request$/);
