@@ -22,10 +22,10 @@ ON CONFLICT DO NOTHING;
 ALTER TABLE miembros_familia
  ADD COLUMN IF NOT EXISTS asiste_escuela BOOLEAN,
  ADD COLUMN IF NOT EXISTS grado_estudio_id UUID REFERENCES grados_estudio(id) ON DELETE SET NULL;
-DO $ BEGIN
+DO $$ BEGIN
  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'miembros_familia_grado_si_asiste') THEN
    ALTER TABLE miembros_familia ADD CONSTRAINT miembros_familia_grado_si_asiste
      CHECK (asiste_escuela IS DISTINCT FROM FALSE OR grado_estudio_id IS NULL);
  END IF;
-END $;
+END $$;
 CREATE INDEX IF NOT EXISTS idx_miembros_familia_grado ON miembros_familia(grado_estudio_id);
