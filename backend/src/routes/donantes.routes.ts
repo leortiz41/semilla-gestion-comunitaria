@@ -163,14 +163,14 @@ donantesRouter.get(
              FROM evidencias e
              JOIN avances_proyecto av ON av.id = e.avance_proyecto_id
                 AND av.proyecto_id = e.proyecto_id
-            WHERE e.proyecto_id = $1
+            WHERE e.proyecto_id = $1 AND $2::boolean
               AND av.estado_revision = 'VALIDADO'
               AND e.visible_para_donantes = TRUE
               AND e.solicitud_pago_id IS NULL
               AND e.tipo_mime IN ('image/jpeg', 'image/png', 'image/webp')
               AND (e.archivo_url LIKE 'https://%' OR e.archivo_url LIKE 'r2:%')
             ORDER BY e.creado_en DESC, e.id DESC LIMIT 1000`,
-          [proyectoId],
+          [proyectoId, acceso.permisos.includes('evidencias.ver')],
         ),
       ]);
       res.set('Cache-Control', 'no-store');
