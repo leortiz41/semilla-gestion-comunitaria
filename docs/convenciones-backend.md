@@ -43,7 +43,9 @@ Se identificaron **58 archivos TypeScript** bajo `backend/` mediante el árbol d
 
 **Primer lote aplicado:** `src/domain/expediente.ts`, `src/domain/metas-vision.ts`, `src/domain/necesidades.ts`, `src/services/capacidades.service.ts`. Se mantuvieron interfaces, mensajes, validaciones y contratos públicos.
 
-**Pendientes priorizados:** servicios de expedientes/necesidades/comunidades, diagnóstico R2 y rutas de administración, integrantes de familia, pagos y proveedores. Los módulos extensos deben refactorizarse por separado con revisión de diferencias, compilación y pruebas. Se excluyen los alias SQL de reemplazos automáticos.
+**Segundo lote aplicado:** `src/services/expedientes.service.ts`, `src/services/necesidades.service.ts` y `src/services/comunidades.service.ts`. Se renombraron identificadores locales de transacciones, resultados, comunidad, metas y errores. Se conservaron literalmente las cadenas SQL y las claves de los objetos devueltos.
+
+**Pendientes priorizados:** diagnóstico R2 y rutas de administración, integrantes de familia, pagos y proveedores. Los módulos extensos deben refactorizarse por separado con revisión de diferencias, compilación y pruebas. Se excluyen los alias SQL de reemplazos automáticos.
 
 ## 4. Criterios de aceptación por lote
 
