@@ -243,3 +243,76 @@ export async function consultarSaldoActividad(pool: Consultable, proyectoId: str
       );
   return saldos;
 }
+
+/** Escritura transaccional de proyectos y sus donantes; conserva bloqueo y rollback originales. */
+export async function guardarProyectoEnRepositorio(
+  pool: Pool,
+  datos: { id?: string; organizacionId: string; presupuesto?: string; donanteIds?: string[];
+    tipoDeDiagnostico: boolean; parametros: (string | null)[] },
+) {
+  const { id, organizacionId, presupuesto, donanteIds, tipoDeDiagnostico, parametros } = datos;
+    const cliente = await pool.connect();
+    try {
+      await cliente.query('BEGIN');
+      if (id && presupuesto !== undefined) {
+        const asignacion = await cliente.query(
+          `SELECT p.presupuesto_asignado::text AS presupuesto_actual,
+             COALESCE((SELECT SUM(a.presupuesto_estimado) FROM actividades_programadas a
+               WHERE a.proyecto_id = p.id), 0)::text AS presupuesto_actividades
+           FROM proyectos p JOIN comunidades c ON c.id = p.comunidad_id
+           WHERE p.id = $1 AND c.organizacion_id = $2
+           FOR UPDATE OF p`,
+          [id, organizacionId],
+        );
+        if (asignacion.rows.length && Number(presupuesto) < Number(asignacion.rows[0].presupuesto_actividades)) {
+          await cliente.query('ROLLBACK');
+          return { tipo: 'PRESUPUESTO_INSUFICIENTE' } as const;
+        }
+      }
+      const resultado = id
+      ? await cliente.query(
+        `UPDATE proyectos p SET nombre = $3, tipo = $4, estado = $5,
+           fecha_inicio = $6, fecha_fin = $7, descripcion = $8, presupuesto_asignado = COALESCE($9, p.presupuesto_asignado), actualizado_en = NOW()
+         FROM comunidades c
+         WHERE p.id = $10 AND ($11::boolean OR p.tipo = $4) AND p.comunidad_id = c.id AND c.id = $1 AND c.organizacion_id = $2
+         RETURNING p.id`,
+        [...parametros, id, tipoDeDiagnostico],
+      )
+      : await cliente.query(
+        `INSERT INTO proyectos (comunidad_id, nombre, tipo, estado, fecha_inicio, fecha_fin, descripcion, presupuesto_asignado)
+         SELECT id, $3, $4, $5, $6, $7, $8, COALESCE($9::numeric, 0) FROM comunidades
+         WHERE id = $1 AND organizacion_id = $2 AND activo RETURNING id`,
+        parametros,
+      );
+      if (!resultado.rowCount) {
+        await cliente.query('ROLLBACK');
+        return { tipo: 'NO_ENCONTRADO' } as const;
+      }
+      const proyectoId = resultado.rows[0].id;
+      if (donanteIds !== undefined) {
+        const seleccion = await cliente.query(
+          `SELECT id FROM donantes d WHERE d.organizacion_id = $1 AND d.id = ANY($2::uuid[])
+             AND (d.activo OR EXISTS (
+               SELECT 1 FROM proyectos_fichas_donantes pd WHERE pd.proyecto_id = $3 AND pd.donante_id = d.id
+             )) FOR SHARE OF d`,
+          [organizacionId, donanteIds, proyectoId],
+        );
+        if (seleccion.rowCount !== donanteIds.length) {
+          await cliente.query('ROLLBACK');
+          return { tipo: 'DONANTES_INVALIDOS' } as const;
+        }
+        await cliente.query('DELETE FROM proyectos_fichas_donantes WHERE proyecto_id = $1', [proyectoId]);
+        await cliente.query(
+          'INSERT INTO proyectos_fichas_donantes (proyecto_id, donante_id) SELECT $1, unnest($2::uuid[])',
+          [proyectoId, donanteIds],
+        );
+      }
+      await cliente.query('COMMIT');
+      return { tipo: 'OK', id: proyectoId } as const;
+    } catch (error) {
+      await cliente.query('ROLLBACK');
+      throw error;
+    } finally {
+      cliente.release();
+    }
+}
