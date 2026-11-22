@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { Router, raw, type RequestHandler } from 'express';
 import { firmarObjetoR2, r2Disponible, verificarObjetoR2, cargarObjetoR2, leerObjetoR2, diagnosticarErrorR2 } from '../../services/r2-evidencias.service.js';
 import { databasePool } from '../../config/database.js';
-import { consultarAccesoEvidenciaAvance, consultarIndiceEvidencias, consultarCatalogoProyectos, consultarResponsablesProyecto, consultarAvancesPendientes, consultarMetaActividad, consultarEvidenciasAvance, consultarClaveEvidencia } from './proyectos.repository.js';
+import { consultarAccesoEvidenciaAvance, consultarIndiceEvidencias, consultarCatalogoProyectos, consultarResponsablesProyecto, consultarAvancesPendientes, consultarMetaActividad, consultarEvidenciasAvance, consultarClaveEvidencia, guardarActividadEnRepositorio } from './proyectos.repository.js';
 import { areasNecesidad } from '../../domain/necesidades.js';
 import { esUuid } from '../../domain/expediente.js';
 import { esFecha } from '../../domain/fecha.js';
@@ -633,55 +633,7 @@ const guardarActividad: RequestHandler = async (req, res) => {
     const valores = [proyectoId, req.auth!.organizacionId, nombre, descripcion.trim() || null,
       estado, fechaInicio ?? null, fechaFin ?? null, actividadId ?? null,
       presupuestoEstimado, responsableAsignadoId, metaCantidad, unidadMedida || null, pesoResultado];
-    // La creación no tiene actividadId: no enviar un parámetro $8 sin tipo.
-    const valoresCreacion = [...valores.slice(0, 7), ...valores.slice(8)];
-    const { rows } = actividadId
-      ? await databasePool.query(
-        `WITH proyecto AS MATERIALIZED (
-           SELECT p.id, p.presupuesto_asignado, c.organizacion_id
-           FROM proyectos p JOIN comunidades c ON c.id = p.comunidad_id
-           WHERE p.id = $1 AND c.organizacion_id = $2
-           FOR UPDATE OF p
-         ), otros AS (
-           SELECT COALESCE(SUM(a.presupuesto_estimado), 0) AS total
-           FROM actividades_programadas a JOIN proyecto p ON p.id = a.proyecto_id
-           WHERE a.id IS DISTINCT FROM $8::uuid
-         )
-         UPDATE actividades_programadas a SET nombre = $3, descripcion = $4, estado = $5,
-           fecha_inicio = $6, fecha_fin = $7, responsable_asignado_usuario_id = $10,
-           meta_cantidad = $11, unidad_medida = $12, presupuesto_estimado = $9,
-           peso_resultado = $13, actualizado_en = NOW()
-         FROM proyecto p CROSS JOIN otros o
-         WHERE a.proyecto_id = p.id AND a.id = $8
-           AND COALESCE($9::numeric, 0) + o.total <= p.presupuesto_asignado
-           AND ($10::uuid IS NULL OR EXISTS (
-             SELECT 1 FROM usuarios u WHERE u.id = $10 AND u.organizacion_id = p.organizacion_id AND u.activo
-           ))
-         RETURNING a.id`, valores,
-      )
-      : await databasePool.query(
-        `WITH proyecto AS MATERIALIZED (
-           SELECT p.id, p.presupuesto_asignado, c.organizacion_id
-           FROM proyectos p JOIN comunidades c ON c.id = p.comunidad_id
-           WHERE p.id = $1 AND c.organizacion_id = $2
-           FOR UPDATE OF p
-         ), otros AS (
-           SELECT COALESCE(SUM(a.presupuesto_estimado), 0) AS total
-           FROM actividades_programadas a JOIN proyecto p ON p.id = a.proyecto_id
-         )
-         INSERT INTO actividades_programadas (
-           proyecto_id, nombre, descripcion, estado, fecha_inicio, fecha_fin,
-           responsable_asignado_usuario_id, meta_cantidad, unidad_medida,
-           presupuesto_estimado, peso_resultado
-         )
-         SELECT p.id, $3, $4, $5, $6, $7, $9, $10, $11, $8, $12
-         FROM proyecto p CROSS JOIN otros o
-         WHERE COALESCE($8::numeric, 0) + o.total <= p.presupuesto_asignado
-           AND ($9::uuid IS NULL OR EXISTS (
-             SELECT 1 FROM usuarios u WHERE u.id = $9 AND u.organizacion_id = p.organizacion_id AND u.activo
-           ))
-         RETURNING id`, valoresCreacion,
-      );
+    const rows = await guardarActividadEnRepositorio(databasePool, actividadId ?? null, valores);
     if (!rows.length) {
       const disponible = await databasePool.query(
         `SELECT 1 FROM proyectos p JOIN comunidades c ON c.id = p.comunidad_id
