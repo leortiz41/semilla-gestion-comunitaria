@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { Router, raw, type RequestHandler } from 'express';
 import { firmarObjetoR2, r2Disponible, verificarObjetoR2, cargarObjetoR2, leerObjetoR2, diagnosticarErrorR2 } from '../../services/r2-evidencias.service.js';
 import { databasePool } from '../../config/database.js';
-import { consultarAccesoEvidenciaAvance, consultarIndiceEvidencias } from './proyectos.repository.js';
+import { consultarAccesoEvidenciaAvance, consultarIndiceEvidencias, consultarCatalogoProyectos, consultarResponsablesProyecto } from './proyectos.repository.js';
 import { areasNecesidad } from '../../domain/necesidades.js';
 import { esUuid } from '../../domain/expediente.js';
 import { esFecha } from '../../domain/fecha.js';
@@ -305,34 +305,8 @@ proyectosRouter.get('/revision/pendientes', requirePermission('actividades.avanc
 proyectosRouter.get('/', async (req, res) => {
   try {
     if (!databasePool) throw new Error('Base de datos no disponible');
-    const parametros = [req.auth!.organizacionId];
-    const [proyectos, comunidades, donantes, organizacion] = await Promise.all([
-      databasePool.query(
-        `SELECT p.id, p.nombre, p.tipo, p.estado, p.descripcion, p.presupuesto_asignado::text AS "presupuesto",
-                ARRAY(SELECT donante_id FROM proyectos_fichas_donantes WHERE proyecto_id = p.id) AS "donanteIds",
-                ARRAY(SELECT d.nombre FROM donantes d
-                  WHERE d.organizacion_id = c.organizacion_id AND (
-                    EXISTS (SELECT 1 FROM proyectos_fichas_donantes pd WHERE pd.proyecto_id = p.id AND pd.donante_id = d.id)
-                    OR EXISTS (SELECT 1 FROM brigadas_donantes_proyectos bp
-                      JOIN brigadas_donantes b ON b.id = bp.brigada_id
-                      WHERE bp.proyecto_id = p.id AND b.donante_id = d.id)
-                  ) ORDER BY d.nombre, d.id) AS donantes,
-                p.comunidad_id AS "comunidadId", c.nombre AS comunidad,
-                p.fecha_inicio::text AS "fechaInicio", p.fecha_fin::text AS "fechaFin"
-         FROM proyectos p JOIN comunidades c ON c.id = p.comunidad_id
-         WHERE c.organizacion_id = $1 ORDER BY p.fecha_inicio DESC, p.nombre, p.id`,
-        parametros,
-      ),
-      databasePool.query(
-        `SELECT id, nombre, municipio FROM comunidades
-         WHERE organizacion_id = $1 AND activo ORDER BY nombre, municipio, id`,
-        parametros,
-      ),
-      databasePool.query('SELECT id, nombre, activo FROM donantes WHERE organizacion_id = $1 ORDER BY nombre, id', parametros),
-      databasePool.query('SELECT moneda FROM organizaciones WHERE id = $1', parametros),
-    ]);
-    res.json({ proyectos: proyectos.rows, comunidades: comunidades.rows, donantes: donantes.rows,
-      moneda: organizacion.rows[0]?.moneda ?? 'HNL' });
+    const catalogo = await consultarCatalogoProyectos(databasePool, req.auth!.organizacionId);
+    res.json(catalogo);
   } catch (error) {
     console.error('Error consultando proyectos:', error);
     res.status(500).json({ message: 'No fue posible consultar los proyectos.' });
@@ -479,19 +453,7 @@ export function crearRouterActividades(pool: typeof databasePool = databasePool)
     }
     try {
       if (!pool) throw new Error('Base de datos no disponible');
-      const { rows } = await pool.query(
-        `SELECT u.id, u.email AS nombre
-         FROM usuarios u
-         JOIN comunidades c ON c.organizacion_id = u.organizacion_id
-         JOIN proyectos p ON p.comunidad_id = c.id
-         WHERE p.id = $1 AND c.organizacion_id = $2 AND u.activo
-           AND NOT EXISTS (
-             SELECT 1 FROM usuarios_roles ur JOIN roles r ON r.id = ur.rol_id
-             WHERE ur.usuario_id = u.id AND r.nombre = 'DONANTE'
-           )
-         ORDER BY u.email, u.id`,
-        [proyectoId, req.auth!.organizacionId],
-      );
+      const rows = await consultarResponsablesProyecto(pool, proyectoId, req.auth!.organizacionId);
       res.json({ responsables: rows });
     } catch (error) {
       console.error('Error consultando responsables de actividad:', error);
