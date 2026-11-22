@@ -107,3 +107,42 @@ export async function consultarResponsablesProyecto(pool: Consultable, proyectoI
       );
   return rows;
 }
+
+/** Bandeja de avances enviados, filtrada por tenant y consultante. */
+export async function consultarAvancesPendientes(pool: Consultable, organizacionId: string, usuarioId: string) {
+    const { rows } = await pool.query(
+      `SELECT av.id, av.actividad_id AS "actividadId", av.proyecto_id AS "proyectoId",
+         a.nombre AS actividad, p.nombre AS proyecto, c.nombre AS comunidad,
+         av.fecha_avance::text AS fecha, av.comentarios AS descripcion,
+         av.observaciones, av.cantidad_reportada::double precision AS "cantidadReportada",
+         av.porcentaje_avance::double precision AS "porcentajeAvance",
+         a.unidad_medida AS "unidadMedida", autor.email AS responsable,
+         (SELECT COUNT(*)::int FROM evidencias ev WHERE ev.avance_proyecto_id = av.id
+           AND ev.proyecto_id = p.id
+           AND ev.tipo_mime IN ('image/jpeg', 'image/png', 'image/webp')) AS "cantidadEvidencias",
+         (av.responsable_usuario_id = $2::uuid) AS "esPropio"
+       FROM avances_proyecto av
+       JOIN actividades_programadas a ON a.id = av.actividad_id AND a.proyecto_id = av.proyecto_id
+       JOIN proyectos p ON p.id = a.proyecto_id
+       JOIN comunidades c ON c.id = p.comunidad_id
+       JOIN usuarios autor ON autor.id = av.responsable_usuario_id
+       WHERE c.organizacion_id = $1 AND av.estado_revision = 'ENVIADO'
+       ORDER BY av.fecha_avance DESC, av.creado_en DESC, av.id DESC
+       LIMIT 200`,
+      [organizacionId, usuarioId],
+    );
+  return rows;
+}
+
+/** Verifica la actividad en el proyecto/organización antes de registrar un avance. */
+export async function consultarMetaActividad(pool: Consultable, proyectoId: string, actividadId: string, organizacionId: string) {
+        const contexto = await pool.query(
+          `SELECT a.meta_cantidad
+           FROM actividades_programadas a
+           JOIN proyectos p ON p.id = a.proyecto_id
+           JOIN comunidades c ON c.id = p.comunidad_id
+           WHERE p.id = $1 AND a.id = $2 AND c.organizacion_id = $3`,
+          [proyectoId, actividadId, organizacionId],
+        );
+  return contexto.rows;
+}
