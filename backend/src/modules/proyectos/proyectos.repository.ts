@@ -316,3 +316,74 @@ export async function guardarProyectoEnRepositorio(
       cliente.release();
     }
 }
+
+
+/** Registro transaccional de fotografía previamente autorizada y verificada en R2.
+ * Revalida el estado del avance bajo FOR UPDATE. La confirmación permite reintentos.
+ */
+export async function registrarEvidenciaEnRepositorio(
+  pool: Pool,
+  datos: {
+    proyectoId: string; actividadId: string; avanceId: string; organizacionId: string;
+    usuarioId: string; clave: string; mime: string; titulo: string; descripcion?: string;
+    modo: 'proxy' | 'confirmar';
+  },
+): Promise<{ tipo: 'CAMBIO_ESTADO' } | { tipo: 'CREADA' | 'EXISTENTE'; id: string }> {
+  const { proyectoId, actividadId, avanceId, organizacionId, usuarioId, clave, mime, titulo, descripcion, modo } = datos;
+  const cliente = await pool.connect();
+  try {
+    await cliente.query('BEGIN');
+    const vigente = await cliente.query(
+      `SELECT av.id FROM avances_proyecto av
+       JOIN actividades_programadas a ON a.id=av.actividad_id AND a.proyecto_id=av.proyecto_id
+       JOIN proyectos p ON p.id=a.proyecto_id JOIN comunidades c ON c.id=p.comunidad_id
+       WHERE av.id=$1 AND a.id=$2 AND p.id=$3 AND c.organizacion_id=$4
+         AND av.responsable_usuario_id=$5 AND av.estado_revision IN ('BORRADOR','DEVUELTO')
+       FOR UPDATE OF av`,
+      [avanceId, actividadId, proyectoId, organizacionId, usuarioId],
+    );
+    if (!vigente.rows.length) {
+      await cliente.query('ROLLBACK');
+      return { tipo: 'CAMBIO_ESTADO' };
+    }
+
+    if (modo === 'confirmar') {
+      const existente = await cliente.query(
+        'SELECT id FROM evidencias WHERE proyecto_id=$1 AND avance_proyecto_id=$2 AND archivo_url=$3 LIMIT 1',
+        [proyectoId, avanceId, 'r2:' + clave],
+      );
+      if (existente.rows.length) {
+        await cliente.query('COMMIT');
+        return { tipo: 'EXISTENTE', id: existente.rows[0].id };
+      }
+    }
+
+    const guardado = modo === 'confirmar'
+      ? await cliente.query(
+        `INSERT INTO evidencias (proyecto_id, avance_proyecto_id, tipo_evidencia, titulo, descripcion,
+          archivo_url, tipo_mime, subido_por_usuario_id, visible_para_donantes)
+         VALUES ($1,$2,'FOTOGRAFIA',$3,$4,$5,$6,$7,false) RETURNING id`,
+        [proyectoId, avanceId, titulo || null, descripcion || null, 'r2:' + clave, mime, usuarioId],
+      )
+      : await cliente.query(
+        `INSERT INTO evidencias
+         (proyecto_id,avance_proyecto_id,tipo_evidencia,titulo,archivo_url,
+          tipo_mime,subido_por_usuario_id,visible_para_donantes)
+         VALUES ($1,$2,'FOTOGRAFIA',$3,$4,$5,$6,false) RETURNING id`,
+        [proyectoId, avanceId, titulo || null, 'r2:' + clave, mime, usuarioId],
+      );
+    const evidenciaId = guardado.rows[0].id as string;
+    await cliente.query(
+      `INSERT INTO bitacora_auditoria (usuario_id,accion,nombre_entidad,entidad_id,valores_nuevos)
+       VALUES($1,'REGISTRAR_EVIDENCIA','evidencias',$2,$3::jsonb)`,
+      [usuarioId, evidenciaId, JSON.stringify({ proyectoId, actividadId, avanceId, tipoMime: mime })],
+    );
+    await cliente.query('COMMIT');
+    return { tipo: 'CREADA', id: evidenciaId };
+  } catch (error) {
+    await cliente.query('ROLLBACK');
+    throw error;
+  } finally {
+    cliente.release();
+  }
+}
