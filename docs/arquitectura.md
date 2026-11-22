@@ -58,7 +58,7 @@ flowchart TD
     P --> DB[(Base de datos)]
 ```
 
-La organización actual separa presentación, comunicación HTTP, autorización, dominio y servicios. La modularización es incremental: comunidades agrupa sus rutas y servicio, y extrae su consulta de listado a un repositorio. Otras operaciones de comunidades y otras rutas todavía contienen SQL en servicios o controladores; por tanto, aún no existe una capa de repositorios uniforme. Se utiliza el controlador pg para las consultas de negocio y se mantienen dependencias y utilidades de Prisma. Los cambios del esquema se versionan en scripts SQL.
+La organización actual separa presentación, comunicación HTTP, autorización, dominio y servicios. La modularización es incremental: comunidades agrupa sus rutas y servicio, y extrae su consulta de listado a un repositorio. Las reglas de dominio de metas y necesidades, así como los servicios de capacidades y necesidades, ahora también se agrupan en el módulo, conservando adaptadores de importación para sus consumidores anteriores. Otras operaciones de comunidades y otras rutas todavía contienen SQL en servicios o controladores; por tanto, aún no existe una capa de repositorios uniforme. Se utiliza el controlador pg para las consultas de negocio y se mantienen dependencias y utilidades de Prisma. Los cambios del esquema se versionan en scripts SQL.
 
 ## 4. Organización del repositorio
 
@@ -83,7 +83,11 @@ semilla-gestion-comunitaria/
 │   │   │       ├── comunidades.service.ts
 │   │   │       ├── comunidades.repository.ts
 │   │   │       ├── capacidades.routes.ts
-│   │   │       └── necesidades.routes.ts
+│   │   │       ├── capacidades.service.ts
+│   │   │       ├── necesidades.routes.ts
+│   │   │       ├── necesidades.service.ts
+│   │   │       ├── necesidades.domain.ts
+│   │   │       └── metas-vision.domain.ts
 │   │   ├── routes/                    # Rutas restantes y adaptadores
 │   │   ├── security/
 │   │   ├── services/                  # Servicios restantes y adaptadores
