@@ -1,7 +1,7 @@
 import type { Pool } from 'pg';
 import { consultarComunidadesPorOrganizacion, type ComunidadFila } from './comunidades.repository.js';
 import { ErrorExpediente } from '../../domain/expediente.js';
-import { validarMetasVision, type MetaVision } from '../../domain/metas-vision.js';
+import { validarMetasVision, type MetaVision } from './metas-vision.domain.js';
 import { databasePool } from '../../config/database.js';
 
 export interface ComunidadListado {
