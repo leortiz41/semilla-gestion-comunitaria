@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { Pool } from 'pg';
-import { consultarAccesoEvidenciaAvance, consultarIndiceEvidencias, consultarCatalogoProyectos, consultarResponsablesProyecto, consultarAvancesPendientes, consultarMetaActividad } from '../src/modules/proyectos/proyectos.repository.js';
+import { consultarAccesoEvidenciaAvance, consultarIndiceEvidencias, consultarCatalogoProyectos, consultarResponsablesProyecto, consultarAvancesPendientes, consultarMetaActividad, consultarEvidenciasAvance, consultarClaveEvidencia } from '../src/modules/proyectos/proyectos.repository.js';
 
 const organizacionId = 'a63f86ca-318e-492b-8bc6-d5e2700062ba';
 const proyectoId = 'f0cc242b-b341-46a9-98af-4e6d224f218e';
@@ -101,4 +101,23 @@ test('Proyectos: la meta de actividad pertenece al proyecto y tenant solicitados
     },
   } as unknown as Pool;
   assert.deepEqual(await consultarMetaActividad(pool, proyectoId, actividadId, organizacionId), [{ meta_cantidad: 30 }]);
+});
+
+test('Proyectos: las consultas de evidencia conservan los filtros por proyecto y avance', async () => {
+  const evidenciaId = 'bd6cdb66-a498-4f5d-9ef8-bd10e1ea45bc';
+  const pool = {
+    query: async (consulta: string, parametros: unknown[]) => {
+      if (parametros.length === 2) {
+        assert.match(consulta, /proyecto_id=\$1 AND avance_proyecto_id=\$2/);
+        assert.deepEqual(parametros, [proyectoId, avanceId]);
+        return { rows: [{ id: evidenciaId, archivoUrl: 'r2:clave' }] };
+      }
+      assert.match(consulta, /e.id=\$1 AND e.proyecto_id=\$2 AND e.avance_proyecto_id=\$3/);
+      assert.deepEqual(parametros, [evidenciaId, proyectoId, avanceId]);
+      return { rows: [{ clave: 'r2:clave' }] };
+    },
+  } as unknown as Pool;
+  const evidencias = await consultarEvidenciasAvance(pool, proyectoId, avanceId);
+  assert.equal(evidencias.length, 1);
+  assert.equal(await consultarClaveEvidencia(pool, evidenciaId, proyectoId, avanceId), 'r2:clave');
 });
