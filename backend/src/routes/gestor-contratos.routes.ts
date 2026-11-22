@@ -165,7 +165,7 @@ gestorContratosRouter.post('/documentos',...escribir,async(req,res)=>{
   const clienteTransaccion=await databasePool.connect();
   try{
     await clienteTransaccion.query('BEGIN');
-    const org=req.auth!.organizacionId;
+    const organizacionId=req.auth!.organizacionId;
     const proyecto=await clienteTransaccion.query(
       `SELECT p.id FROM proyectos p JOIN comunidades c ON c.id=p.comunidad_id
        WHERE p.id=$1 AND c.organizacion_id=$2`,[proyectoId,organizacionId]);
