@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { Pool } from 'pg';
-import { consultarAccesoEvidenciaAvance, consultarIndiceEvidencias, consultarCatalogoProyectos, consultarResponsablesProyecto, consultarAvancesPendientes, consultarMetaActividad, consultarEvidenciasAvance, consultarClaveEvidencia, guardarActividadEnRepositorio, existeProyectoEnOrganizacion, consultarSaldoActividad } from '../src/modules/proyectos/proyectos.repository.js';
+import { consultarAccesoEvidenciaAvance, consultarIndiceEvidencias, consultarCatalogoProyectos, consultarResponsablesProyecto, consultarAvancesPendientes, consultarMetaActividad, consultarEvidenciasAvance, consultarClaveEvidencia, guardarActividadEnRepositorio, existeProyectoEnOrganizacion, consultarSaldoActividad, guardarProyectoEnRepositorio } from '../src/modules/proyectos/proyectos.repository.js';
 
 const organizacionId = 'a63f86ca-318e-492b-8bc6-d5e2700062ba';
 const proyectoId = 'f0cc242b-b341-46a9-98af-4e6d224f218e';
@@ -157,4 +157,57 @@ test('Proyectos: verificación y saldo de actividad usan el mismo tenant', async
   } as unknown as Pool;
   assert.equal(await existeProyectoEnOrganizacion(pool, proyectoId, organizacionId), true);
   assert.deepEqual(await consultarSaldoActividad(pool, proyectoId, organizacionId, actividadId), [{ presupuesto: '500', asignado: '200' }]);
+});
+
+test('Proyectos: crear proyecto conserva transacción y parámetros del tenant', async () => {
+  const comandos: string[] = [];
+  let liberado = false;
+  const cliente = {
+    query: async (sql: string, params?: unknown[]) => {
+      comandos.push(sql);
+      if (sql.includes('INSERT INTO proyectos (')) {
+        assert.equal(params?.[1], organizacionId);
+        return { rowCount: 1, rows: [{ id: proyectoId }] };
+      }
+      return { rowCount: 1, rows: [] };
+    },
+    release: () => { liberado = true; },
+  };
+  const pool = { connect: async () => cliente } as unknown as Pool;
+  const resultado = await guardarProyectoEnRepositorio(pool, {
+    organizacionId, tipoDeDiagnostico: true,
+    parametros: [actividadId, organizacionId, 'Educación', 'EDUCACION_FORMAL',
+      'PLANIFICADO', '2026-11-22', null, null, '100'],
+  });
+  assert.deepEqual(resultado, { tipo: 'OK', id: proyectoId });
+  assert.equal(comandos[0], 'BEGIN');
+  assert.equal(comandos.at(-1), 'COMMIT');
+  assert.equal(comandos.includes('ROLLBACK'), false);
+  assert.equal(liberado, true);
+});
+
+test('Proyectos: presupuesto menor a las actividades revierte la transacción', async () => {
+  const comandos: string[] = [];
+  let liberado = false;
+  const cliente = {
+    query: async (sql: string, params?: unknown[]) => {
+      comandos.push(sql);
+      if (sql.includes('presupuesto_actividades')) {
+        assert.deepEqual(params, [proyectoId, organizacionId]);
+        return { rows: [{ presupuesto_actividades: '250' }] };
+      }
+      return { rows: [], rowCount: 0 };
+    },
+    release: () => { liberado = true; },
+  };
+  const pool = { connect: async () => cliente } as unknown as Pool;
+  const resultado = await guardarProyectoEnRepositorio(pool, {
+    id: proyectoId, organizacionId, presupuesto: '100', tipoDeDiagnostico: true,
+    parametros: [actividadId, organizacionId, 'Educación', 'EDUCACION_FORMAL',
+      'PLANIFICADO', '2026-11-22', null, null, '100'],
+  });
+  assert.deepEqual(resultado, { tipo: 'PRESUPUESTO_INSUFICIENTE' });
+  assert.equal(comandos[0], 'BEGIN');
+  assert.equal(comandos.at(-1), 'ROLLBACK');
+  assert.equal(liberado, true);
 });
