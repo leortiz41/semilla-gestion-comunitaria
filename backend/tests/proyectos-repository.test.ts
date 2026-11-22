@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { Pool } from 'pg';
-import { consultarAccesoEvidenciaAvance, consultarIndiceEvidencias } from '../src/modules/proyectos/proyectos.repository.js';
+import { consultarAccesoEvidenciaAvance, consultarIndiceEvidencias, consultarCatalogoProyectos, consultarResponsablesProyecto } from '../src/modules/proyectos/proyectos.repository.js';
 
 const organizacionId = 'a63f86ca-318e-492b-8bc6-d5e2700062ba';
 const proyectoId = 'f0cc242b-b341-46a9-98af-4e6d224f218e';
@@ -46,4 +46,35 @@ test('Proyectos: índice documental pasa el tenant a las dos consultas', async (
   assert.deepEqual(resultado.avances, [{ avanceId }]);
   assert.deepEqual(resultado.proyectosFinalizados, [{ id: proyectoId }]);
   assert.equal(consultas.length, 2);
+});
+
+test('Proyectos: el catálogo usa la organización en sus cuatro consultas', async () => {
+  let indice = 0;
+  const pool = {
+    query: async (consulta: string, parametros: unknown[]) => {
+      assert.deepEqual(parametros, [organizacionId]);
+      assert.match(consulta, /organizacion_id\s*=\s*\$1|WHERE id = \$1/);
+      indice++;
+      return { rows: indice === 4 ? [{ moneda: 'HNL' }] : [] };
+    },
+  } as unknown as Pool;
+  const catalogo = await consultarCatalogoProyectos(pool, organizacionId);
+  assert.equal(indice, 4);
+  assert.deepEqual(catalogo.proyectos, []);
+  assert.deepEqual(catalogo.comunidades, []);
+  assert.deepEqual(catalogo.donantes, []);
+  assert.equal(catalogo.moneda, 'HNL');
+});
+
+test('Proyectos: responsables se limitan al proyecto y organización y excluyen DONANTE', async () => {
+  const pool = {
+    query: async (consulta: string, parametros: unknown[]) => {
+      assert.match(consulta, /c\.organizacion_id\s*=\s*\$2/);
+      assert.match(consulta, /r.nombre = 'DONANTE'/);
+      assert.deepEqual(parametros, [proyectoId, organizacionId]);
+      return { rows: [{ id: actividadId, nombre: 'coordinador@ejemplo.test' }] };
+    },
+  } as unknown as Pool;
+  const responsables = await consultarResponsablesProyecto(pool, proyectoId, organizacionId);
+  assert.equal(responsables.length, 1);
 });
