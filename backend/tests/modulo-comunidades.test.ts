@@ -10,12 +10,26 @@ import { necesidadesRouter as necesidadesModular } from '../src/modules/comunida
 import { listarComunidadesPorOrganizacion as listarAnterior } from '../src/services/comunidades.service.js';
 import { listarComunidadesPorOrganizacion as listarModular } from '../src/modules/comunidades/comunidades.service.js';
 import { consultarComunidadesPorOrganizacion } from '../src/modules/comunidades/comunidades.repository.js';
+import { validarMetasVision as validarMetasAnterior } from '../src/domain/metas-vision.js';
+import { validarMetasVision as validarMetasModular } from '../src/modules/comunidades/metas-vision.domain.js';
+import { validarNecesidad as validarNecesidadAnterior } from '../src/domain/necesidades.js';
+import { validarNecesidad as validarNecesidadModular } from '../src/modules/comunidades/necesidades.domain.js';
+import { validarCapacidades as validarCapacidadesAnterior, guardarCapacidades as guardarCapacidadesAnterior } from '../src/services/capacidades.service.js';
+import { validarCapacidades as validarCapacidadesModular, guardarCapacidades as guardarCapacidadesModular } from '../src/modules/comunidades/capacidades.service.js';
+import { registrarNecesidad as registrarNecesidadAnterior, listarNecesidades as listarNecesidadesAnterior } from '../src/services/necesidades.service.js';
+import { registrarNecesidad as registrarNecesidadModular, listarNecesidades as listarNecesidadesModular } from '../src/modules/comunidades/necesidades.service.js';
 
 test('Módulo comunidades: los adaptadores conservan las mismas rutas y servicios', () => {
   assert.equal(routerAnterior, routerModular);
   assert.equal(capacidadesAnterior, capacidadesModular);
   assert.equal(necesidadesAnterior, necesidadesModular);
   assert.equal(listarAnterior, listarModular);
+  assert.equal(validarMetasAnterior, validarMetasModular);
+  assert.equal(validarNecesidadAnterior, validarNecesidadModular);
+  assert.equal(validarCapacidadesAnterior, validarCapacidadesModular);
+  assert.equal(guardarCapacidadesAnterior, guardarCapacidadesModular);
+  assert.equal(registrarNecesidadAnterior, registrarNecesidadModular);
+  assert.equal(listarNecesidadesAnterior, listarNecesidadesModular);
 });
 
 test('Módulo comunidades: el repositorio limita la consulta a la organización recibida', async () => {
