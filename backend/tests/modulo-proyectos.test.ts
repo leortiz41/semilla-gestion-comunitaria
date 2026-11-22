@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { proyectosRouter as routerAnterior, crearRouterActividades as crearRouterAnterior } from '../src/routes/proyectos.routes.js';
 import { proyectosRouter as routerModular, crearRouterActividades as crearRouterModular } from '../src/modules/proyectos/proyectos.routes.js';
 import { validarAvanceActividad as validarAnterior } from '../src/domain/avances-actividad.js';
@@ -25,4 +26,12 @@ test('Módulo Proyectos: rutas, dominio y servicios mantienen la misma implement
   assert.equal(listarAnterior, listarModular);
   assert.equal(transicionarAnterior, transicionarModular);
   assert.equal(editarAnterior, editarModular);
+});
+
+
+test('Módulo Proyectos: rutas y servicios de avances no contienen consultas SQL directas', () => {
+  for (const nombre of ['proyectos.routes.ts', 'avances-actividad.service.ts']) {
+    const contenido = readFileSync(new URL('../src/modules/proyectos/' + nombre, import.meta.url), 'utf8');
+    assert.doesNotMatch(contenido, /\\.query\\s*\\(/, nombre);
+  }
 });
