@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { Pool } from 'pg';
-import { consultarAccesoEvidenciaAvance, consultarIndiceEvidencias, consultarCatalogoProyectos, consultarResponsablesProyecto, consultarAvancesPendientes, consultarMetaActividad, consultarEvidenciasAvance, consultarClaveEvidencia } from '../src/modules/proyectos/proyectos.repository.js';
+import { consultarAccesoEvidenciaAvance, consultarIndiceEvidencias, consultarCatalogoProyectos, consultarResponsablesProyecto, consultarAvancesPendientes, consultarMetaActividad, consultarEvidenciasAvance, consultarClaveEvidencia, guardarActividadEnRepositorio, existeProyectoEnOrganizacion, consultarSaldoActividad } from '../src/modules/proyectos/proyectos.repository.js';
 
 const organizacionId = 'a63f86ca-318e-492b-8bc6-d5e2700062ba';
 const proyectoId = 'f0cc242b-b341-46a9-98af-4e6d224f218e';
@@ -120,4 +120,41 @@ test('Proyectos: las consultas de evidencia conservan los filtros por proyecto y
   const evidencias = await consultarEvidenciasAvance(pool, proyectoId, avanceId);
   assert.equal(evidencias.length, 1);
   assert.equal(await consultarClaveEvidencia(pool, evidenciaId, proyectoId, avanceId), 'r2:clave');
+});
+
+test('Proyectos: guardar actividad conserva organización y validación de presupuesto en SQL', async () => {
+  const parametros = [proyectoId, organizacionId, 'Actividad', null, 'PLANIFICADA', null, null, actividadId, 100, null, 20, 'unidades', 25];
+  const consultas: string[] = [];
+  const pool = {
+    query: async (consulta: string, args: unknown[]) => {
+      consultas.push(consulta);
+      assert.match(consulta, /c\.organizacion_id = \$2/);
+      assert.match(consulta, /presupuesto_asignado/);
+      assert.equal(args[0], proyectoId);
+      assert.equal(args[1], organizacionId);
+      if (consulta.includes('UPDATE actividades_programadas')) {
+        assert.equal(args[7], actividadId);
+        return { rows: [{ id: actividadId }] };
+      }
+      assert.equal(args.length, 12);
+      assert.equal(args[7], 100);
+      return { rows: [{ id: actividadId }] };
+    },
+  } as unknown as Pool;
+  assert.deepEqual(await guardarActividadEnRepositorio(pool, actividadId, parametros), [{ id: actividadId }]);
+  assert.deepEqual(await guardarActividadEnRepositorio(pool, null, parametros), [{ id: actividadId }]);
+  assert.equal(consultas.length, 2);
+});
+
+test('Proyectos: verificación y saldo de actividad usan el mismo tenant', async () => {
+  const pool = {
+    query: async (consulta: string, args: unknown[]) => {
+      assert.equal(args[0], proyectoId);
+      assert.equal(args[1], organizacionId);
+      assert.match(consulta, /c\.organizacion_id\s*=\s*\$2/);
+      return args.length === 2 ? { rows: [{ existe: 1 }] } : { rows: [{ presupuesto: '500', asignado: '200' }] };
+    },
+  } as unknown as Pool;
+  assert.equal(await existeProyectoEnOrganizacion(pool, proyectoId, organizacionId), true);
+  assert.deepEqual(await consultarSaldoActividad(pool, proyectoId, organizacionId, actividadId), [{ presupuesto: '500', asignado: '200' }]);
 });
