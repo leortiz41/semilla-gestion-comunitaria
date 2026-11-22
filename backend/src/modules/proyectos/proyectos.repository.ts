@@ -166,3 +166,57 @@ export async function consultarClaveEvidencia(pool: Consultable, evidenciaId: st
     const clave=encontrado.rows[0]?.clave as string|undefined;
   return clave;
 }
+
+/** Escritura atómica de actividad; mantiene CTE, bloqueo y presupuesto del proyecto. */
+export async function guardarActividadEnRepositorio(pool: Consultable, actividadId: string | null, valores: (string | number | null)[]) {
+    // La creación no tiene actividadId: no enviar un parámetro $8 sin tipo.
+    const valoresCreacion = [...valores.slice(0, 7), ...valores.slice(8)];
+    const { rows } = actividadId
+      ? await pool.query(
+        `WITH proyecto AS MATERIALIZED (
+           SELECT p.id, p.presupuesto_asignado, c.organizacion_id
+           FROM proyectos p JOIN comunidades c ON c.id = p.comunidad_id
+           WHERE p.id = $1 AND c.organizacion_id = $2
+           FOR UPDATE OF p
+         ), otros AS (
+           SELECT COALESCE(SUM(a.presupuesto_estimado), 0) AS total
+           FROM actividades_programadas a JOIN proyecto p ON p.id = a.proyecto_id
+           WHERE a.id IS DISTINCT FROM $8::uuid
+         )
+         UPDATE actividades_programadas a SET nombre = $3, descripcion = $4, estado = $5,
+           fecha_inicio = $6, fecha_fin = $7, responsable_asignado_usuario_id = $10,
+           meta_cantidad = $11, unidad_medida = $12, presupuesto_estimado = $9,
+           peso_resultado = $13, actualizado_en = NOW()
+         FROM proyecto p CROSS JOIN otros o
+         WHERE a.proyecto_id = p.id AND a.id = $8
+           AND COALESCE($9::numeric, 0) + o.total <= p.presupuesto_asignado
+           AND ($10::uuid IS NULL OR EXISTS (
+             SELECT 1 FROM usuarios u WHERE u.id = $10 AND u.organizacion_id = p.organizacion_id AND u.activo
+           ))
+         RETURNING a.id`, valores,
+      )
+      : await pool.query(
+        `WITH proyecto AS MATERIALIZED (
+           SELECT p.id, p.presupuesto_asignado, c.organizacion_id
+           FROM proyectos p JOIN comunidades c ON c.id = p.comunidad_id
+           WHERE p.id = $1 AND c.organizacion_id = $2
+           FOR UPDATE OF p
+         ), otros AS (
+           SELECT COALESCE(SUM(a.presupuesto_estimado), 0) AS total
+           FROM actividades_programadas a JOIN proyecto p ON p.id = a.proyecto_id
+         )
+         INSERT INTO actividades_programadas (
+           proyecto_id, nombre, descripcion, estado, fecha_inicio, fecha_fin,
+           responsable_asignado_usuario_id, meta_cantidad, unidad_medida,
+           presupuesto_estimado, peso_resultado
+         )
+         SELECT p.id, $3, $4, $5, $6, $7, $9, $10, $11, $8, $12
+         FROM proyecto p CROSS JOIN otros o
+         WHERE COALESCE($8::numeric, 0) + o.total <= p.presupuesto_asignado
+           AND ($9::uuid IS NULL OR EXISTS (
+             SELECT 1 FROM usuarios u WHERE u.id = $9 AND u.organizacion_id = p.organizacion_id AND u.activo
+           ))
+         RETURNING id`, valoresCreacion,
+      );
+  return rows;
+}
