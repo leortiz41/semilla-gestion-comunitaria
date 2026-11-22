@@ -45,7 +45,9 @@ Se identificaron **58 archivos TypeScript** bajo `backend/` mediante el árbol d
 
 **Segundo lote aplicado:** `src/services/expedientes.service.ts`, `src/services/necesidades.service.ts` y `src/services/comunidades.service.ts`. Se renombraron identificadores locales de transacciones, resultados, comunidad, metas y errores. Se conservaron literalmente las cadenas SQL y las claves de los objetos devueltos.
 
-**Pendientes priorizados:** diagnóstico R2 y rutas de administración, integrantes de familia, pagos y proveedores. Los módulos extensos deben refactorizarse por separado con revisión de diferencias, compilación y pruebas. Se excluyen los alias SQL de reemplazos automáticos.
+**Tercer lote aplicado:** `src/routes/administracion-accesos.routes.ts`, `src/routes/integrantes-familia.routes.ts`, `src/routes/proveedores.routes.ts` y `src/routes/pagos-operaciones.routes.ts`. Se sustituyeron nombres de variables locales y callbacks ambiguos por referencias explícitas a roles, permisos, miembros familiares, proveedores, solicitudes y clientes de transacción. Los identificadores de respuesta (por ejemplo `id`) y propiedades públicas conservan su nombre. Se restituyó de inmediato la expresión regular original de fecha de nacimiento tras detectar que un renombre automático podía modificar su contenido.
+
+**Pendientes priorizados:** diagnóstico R2; rutas de auditoría, configuración institucional, perfiles de familia y plataforma; otros nombres descriptivamente insuficientes aunque superen dos caracteres. La revisión de 58 archivos es un inventario inicial y continuará por módulo con CI, sin prometer ausencia total de variables ambiguas. Los módulos extensos deben refactorizarse por separado con revisión de diferencias, compilación y pruebas. Se excluyen los alias SQL de reemplazos automáticos.
 
 ## 4. Criterios de aceptación por lote
 
