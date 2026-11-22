@@ -4,11 +4,11 @@ import {
   requirePermission,
 } from '../../middleware/auth.middleware.js';
 import { esUuid, ErrorExpediente } from '../../domain/expediente.js';
-import { validarNecesidad } from '../../domain/necesidades.js';
+import { validarNecesidad } from './necesidades.domain.js';
 import {
   listarNecesidades,
   registrarNecesidad,
-} from '../../services/necesidades.service.js';
+} from './necesidades.service.js';
 export const necesidadesRouter = Router({ mergeParams: true });
 necesidadesRouter.use(authenticateAccessToken);
 necesidadesRouter.get(
