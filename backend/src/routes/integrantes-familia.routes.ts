@@ -85,7 +85,7 @@ integrantesFamiliaRouter.post('/catalogos/grados-estudio',...gestion,async(req,r
   }
 });
 
-function datosIntegrante(datosSolicitud: Record<string,unknown>) {
+export function datosIntegrante(datosSolicitud: Record<string,unknown>) {
   const obligatorio=(clave:string)=>typeof datosSolicitud[clave]==='string'?(datosSolicitud[clave] as string).trim():'';
   const opcional=(clave:string)=>datosSolicitud[clave]==null?'':obligatorio(clave);
   return {
@@ -96,13 +96,13 @@ function datosIntegrante(datosSolicitud: Record<string,unknown>) {
     asisteEscuela:datosSolicitud.asisteEscuela??null,gradoEstudioId:datosSolicitud.gradoEstudioId||null,
   };
 }
-function validarIntegrante(integranteValidado:ReturnType<typeof datosIntegrante>) {
+export function validarIntegrante(integranteValidado:ReturnType<typeof datosIntegrante>) {
   return !!integranteValidado.primerNombre && !!integranteValidado.primerApellido &&
     [integranteValidado.primerNombre,integranteValidado.primerApellido,integranteValidado.segundoNombre,integranteValidado.segundoApellido].every(nombreIntegrante=>nombreIntegrante.length<=100) &&
     integranteValidado.ocupacion.length<=120 &&
     (integranteValidado.parentescoId===null || esUuid(integranteValidado.parentescoId)) &&
     (integranteValidado.gradoEstudioId===null || esUuid(integranteValidado.gradoEstudioId)) &&
-    (integranteValidado.fechaNacimiento===null || (typeof integranteValidado.fechaNacimiento==='string' && /^\\d{4}-\\d{2}-\\d{2}$/.test(integranteValidado.fechaNacimiento))) &&
+    (integranteValidado.fechaNacimiento===null || (typeof integranteValidado.fechaNacimiento==='string' && /^\d{4}-\d{2}-\d{2}$/.test(integranteValidado.fechaNacimiento))) &&
     typeof integranteValidado.esJefeHogar==='boolean' &&
     (integranteValidado.asisteEscuela===null || typeof integranteValidado.asisteEscuela==='boolean') &&
     (integranteValidado.asisteEscuela!==false || integranteValidado.gradoEstudioId===null);
