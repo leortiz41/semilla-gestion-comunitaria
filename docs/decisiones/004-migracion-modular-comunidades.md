@@ -19,6 +19,12 @@ Se elige la tercera alternativa. **Comunidades** es el primer módulo:
 - `server.ts` importa directamente el nuevo router pero sigue montándolo en **`/api/comunidades`**.
 - La autenticación, el middleware de permisos, el pool PostgreSQL y los dominios compartidos continúan en sus ubicaciones actuales.
 
+## Segunda etapa
+
+Se agruparon `capacidades.service.ts`, `necesidades.service.ts`, `metas-vision.domain.ts` y `necesidades.domain.ts` bajo `src/modules/comunidades/`. Las ubicaciones históricas de servicios y dominio mantienen adaptadores de reexportación. Las rutas internas importan las implementaciones del módulo. Se añadieron comprobaciones de identidad de los exports para evitar duplicación accidental de implementaciones.
+
+La extracción de repositorios para escrituras comunitarias y consultas de capacidades y necesidades permanece pendiente. Las consultas existentes conservan sus transacciones y filtros por organización; el cambio de ubicación no equivale por sí solo a una separación completa de persistencia.
+
 ## Consecuencias
 Se obtiene un límite funcional visible, sin multiplicar servicios de despliegue ni cambiar API, esquemas o credenciales. Durante la transición existirán archivos adaptadores y algunas consultas SQL en servicios; no se declara completa una separación por repositorios que aún no existe.
 
