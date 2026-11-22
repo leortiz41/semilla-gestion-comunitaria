@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { Pool } from 'pg';
-import { consultarAccesoEvidenciaAvance, consultarIndiceEvidencias, consultarCatalogoProyectos, consultarResponsablesProyecto, consultarAvancesPendientes, consultarMetaActividad, consultarEvidenciasAvance, consultarClaveEvidencia, guardarActividadEnRepositorio, existeProyectoEnOrganizacion, consultarSaldoActividad, guardarProyectoEnRepositorio } from '../src/modules/proyectos/proyectos.repository.js';
+import { consultarAccesoEvidenciaAvance, consultarIndiceEvidencias, consultarCatalogoProyectos, consultarResponsablesProyecto, consultarAvancesPendientes, consultarMetaActividad, consultarEvidenciasAvance, consultarClaveEvidencia, guardarActividadEnRepositorio, existeProyectoEnOrganizacion, consultarSaldoActividad, guardarProyectoEnRepositorio, registrarEvidenciaEnRepositorio } from '../src/modules/proyectos/proyectos.repository.js';
 
 const organizacionId = 'a63f86ca-318e-492b-8bc6-d5e2700062ba';
 const proyectoId = 'f0cc242b-b341-46a9-98af-4e6d224f218e';
@@ -210,4 +210,79 @@ test('Proyectos: presupuesto menor a las actividades revierte la transacción', 
   assert.equal(comandos[0], 'BEGIN');
   assert.equal(comandos.at(-1), 'ROLLBACK');
   assert.equal(liberado, true);
+});
+
+test('Proyectos: registra fotografía proxy con tenant y auditoría dentro de transacción', async () => {
+  const comandos: string[] = [];
+  let liberado = false;
+  const evidenciaId = 'a7ecbfde-6dbd-4a95-9d94-20131fb3f6dd';
+  const cliente = {
+    query: async (sql: string, args?: unknown[]) => {
+      comandos.push(sql);
+      if (sql.includes('FOR UPDATE OF av')) {
+        assert.deepEqual(args, [avanceId, actividadId, proyectoId, organizacionId, actividadId]);
+        return { rows: [{ id: avanceId }] };
+      }
+      if (sql.includes('INSERT INTO evidencias')) return { rows: [{ id: evidenciaId }] };
+      if (sql.includes('INSERT INTO bitacora_auditoria')) {
+        assert.equal(args?.[0], actividadId);
+        assert.equal(args?.[1], evidenciaId);
+      }
+      return { rows: [] };
+    },
+    release: () => { liberado = true; },
+  };
+  const pool = { connect: async () => cliente } as unknown as Pool;
+  const resultado = await registrarEvidenciaEnRepositorio(pool, {
+    proyectoId, actividadId, avanceId, organizacionId, usuarioId: actividadId,
+    clave: 'ruta/imagen', mime: 'image/png', titulo: 'Evidencia', modo: 'proxy',
+  });
+  assert.deepEqual(resultado, { tipo: 'CREADA', id: evidenciaId });
+  assert.equal(comandos[0], 'BEGIN');
+  assert.equal(comandos.at(-1), 'COMMIT');
+  assert.equal(liberado, true);
+});
+
+test('Proyectos: confirma evidencia existente sin duplicar la inserción', async () => {
+  const comandos: string[] = [];
+  const evidenciaId = 'a7ecbfde-6dbd-4a95-9d94-20131fb3f6dd';
+  const cliente = {
+    query: async (sql: string, args?: unknown[]) => {
+      comandos.push(sql);
+      if (sql.includes('FOR UPDATE OF av')) {
+        assert.equal(args?.[3], organizacionId);
+        return { rows: [{ id: avanceId }] };
+      }
+      if (sql.startsWith('SELECT id FROM evidencias')) return { rows: [{ id: evidenciaId }] };
+      return { rows: [] };
+    },
+    release: () => {},
+  };
+  const pool = { connect: async () => cliente } as unknown as Pool;
+  const resultado = await registrarEvidenciaEnRepositorio(pool, {
+    proyectoId, actividadId, avanceId, organizacionId, usuarioId: actividadId,
+    clave: 'ruta/imagen', mime: 'image/png', titulo: 'Evidencia', modo: 'confirmar',
+  });
+  assert.deepEqual(resultado, { tipo: 'EXISTENTE', id: evidenciaId });
+  assert.equal(comandos.at(-1), 'COMMIT');
+  assert.equal(comandos.some(x => x.includes('INSERT INTO evidencias')), false);
+});
+
+test('Proyectos: rechaza cambio de estado y revierte antes de guardar evidencia', async () => {
+  const comandos: string[] = [];
+  const cliente = {
+    query: async (sql: string) => {
+      comandos.push(sql);
+      return { rows: [] };
+    },
+    release: () => {},
+  };
+  const pool = { connect: async () => cliente } as unknown as Pool;
+  const resultado = await registrarEvidenciaEnRepositorio(pool, {
+    proyectoId, actividadId, avanceId, organizacionId, usuarioId: actividadId,
+    clave: 'ruta/imagen', mime: 'image/png', titulo: 'Evidencia', modo: 'confirmar',
+  });
+  assert.deepEqual(resultado, { tipo: 'CAMBIO_ESTADO' });
+  assert.equal(comandos.at(-1), 'ROLLBACK');
+  assert.equal(comandos.some(x => x.includes('INSERT INTO evidencias')), false);
 });
