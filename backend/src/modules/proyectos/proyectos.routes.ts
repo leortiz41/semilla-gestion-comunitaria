@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { Router, raw, type RequestHandler } from 'express';
 import { firmarObjetoR2, r2Disponible, verificarObjetoR2, cargarObjetoR2, leerObjetoR2, diagnosticarErrorR2 } from '../../services/r2-evidencias.service.js';
 import { databasePool } from '../../config/database.js';
-import { consultarAccesoEvidenciaAvance, consultarIndiceEvidencias, consultarCatalogoProyectos, consultarResponsablesProyecto, consultarAvancesPendientes, consultarMetaActividad, consultarEvidenciasAvance, consultarClaveEvidencia, guardarActividadEnRepositorio, existeProyectoEnOrganizacion, consultarSaldoActividad, guardarProyectoEnRepositorio } from './proyectos.repository.js';
+import { consultarAccesoEvidenciaAvance, consultarIndiceEvidencias, consultarCatalogoProyectos, consultarResponsablesProyecto, consultarAvancesPendientes, consultarMetaActividad, consultarEvidenciasAvance, consultarClaveEvidencia, guardarActividadEnRepositorio, existeProyectoEnOrganizacion, consultarSaldoActividad, guardarProyectoEnRepositorio, registrarEvidenciaEnRepositorio } from './proyectos.repository.js';
 import { areasNecesidad } from '../../domain/necesidades.js';
 import { esUuid } from '../../domain/expediente.js';
 import { esFecha } from '../../domain/fecha.js';
@@ -124,36 +124,15 @@ proyectosRouter.post(rutaEvidencias+'/subir',
       if(!await verificarObjetoR2(clave,mime)){
         res.status(502).json({message:'R2 recibió la carga, pero no pudo verificarse el archivo.'});return;
       }
-      const cliente=await databasePool.connect();
-      try{
-        await cliente.query('BEGIN');
-        const vigente=await cliente.query(
-          `SELECT av.id FROM avances_proyecto av
-           JOIN actividades_programadas a ON a.id=av.actividad_id AND a.proyecto_id=av.proyecto_id
-           JOIN proyectos p ON p.id=a.proyecto_id JOIN comunidades c ON c.id=p.comunidad_id
-           WHERE av.id=$1 AND a.id=$2 AND p.id=$3 AND c.organizacion_id=$4
-             AND av.responsable_usuario_id=$5 AND av.estado_revision IN ('BORRADOR','DEVUELTO')
-           FOR UPDATE OF av`,
-           [avanceId,actividadId,proyectoId,req.auth!.organizacionId,req.auth!.sub]);
-        if(!vigente.rows.length){
-          await cliente.query('ROLLBACK');
-          res.status(409).json({message:'El estado del avance cambió durante la carga.'});return;
-        }
-        const guardado=await cliente.query(
-          `INSERT INTO evidencias
-           (proyecto_id,avance_proyecto_id,tipo_evidencia,titulo,archivo_url,
-            tipo_mime,subido_por_usuario_id,visible_para_donantes)
-           VALUES ($1,$2,'FOTOGRAFIA',$3,$4,$5,$6,false) RETURNING id`,
-          [proyectoId,avanceId,titulo||null,'r2:'+clave,mime,req.auth!.sub]);
-        await cliente.query(
-          `INSERT INTO bitacora_auditoria
-           (usuario_id,accion,nombre_entidad,entidad_id,valores_nuevos)
-           VALUES($1,'REGISTRAR_EVIDENCIA','evidencias',$2,$3::jsonb)`,
-          [req.auth!.sub,guardado.rows[0].id,JSON.stringify({proyectoId,actividadId,avanceId,tipoMime:mime})]);
-        await cliente.query('COMMIT');
-        res.status(201).json({id:guardado.rows[0].id});
-      }catch(error){await cliente.query('ROLLBACK');throw error;}
-      finally{cliente.release();}
+      const registro = await registrarEvidenciaEnRepositorio(databasePool, {
+        proyectoId: String(proyectoId), actividadId: String(actividadId), avanceId: String(avanceId),
+        organizacionId: req.auth!.organizacionId, usuarioId: req.auth!.sub,
+        clave, mime, titulo, modo: 'proxy',
+      });
+      if (registro.tipo === 'CAMBIO_ESTADO') {
+        res.status(409).json({ message: 'El estado del avance cambió durante la carga.' }); return;
+      }
+      res.status(201).json({ id: registro.id });
     }catch(error){
       const diagnostico=diagnosticarErrorR2(error);
       console.error('Error cargando fotografía por proxy R2:',diagnostico);
@@ -216,46 +195,14 @@ proyectosRouter.post(rutaEvidencias + '/confirmar', requirePermission('evidencia
     if (!await verificarObjetoR2(clave, mime)) {
       res.status(422).json({ message: 'La fotografía no existe en R2 o no cumple el tamaño y tipo permitido (10 MB).' }); return;
     }
-    const cliente = await databasePool!.connect();
-    try {
-      await cliente.query('BEGIN');
-      // Revalidar el estado dentro de la misma transacción que escribe la evidencia.
-      const validacion = await cliente.query(
-        `SELECT av.id FROM avances_proyecto av
-         JOIN actividades_programadas a ON a.id=av.actividad_id AND a.proyecto_id=av.proyecto_id
-         JOIN proyectos p ON p.id=a.proyecto_id JOIN comunidades c ON c.id=p.comunidad_id
-         WHERE av.id=$1 AND a.id=$2 AND p.id=$3 AND c.organizacion_id=$4
-           AND av.responsable_usuario_id=$5 AND av.estado_revision IN ('BORRADOR','DEVUELTO')
-         FOR UPDATE OF av`,
-        [avanceId, actividadId, proyectoId, req.auth!.organizacionId, req.auth!.sub],
-      );
-      if (!validacion.rows.length) {
-        await cliente.query('ROLLBACK');
-        res.status(409).json({ message: 'El avance cambió de estado antes de confirmar la fotografía.' }); return;
-      }
-      const existente = await cliente.query(
-        'SELECT id FROM evidencias WHERE proyecto_id=$1 AND avance_proyecto_id=$2 AND archivo_url=$3 LIMIT 1',
-        [proyectoId, avanceId, 'r2:' + clave],
-      );
-      if (existente.rows.length) {
-        await cliente.query('COMMIT');
-        res.json({ id: existente.rows[0].id }); return;
-      }
-      const { rows } = await cliente.query(
-        `INSERT INTO evidencias (proyecto_id, avance_proyecto_id, tipo_evidencia, titulo, descripcion,
-           archivo_url, tipo_mime, subido_por_usuario_id, visible_para_donantes)
-         VALUES ($1,$2,'FOTOGRAFIA',$3,$4,$5,$6,$7,false) RETURNING id`,
-        [proyectoId, avanceId, titulo || null, descripcion || null, 'r2:' + clave, mime, req.auth!.sub],
-      );
-      await cliente.query(
-        `INSERT INTO bitacora_auditoria (usuario_id, accion, nombre_entidad, entidad_id, valores_nuevos)
-         VALUES ($1, 'REGISTRAR_EVIDENCIA', 'evidencias', $2, $3::jsonb)`,
-        [req.auth!.sub, rows[0].id, JSON.stringify({ proyectoId, actividadId, avanceId, tipoMime: mime })],
-      );
-      await cliente.query('COMMIT');
-      res.status(201).json({ id: rows[0].id });
-    } catch (error) { await cliente.query('ROLLBACK'); throw error; }
-    finally { cliente.release(); }
+    const registro = await registrarEvidenciaEnRepositorio(databasePool!, {
+      proyectoId, actividadId, avanceId, organizacionId: req.auth!.organizacionId,
+      usuarioId: req.auth!.sub, clave, mime, titulo, descripcion, modo: 'confirmar',
+    });
+    if (registro.tipo === 'CAMBIO_ESTADO') {
+      res.status(409).json({ message: 'El avance cambió de estado antes de confirmar la fotografía.' }); return;
+    }
+    res.status(registro.tipo === 'EXISTENTE' ? 200 : 201).json({ id: registro.id });
   } catch (error) {
     console.error('Error confirmando fotografía:', error);
     res.status(500).json({ message: 'No fue posible registrar la fotografía.' });
