@@ -44,9 +44,11 @@ input {
   font: inherit;
 }
 
-/* El puntero comunica la acción disponible, no la posibilidad de editar la interfaz. */
+/* En la interfaz de consulta no se muestra cursor de inserción sobre texto estático.
+   Los campos editables restablecen su propio caret más abajo. */
 body {
   cursor: default;
+  caret-color: transparent;
 }
 
 /* Marca institucional y logotipos informativos: no son controles de edición. */
@@ -67,7 +69,8 @@ body {
 
 /* Mantener la selección de texto y el cursor de escritura en controles editables. */
 :where(input:not([type]), input:is([type="text"], [type="email"], [type="password"],
-       [type="search"], [type="url"], [type="tel"], [type="number"]), textarea,
+       [type="search"], [type="url"], [type="tel"], [type="number"],
+       [type="date"], [type="time"], [type="datetime-local"]), textarea,
        [contenteditable="true"], [contenteditable="plaintext-only"]) {
   cursor: text;
   caret-color: auto;
