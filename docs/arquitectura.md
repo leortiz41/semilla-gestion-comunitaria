@@ -78,6 +78,10 @@ semilla-gestion-comunitaria/
 │   │   ├── domain/                    # Dominio compartido / en transición
 │   │   ├── middleware/                # Autenticación y permisos
 │   │   ├── modules/
+│   │   │   ├── proyectos/
+│   │   │   │   ├── proyectos.routes.ts
+│   │   │   │   ├── avances-actividad.service.ts
+│   │   │   │   └── avances-actividad.domain.ts
 │   │   │   └── comunidades/
 │   │   │       ├── comunidades.routes.ts
 │   │   │       ├── comunidades.service.ts
@@ -119,6 +123,12 @@ flowchart TD
 ```
 
 La extracción de operaciones de escritura al repositorio, y la migración de `proyectos` y `donantes`, son pasos futuros condicionados por pruebas de integración. No se crea una nueva conexión ni se cambia la estructura de las tablas. Véase [ADR 004](decisiones/004-migracion-modular-comunidades.md).
+
+### Proyectos — primera etapa modular
+
+El módulo `src/modules/proyectos/` centraliza el router existente, el servicio de avances por actividad y sus validaciones. `server.ts` monta el mismo router en `/api/proyectos`. Los antiguos archivos `routes/proyectos.routes.ts`, `services/avances-actividad.service.ts` y `domain/avances-actividad.ts` son adaptadores `export *`, conservando referencias de los consumidores y las pruebas HU-12.
+
+**Límite actual:** la ruta de Proyectos aún ejecuta consultas SQL directamente, por lo que esta fase es una agrupación funcional y no una separación terminada de repositorios. El mapa de impacto, las evidencias R2, los permisos y la base de datos permanecen compartidos. El desacoplamiento de persistencia se planificará en una etapa posterior con transacciones y pruebas específicas.
 
 ## 5. Segundo flujo de negocio: seguimiento y validación de proyectos
 
