@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { Router, raw, type RequestHandler } from 'express';
 import { firmarObjetoR2, r2Disponible, verificarObjetoR2, cargarObjetoR2, leerObjetoR2, diagnosticarErrorR2 } from '../../services/r2-evidencias.service.js';
 import { databasePool } from '../../config/database.js';
-import { consultarAccesoEvidenciaAvance, consultarIndiceEvidencias, consultarCatalogoProyectos, consultarResponsablesProyecto, consultarAvancesPendientes, consultarMetaActividad } from './proyectos.repository.js';
+import { consultarAccesoEvidenciaAvance, consultarIndiceEvidencias, consultarCatalogoProyectos, consultarResponsablesProyecto, consultarAvancesPendientes, consultarMetaActividad, consultarEvidenciasAvance, consultarClaveEvidencia } from './proyectos.repository.js';
 import { areasNecesidad } from '../../domain/necesidades.js';
 import { esUuid } from '../../domain/expediente.js';
 import { esFecha } from '../../domain/fecha.js';
@@ -54,11 +54,7 @@ proyectosRouter.get(rutaEvidencias, async (req, res) => {
     if (!await accesoEvidenciaAvance(proyectoId, actividadId, avanceId, req.auth!.organizacionId)) {
       res.status(404).json({ message: 'Avance no disponible.' }); return;
     }
-    const { rows } = await databasePool!.query(
-      `SELECT id, titulo, descripcion, tipo_mime AS "tipoMime", archivo_url AS "archivoUrl", creado_en AS "creadoEn"
-       FROM evidencias WHERE proyecto_id=$1 AND avance_proyecto_id=$2
-       ORDER BY creado_en DESC, id DESC`, [proyectoId, avanceId],
-    );
+    const rows = await consultarEvidenciasAvance(databasePool!, proyectoId, avanceId);
     res.json({ evidencias: await Promise.all(rows.map(async (e) => ({
       id: e.id, titulo: e.titulo, descripcion: e.descripcion, tipoMime: e.tipoMime,
       creadoEn: e.creadoEn,
@@ -81,11 +77,7 @@ proyectosRouter.get(rutaEvidencias + '/:evidenciaId/imagen', async (req,res) => 
     if(!await accesoEvidenciaAvance(String(proyectoId),String(actividadId),String(avanceId),req.auth!.organizacionId)){
       res.status(404).json({message:'Avance no disponible.'});return;
     }
-    const encontrado=await databasePool!.query(
-      `SELECT e.archivo_url AS clave FROM evidencias e
-       WHERE e.id=$1 AND e.proyecto_id=$2 AND e.avance_proyecto_id=$3`,
-      [evidenciaId,proyectoId,avanceId]);
-    const clave=encontrado.rows[0]?.clave as string|undefined;
+    const clave = await consultarClaveEvidencia(databasePool!, evidenciaId, proyectoId, avanceId);
     if(!clave?.startsWith('r2:')){
       res.status(404).json({message:'Fotografía privada no disponible.'});return;
     }
