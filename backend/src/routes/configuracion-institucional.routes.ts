@@ -3,16 +3,16 @@ import { databasePool } from '../config/database.js';
 import { authenticateAccessToken, requireRole, requirePermission } from '../middleware/auth.middleware.js';
 
 export const configuracionInstitucionalRouter=Router();
-configuracionInstitucionalRoutedatosInstitucion.use(authenticateAccessToken);
+configuracionInstitucionalRouter.use(authenticateAccessToken);
 const administrar=[requireRole('ADMINISTRADOR'),requirePermission('usuarios.gestionar')];
 const color=(valorColor:unknown)=>typeof valorColor==='string'&&/^#[0-9a-fA-F]{6}$/.test(valorColor);
 const texto=(valorTexto:unknown,longitudMaxima:number)=>typeof valorTexto==='string'&&valorTexto.length<=longitudMaxima&&!/[<>\x00-\x08\x0B\x0C\x0E-\x1F]/.test(valorTexto);
 const formatoLogo=(tipo:string,datos:string)=>{
  if(!['image/png','image/jpeg','image/webp'].includes(tipo)||datos.length>280000||
   !/^[A-Za-z0-9+/]+={0,2}$/.test(datos)||datos.length%4!==0)return false;
- const bytes=BuffedatosInstitucion.from(datos,'base64');
+ const bytes=Buffer.from(datos,'base64');
  if(bytes.length>210000||bytes.length<20)return false;
- if(tipo==='image/png')return bytes.subarray(0,8).equals(BuffedatosInstitucion.from([137,80,78,71,13,10,26,10]));
+ if(tipo==='image/png')return bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]));
  if(tipo==='image/jpeg')return bytes[0]===255&&bytes[1]===216&&bytes[2]===255;
  return bytes.subarray(0,4).toString()==='RIFF'&&bytes.subarray(8,12).toString()==='WEBP';
 };
@@ -41,7 +41,7 @@ const query=`SELECT o.id AS "organizacionId",o.nombre AS "nombreOrganizacion",
  FROM organizaciones o LEFT JOIN configuraciones_institucionales c ON c.organizacion_id=o.id
  WHERE o.id=$1 AND o.activo`;
 
-configuracionInstitucionalRoutedatosInstitucion.get('/',async(req,res)=>{
+configuracionInstitucionalRouter.get('/',async(req,res)=>{
  if(!databasePool){res.status(503).json({message:'Configuración no disponible.'});return;}
  try{
   const {rows}=await databasePool.query(query,[req.auth!.organizacionId]);
@@ -52,7 +52,7 @@ configuracionInstitucionalRoutedatosInstitucion.get('/',async(req,res)=>{
   res.status(500).json({message:'No se pudo consultar la configuración.'});}
 });
 
-configuracionInstitucionalRoutedatosInstitucion.put('/',...administrar,async(req,res)=>{
+configuracionInstitucionalRouter.put('/',...administrar,async(req,res)=>{
  const datosConfiguracion=req.body||{};
  if(!texto(datosConfiguracion.nombrePublico,150)||!datosConfiguracion.nombrePublico.trim()||
   !texto(datosConfiguracion.lema,240)||!texto(datosConfiguracion.bienvenidaTitulo,160)||!datosConfiguracion.bienvenidaTitulo.trim()||
