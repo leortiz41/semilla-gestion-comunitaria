@@ -8,7 +8,7 @@ import {
   obtenerCapacidades,
   guardarCapacidades,
   validarCapacidades,
-} from '../../services/capacidades.service.js';
+} from './capacidades.service.js';
 export const capacidadesRouter = Router({ mergeParams: true });
 capacidadesRouter.use(authenticateAccessToken);
 capacidadesRouter.get(
