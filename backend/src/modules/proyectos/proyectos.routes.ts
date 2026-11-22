@@ -77,7 +77,7 @@ proyectosRouter.get(rutaEvidencias + '/:evidenciaId/imagen', async (req,res) => 
     if(!await accesoEvidenciaAvance(String(proyectoId),String(actividadId),String(avanceId),req.auth!.organizacionId)){
       res.status(404).json({message:'Avance no disponible.'});return;
     }
-    const clave = await consultarClaveEvidencia(databasePool!, evidenciaId, proyectoId, avanceId);
+    const clave = await consultarClaveEvidencia(databasePool!, String(evidenciaId), String(proyectoId), String(avanceId));
     if(!clave?.startsWith('r2:')){
       res.status(404).json({message:'Fotografía privada no disponible.'});return;
     }
