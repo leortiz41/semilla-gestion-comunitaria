@@ -51,7 +51,9 @@ Se identificaron **58 archivos TypeScript** bajo `backend/` mediante el árbol d
 
 **Control adicional del lote:** tras los renombres en configuración se detectaron referencias accidentales a identificadores nativos (`Buffer`, `Number`, `Router`) y se restauraron antes de la validación final; en plataforma se actualizaron también las referencias de bucles al nuevo identificador `permisoBase`. Evitar futuros reemplazos de subcadenas como `r.` sin análisis de tokens o AST. La revisión final debe comprobar siempre el diff y ejecutar TypeScript/CI.
 
-**Pendientes priorizados:** rutas de perfiles de familia, gestor de contratos, rutas de pagos restantes y refactorizaciones de nombres poco descriptivos de más de dos caracteres. La revisión inicial de 58 archivos no sustituye una inspección sintáctica completa. Los módulos extensos deben refactorizarse por separado con revisión de diferencias, compilación y pruebas. Se excluyen los alias SQL de reemplazos automáticos.
+**Quinto lote aplicado:** `src/routes/perfiles-familia.routes.ts`, `src/routes/gestor-contratos.routes.ts` y `src/routes/pagos.routes.ts`. Se renombraron límites de validación, datos de evaluación familiar, características de vivienda, nodos de Tiptap, atributos del documento, cliente transaccional e identificador de organización. Se conservan las claves JSON externas, los alias SQL y las rutas. En el gestor de contratos se detectó y corrigió durante la revisión una referencia de organización con nombre anterior.
+
+**Pendientes priorizados:** rutas adicionales con nombres ambiguos de más de dos caracteres; revisión funcional específica de administración, contratos, pagos, configuración institucional y aislamiento por organización. Las 13 pruebas existentes no cubren exhaustivamente todos esos flujos. Antes del merge del PR se requiere revisar cambios, ejecutar pruebas y comprobar los flujos sensibles. Los módulos extensos deben refactorizarse por separado con revisión de diferencias, compilación y pruebas. Se excluyen los alias SQL de reemplazos automáticos.
 
 ## 4. Criterios de aceptación por lote
 
