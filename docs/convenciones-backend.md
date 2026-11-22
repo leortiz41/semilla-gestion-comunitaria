@@ -47,7 +47,11 @@ Se identificaron **58 archivos TypeScript** bajo `backend/` mediante el árbol d
 
 **Tercer lote aplicado:** `src/routes/administracion-accesos.routes.ts`, `src/routes/integrantes-familia.routes.ts`, `src/routes/proveedores.routes.ts` y `src/routes/pagos-operaciones.routes.ts`. Se sustituyeron nombres de variables locales y callbacks ambiguos por referencias explícitas a roles, permisos, miembros familiares, proveedores, solicitudes y clientes de transacción. Los identificadores de respuesta (por ejemplo `id`) y propiedades públicas conservan su nombre. Se restituyó de inmediato la expresión regular original de fecha de nacimiento tras detectar que un renombre automático podía modificar su contenido.
 
-**Pendientes priorizados:** diagnóstico R2; rutas de auditoría, configuración institucional, perfiles de familia y plataforma; otros nombres descriptivamente insuficientes aunque superen dos caracteres. La revisión de 58 archivos es un inventario inicial y continuará por módulo con CI, sin prometer ausencia total de variables ambiguas. Los módulos extensos deben refactorizarse por separado con revisión de diferencias, compilación y pruebas. Se excluyen los alias SQL de reemplazos automáticos.
+**Cuarto lote aplicado:** `src/services/r2-evidencias.service.ts`, `src/routes/auditoria.routes.ts`, `src/routes/configuracion-institucional.routes.ts` y `src/routes/plataforma.routes.ts`. Se aclararon las causas de error y códigos R2, filtros y registros de auditoría, parámetros y coincidencia de logo, roles solicitados y permisos base. Las claves de respuestas y la lista de patrones de seguridad se mantienen.
+
+**Control adicional del lote:** tras los renombres en configuración se detectaron referencias accidentales a identificadores nativos (`Buffer`, `Number`, `Router`) y se restauraron antes de la validación final; en plataforma se actualizaron también las referencias de bucles al nuevo identificador `permisoBase`. Evitar futuros reemplazos de subcadenas como `r.` sin análisis de tokens o AST. La revisión final debe comprobar siempre el diff y ejecutar TypeScript/CI.
+
+**Pendientes priorizados:** rutas de perfiles de familia, gestor de contratos, rutas de pagos restantes y refactorizaciones de nombres poco descriptivos de más de dos caracteres. La revisión inicial de 58 archivos no sustituye una inspección sintáctica completa. Los módulos extensos deben refactorizarse por separado con revisión de diferencias, compilación y pruebas. Se excluyen los alias SQL de reemplazos automáticos.
 
 ## 4. Criterios de aceptación por lote
 
