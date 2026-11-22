@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { Router, raw, type RequestHandler } from 'express';
 import { firmarObjetoR2, r2Disponible, verificarObjetoR2, cargarObjetoR2, leerObjetoR2, diagnosticarErrorR2 } from '../../services/r2-evidencias.service.js';
 import { databasePool } from '../../config/database.js';
-import { consultarAccesoEvidenciaAvance, consultarIndiceEvidencias, consultarCatalogoProyectos, consultarResponsablesProyecto, consultarAvancesPendientes, consultarMetaActividad, consultarEvidenciasAvance, consultarClaveEvidencia, guardarActividadEnRepositorio, existeProyectoEnOrganizacion, consultarSaldoActividad } from './proyectos.repository.js';
+import { consultarAccesoEvidenciaAvance, consultarIndiceEvidencias, consultarCatalogoProyectos, consultarResponsablesProyecto, consultarAvancesPendientes, consultarMetaActividad, consultarEvidenciasAvance, consultarClaveEvidencia, guardarActividadEnRepositorio, existeProyectoEnOrganizacion, consultarSaldoActividad, guardarProyectoEnRepositorio } from './proyectos.repository.js';
 import { areasNecesidad } from '../../domain/necesidades.js';
 import { esUuid } from '../../domain/expediente.js';
 import { esFecha } from '../../domain/fecha.js';
@@ -314,73 +314,23 @@ const guardarProyecto: RequestHandler = async (req, res) => {
 
   try {
     if (!databasePool) throw new Error('Base de datos no disponible');
-    const cliente = await databasePool.connect();
-    try {
-      await cliente.query('BEGIN');
-      if (id && presupuesto !== undefined) {
-        const asignacion = await cliente.query(
-          `SELECT p.presupuesto_asignado::text AS presupuesto_actual,
-             COALESCE((SELECT SUM(a.presupuesto_estimado) FROM actividades_programadas a
-               WHERE a.proyecto_id = p.id), 0)::text AS presupuesto_actividades
-           FROM proyectos p JOIN comunidades c ON c.id = p.comunidad_id
-           WHERE p.id = $1 AND c.organizacion_id = $2
-           FOR UPDATE OF p`,
-          [id, req.auth!.organizacionId],
-        );
-        if (asignacion.rows.length && Number(presupuesto) < Number(asignacion.rows[0].presupuesto_actividades)) {
-          await cliente.query('ROLLBACK');
-          res.status(400).json({ message: 'El presupuesto del proyecto no puede ser menor que las asignaciones estimadas de sus actividades.' });
-          return;
-        }
-      }
-      const resultado = id
-      ? await cliente.query(
-        `UPDATE proyectos p SET nombre = $3, tipo = $4, estado = $5,
-           fecha_inicio = $6, fecha_fin = $7, descripcion = $8, presupuesto_asignado = COALESCE($9, p.presupuesto_asignado), actualizado_en = NOW()
-         FROM comunidades c
-         WHERE p.id = $10 AND ($11::boolean OR p.tipo = $4) AND p.comunidad_id = c.id AND c.id = $1 AND c.organizacion_id = $2
-         RETURNING p.id`,
-        [...parametros, id, tipoDeDiagnostico],
-      )
-      : await cliente.query(
-        `INSERT INTO proyectos (comunidad_id, nombre, tipo, estado, fecha_inicio, fecha_fin, descripcion, presupuesto_asignado)
-         SELECT id, $3, $4, $5, $6, $7, $8, COALESCE($9::numeric, 0) FROM comunidades
-         WHERE id = $1 AND organizacion_id = $2 AND activo RETURNING id`,
-        parametros,
-      );
-      if (!resultado.rowCount) {
-        await cliente.query('ROLLBACK');
-        res.status(404).json({ message: 'El proyecto, su categoría o la comunidad no están disponibles.' });
-        return;
-      }
-      const proyectoId = resultado.rows[0].id;
-      if (donanteIds !== undefined) {
-        const seleccion = await cliente.query(
-          `SELECT id FROM donantes d WHERE d.organizacion_id = $1 AND d.id = ANY($2::uuid[])
-             AND (d.activo OR EXISTS (
-               SELECT 1 FROM proyectos_fichas_donantes pd WHERE pd.proyecto_id = $3 AND pd.donante_id = d.id
-             )) FOR SHARE OF d`,
-          [req.auth!.organizacionId, donanteIds, proyectoId],
-        );
-        if (seleccion.rowCount !== donanteIds.length) {
-          await cliente.query('ROLLBACK');
-          res.status(400).json({ message: 'Hay donantes seleccionados que no están disponibles.' });
-          return;
-        }
-        await cliente.query('DELETE FROM proyectos_fichas_donantes WHERE proyecto_id = $1', [proyectoId]);
-        await cliente.query(
-          'INSERT INTO proyectos_fichas_donantes (proyecto_id, donante_id) SELECT $1, unnest($2::uuid[])',
-          [proyectoId, donanteIds],
-        );
-      }
-      await cliente.query('COMMIT');
-      res.status(id ? 200 : 201).json({ id: proyectoId });
-    } catch (error) {
-      await cliente.query('ROLLBACK');
-      throw error;
-    } finally {
-      cliente.release();
+    const resultado = await guardarProyectoEnRepositorio(databasePool, {
+      id, organizacionId: req.auth!.organizacionId, presupuesto, donanteIds,
+      tipoDeDiagnostico, parametros,
+    });
+    if (resultado.tipo === 'PRESUPUESTO_INSUFICIENTE') {
+      res.status(400).json({ message: 'El presupuesto del proyecto no puede ser menor que las asignaciones estimadas de sus actividades.' });
+      return;
     }
+    if (resultado.tipo === 'NO_ENCONTRADO') {
+      res.status(404).json({ message: 'El proyecto, su categoría o la comunidad no están disponibles.' });
+      return;
+    }
+    if (resultado.tipo === 'DONANTES_INVALIDOS') {
+      res.status(400).json({ message: 'Hay donantes seleccionados que no están disponibles.' });
+      return;
+    }
+    res.status(id ? 200 : 201).json({ id: resultado.id });
   } catch (error) {
     console.error('Error guardando proyecto:', error);
     res.status(500).json({ message: 'No fue posible guardar el proyecto.' });
