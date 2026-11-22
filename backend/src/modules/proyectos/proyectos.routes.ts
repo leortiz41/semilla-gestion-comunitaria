@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { Router, raw, type RequestHandler } from 'express';
 import { firmarObjetoR2, r2Disponible, verificarObjetoR2, cargarObjetoR2, leerObjetoR2, diagnosticarErrorR2 } from '../../services/r2-evidencias.service.js';
 import { databasePool } from '../../config/database.js';
-import { consultarAccesoEvidenciaAvance, consultarIndiceEvidencias, consultarCatalogoProyectos, consultarResponsablesProyecto, consultarAvancesPendientes, consultarMetaActividad, consultarEvidenciasAvance, consultarClaveEvidencia, guardarActividadEnRepositorio } from './proyectos.repository.js';
+import { consultarAccesoEvidenciaAvance, consultarIndiceEvidencias, consultarCatalogoProyectos, consultarResponsablesProyecto, consultarAvancesPendientes, consultarMetaActividad, consultarEvidenciasAvance, consultarClaveEvidencia, guardarActividadEnRepositorio, existeProyectoEnOrganizacion, consultarSaldoActividad } from './proyectos.repository.js';
 import { areasNecesidad } from '../../domain/necesidades.js';
 import { esUuid } from '../../domain/expediente.js';
 import { esFecha } from '../../domain/fecha.js';
@@ -635,24 +635,12 @@ const guardarActividad: RequestHandler = async (req, res) => {
       presupuestoEstimado, responsableAsignadoId, metaCantidad, unidadMedida || null, pesoResultado];
     const rows = await guardarActividadEnRepositorio(databasePool, actividadId ?? null, valores);
     if (!rows.length) {
-      const disponible = await databasePool.query(
-        `SELECT 1 FROM proyectos p JOIN comunidades c ON c.id = p.comunidad_id
-         WHERE p.id = $1 AND c.organizacion_id = $2`,
-        [proyectoId, req.auth!.organizacionId],
-      );
-      if (!disponible.rows.length) {
+      const disponible = await existeProyectoEnOrganizacion(databasePool, proyectoId, req.auth!.organizacionId);
+      if (!disponible) {
         res.status(404).json({ message: 'No se encontró el proyecto o la actividad.' });
         return;
       }
-      const { rows: saldos } = await databasePool.query(
-        `SELECT p.presupuesto_asignado::numeric AS presupuesto,
-          COALESCE(SUM(a.presupuesto_estimado) FILTER (WHERE a.id IS DISTINCT FROM $3::uuid), 0)::numeric AS asignado
-         FROM proyectos p JOIN comunidades c ON c.id=p.comunidad_id
-         LEFT JOIN actividades_programadas a ON a.proyecto_id=p.id
-         WHERE p.id=$1 AND c.organizacion_id=$2
-         GROUP BY p.id,p.presupuesto_asignado`,
-        [proyectoId,req.auth!.organizacionId,actividadId ?? null],
-      );
+      const saldos = await consultarSaldoActividad(databasePool, proyectoId, req.auth!.organizacionId, actividadId ?? null);
       if (saldos.length && Number(presupuestoEstimado ?? 0) >
         Number(saldos[0].presupuesto) - Number(saldos[0].asignado)) {
         res.status(400).json({
