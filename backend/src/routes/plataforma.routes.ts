@@ -148,7 +148,7 @@ plataformaRouter.put('/organizaciones/:organizacionId/accesos/cuentas/:usuarioId
   const previos=await client.query('SELECT p.codigo FROM usuarios_permisos_restringidos r JOIN permisos p ON p.id=r.permiso_id WHERE r.usuario_id=$1 AND r.organizacion_id=$2',[id,org]);
   await client.query('DELETE FROM usuarios_permisos_restringidos WHERE usuario_id=$1 AND organizacion_id=$2',[id,org]);
   for(const permisoBase of base.rows as {id:string;codigo:string}[]){
-   if(!permitidos.includes(permisoBase.codigo))await client.query('INSERT INTO usuarios_permisos_restringidos(organizacion_id,usuario_id,permiso_id,actualizado_por_usuario_id) VALUES($1,$2,$3,$4)',[org,id,p.id,req.auth!.sub]);
+   if(!permitidos.includes(permisoBase.codigo))await client.query('INSERT INTO usuarios_permisos_restringidos(organizacion_id,usuario_id,permiso_id,actualizado_por_usuario_id) VALUES($1,$2,$3,$4)',[org,id,permisoBase.id,req.auth!.sub]);
   }
   await client.query('INSERT INTO bitacora_auditoria(usuario_id,accion,nombre_entidad,entidad_id,valores_anteriores,valores_nuevos) VALUES($1,$2,$3,$4,$5::jsonb,$6::jsonb)',[req.auth!.sub,'PLATAFORMA_RESTRINGIR_PERMISOS','usuarios',id,JSON.stringify({organizacionId:org,restringidos:previos.rows.map((permisoPrevio:{codigo:string})=>permisoPrevio.codigo)}),JSON.stringify({organizacionId:org,permitidos})]);
   await client.query('COMMIT');res.set('Cache-Control','no-store');res.json({permisos:permitidos});
@@ -184,7 +184,7 @@ plataformaRouter.put('/organizaciones/:organizacionId/accesos/roles/:nombre/perm
    await client.query('DELETE FROM organizaciones_roles_permisos_restringidos WHERE organizacion_id=$1 AND rol_id=$2',[org,id]);
    for(const permisoBase of base.rows as {id:string;codigo:string}[]){
      if(!permitidos.includes(permisoBase.codigo)){
-       await client.query('INSERT INTO organizaciones_roles_permisos_restringidos (organizacion_id,rol_id,permiso_id,actualizado_por_usuario_id) VALUES($1,$2,$3,$4)',[org,id,p.id,req.auth!.sub]);
+       await client.query('INSERT INTO organizaciones_roles_permisos_restringidos (organizacion_id,rol_id,permiso_id,actualizado_por_usuario_id) VALUES($1,$2,$3,$4)',[org,id,permisoBase.id,req.auth!.sub]);
      }
    }
    await client.query('INSERT INTO bitacora_auditoria (usuario_id,accion,nombre_entidad,entidad_id,valores_anteriores,valores_nuevos) VALUES($1,$2,$3,$4,$5::jsonb,$6::jsonb)',[
