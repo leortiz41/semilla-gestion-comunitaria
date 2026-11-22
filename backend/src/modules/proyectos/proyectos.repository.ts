@@ -220,3 +220,26 @@ export async function guardarActividadEnRepositorio(pool: Consultable, actividad
       );
   return rows;
 }
+
+/** Verificaciones posteriores a una escritura rechazada: tenant y presupuesto disponible. */
+export async function existeProyectoEnOrganizacion(pool: Consultable, proyectoId: string, organizacionId: string) {
+      const disponible = await pool.query(
+        `SELECT 1 FROM proyectos p JOIN comunidades c ON c.id = p.comunidad_id
+         WHERE p.id = $1 AND c.organizacion_id = $2`,
+        [proyectoId, organizacionId],
+      );
+  return disponible.rows.length > 0;
+}
+
+export async function consultarSaldoActividad(pool: Consultable, proyectoId: string, organizacionId: string, actividadId: string | null) {
+      const { rows: saldos } = await pool.query(
+        `SELECT p.presupuesto_asignado::numeric AS presupuesto,
+          COALESCE(SUM(a.presupuesto_estimado) FILTER (WHERE a.id IS DISTINCT FROM $3::uuid), 0)::numeric AS asignado
+         FROM proyectos p JOIN comunidades c ON c.id=p.comunidad_id
+         LEFT JOIN actividades_programadas a ON a.proyecto_id=p.id
+         WHERE p.id=$1 AND c.organizacion_id=$2
+         GROUP BY p.id,p.presupuesto_asignado`,
+        [proyectoId,organizacionId,actividadId ?? null],
+      );
+  return saldos;
+}
