@@ -102,7 +102,7 @@ function validarIntegrante(integranteValidado:ReturnType<typeof datosIntegrante>
     integranteValidado.ocupacion.length<=120 &&
     (integranteValidado.parentescoId===null || esUuid(integranteValidado.parentescoId)) &&
     (integranteValidado.gradoEstudioId===null || esUuid(integranteValidado.gradoEstudioId)) &&
-    (integranteValidado.fechaNacimiento===null || (typeof integranteValidado.fechaNacimiento==='string' && /^\\integranteValidado{4}-\\integranteValidado{2}-\\integranteValidado{2}$/.test(integranteValidado.fechaNacimiento))) &&
+    (integranteValidado.fechaNacimiento===null || (typeof integranteValidado.fechaNacimiento==='string' && /^\\d{4}-\\d{2}-\\d{2}$/.test(integranteValidado.fechaNacimiento))) &&
     typeof integranteValidado.esJefeHogar==='boolean' &&
     (integranteValidado.asisteEscuela===null || typeof integranteValidado.asisteEscuela==='boolean') &&
     (integranteValidado.asisteEscuela!==false || integranteValidado.gradoEstudioId===null);
