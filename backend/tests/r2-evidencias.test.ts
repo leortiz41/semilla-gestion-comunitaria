@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { firmarObjetoR2, r2Disponible } from '../src/services/r2-evidencias.service.js';
+import { diagnosticarErrorR2, firmarObjetoR2, r2Disponible } from '../src/services/r2-evidencias.service.js';
 
 const keys = ['R2_ACCOUNT_ID', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'R2_BUCKET'] as const;
 
@@ -66,4 +66,55 @@ test('SDK R2: rechaza claves peligrosas, MIME no permitido y TTL inválido', asy
     assert.equal(r2Disponible(), false);
     await assert.rejects(firmarObjetoR2('archivo', 'GET'), /no configurado/);
   });
+});
+
+test('Diagnóstico R2: clasifica errores anidados por categoría sin publicar mensajes privados', () => {
+  const errorTls = {
+    name: 'Error',
+    cause: {
+      name: 'EPROTO',
+      message: 'dato privado no debe ser expuesto',
+      $metadata: { httpStatusCode: 503 },
+    },
+  };
+  assert.deepEqual(diagnosticarErrorR2(errorTls), {
+    categoria: 'TLS_CERTIFICADO', codigo: 'EPROTO', estado: 503,
+  });
+
+  const errorPermiso = {
+    name: 'Error',
+    errors: [{ name: 'AccessDenied', $metadata: { httpStatusCode: 403 } }],
+  };
+  assert.deepEqual(diagnosticarErrorR2(errorPermiso), {
+    categoria: 'CREDENCIALES_O_PERMISOS', codigo: 'AccessDenied', estado: 403,
+  });
+
+  const errorSinCodigo = { name: 'Error', $metadata: { httpStatusCode: 404 } };
+  assert.deepEqual(diagnosticarErrorR2(errorSinCodigo), {
+    categoria: 'BUCKET', codigo: 'DESCONOCIDO', estado: 404,
+  });
+
+  const errorConSecreto = {
+    name: 'Error',
+    code: 'ClavePrivada?token=NO_PUBLICAR',
+    message: 'https://example.test/objeto?firma=secreta',
+  };
+  const diagnostico = diagnosticarErrorR2(errorConSecreto);
+  assert.equal(diagnostico.codigo, 'DESCONOCIDO');
+  assert.equal(diagnostico.categoria, 'ALMACENAMIENTO');
+  assert.ok(!JSON.stringify(diagnostico).includes('NO_PUBLICAR'));
+  assert.ok(!JSON.stringify(diagnostico).includes('secreta'));
+});
+
+test('Diagnóstico R2: tolera valores inesperados y limita la inspección anidada', () => {
+  assert.deepEqual(diagnosticarErrorR2(null), {
+    categoria: 'ALMACENAMIENTO', codigo: 'DESCONOCIDO', estado: null,
+  });
+  let causa: unknown = { name: 'ENOTFOUND' };
+  for (let profundidad = 0; profundidad < 9; profundidad++) {
+    causa = { name: 'Error', cause: causa };
+  }
+  const resultado = diagnosticarErrorR2(causa);
+  assert.equal(resultado.categoria, 'ALMACENAMIENTO');
+  assert.equal(resultado.estado, null);
 });

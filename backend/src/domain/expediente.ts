@@ -22,9 +22,9 @@ export interface ExpedienteComunidad {
   observacionesOrganizaciones: string;
   potencialProductivo: string;
 }
-export const esUuid = (v: unknown): v is string =>
-  typeof v === 'string' &&
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+export const esUuid = (identificador: unknown): identificador is string =>
+  typeof identificador === 'string' &&
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identificador);
 export class ErrorExpediente extends Error {
   constructor(
     message: string,
@@ -36,47 +36,47 @@ export class ErrorExpediente extends Error {
 export function validarExpediente(valor: unknown): ExpedienteComunidad {
   if (!valor || typeof valor !== 'object' || Array.isArray(valor))
     throw new ErrorExpediente('El expediente no es válido.');
-  const d = valor as Record<string, unknown>;
-  function texto(campo: string, max: number, obligatorio = false) {
-    const v = d[campo];
+  const datosExpediente = valor as Record<string, unknown>;
+  function texto(campo: string, longitudMaxima: number, obligatorio = false) {
+    const valorCampo = datosExpediente[campo];
     if (
-      typeof v !== 'string' ||
-      v.trim().length > max ||
-      (obligatorio && !v.trim())
+      typeof valorCampo !== 'string' ||
+      valorCampo.trim().length > longitudMaxima ||
+      (obligatorio && !valorCampo.trim())
     )
       throw new ErrorExpediente(`Revisa el campo ${campo}.`);
-    return v.trim();
+    return valorCampo.trim();
   }
-  function numero(campo: string, min: number, max: number, entero = false) {
-    const v = d[campo];
-    if (v === null) return null;
+  function numero(campo: string, minimo: number, maximo: number, entero = false) {
+    const valorCampo = datosExpediente[campo];
+    if (valorCampo === null) return null;
     if (
-      typeof v !== 'number' ||
-      !Number.isFinite(v) ||
-      v < min ||
-      v > max ||
-      (entero && !Number.isInteger(v))
+      typeof valorCampo !== 'number' ||
+      !Number.isFinite(valorCampo) ||
+      valorCampo < minimo ||
+      valorCampo > maximo ||
+      (entero && !Number.isInteger(valorCampo))
     )
       throw new ErrorExpediente(`Revisa el campo ${campo}.`);
-    return v;
+    return valorCampo;
   }
   function lista(campo: string) {
-    const v = d[campo];
+    const valorLista = datosExpediente[campo];
     if (
-      !Array.isArray(v) ||
-      v.length > 50 ||
-      v.some((x) => typeof x !== 'string' || !x.trim() || x.trim().length > 150)
+      !Array.isArray(valorLista) ||
+      valorLista.length > 50 ||
+      valorLista.some((elemento) => typeof elemento !== 'string' || !elemento.trim() || elemento.trim().length > 150)
     )
       throw new ErrorExpediente(`Revisa la lista ${campo}.`);
-    const limpio = v.map((x) => (x as string).trim());
+    const elementosLimpios = valorLista.map((elemento) => (elemento as string).trim());
     if (
-      new Set(limpio.map((x) => x.toLocaleLowerCase('es'))).size !==
-      limpio.length
+      new Set(elementosLimpios.map((elemento) => elemento.toLocaleLowerCase('es'))).size !==
+      elementosLimpios.length
     )
       throw new ErrorExpediente(`Hay valores repetidos en ${campo}.`);
-    return limpio;
+    return elementosLimpios;
   }
-  if (!esUuid(d.zonaId))
+  if (!esUuid(datosExpediente.zonaId))
     throw new ErrorExpediente('Selecciona una zona válida.');
   const latitud = numero('latitud', -90, 90),
     longitud = numero('longitud', -180, 180);
@@ -105,39 +105,39 @@ export function validarExpediente(valor: unknown): ExpedienteComunidad {
     'Educación comunitaria',
     'Infraestructura',
   ];
-  if (!Array.isArray(d.visiones) || d.visiones.length > 4)
+  if (!Array.isArray(datosExpediente.visiones) || datosExpediente.visiones.length > 4)
     throw new ErrorExpediente('La visión de desarrollo no es válida.');
-  const visiones = d.visiones.map((v: unknown) => {
-    if (!v || typeof v !== 'object')
+  const visiones = datosExpediente.visiones.map((vision: unknown) => {
+    if (!vision || typeof vision !== 'object')
       throw new ErrorExpediente('Área de desarrollo inválida.');
-    const x = v as Record<string, unknown>;
+    const datosVision = vision as Record<string, unknown>;
     if (
-      typeof x.categoria !== 'string' ||
-      !categorias.includes(x.categoria) ||
-      typeof x.prioridad !== 'string' ||
-      !['alta', 'media', 'baja'].includes(x.prioridad) ||
-      typeof x.situacion !== 'string' ||
-      !x.situacion.trim() ||
-      x.situacion.length > 3000 ||
-      typeof x.meta !== 'string' ||
-      !x.meta.trim() ||
-      x.meta.length > 3000
+      typeof datosVision.categoria !== 'string' ||
+      !categorias.includes(datosVision.categoria) ||
+      typeof datosVision.prioridad !== 'string' ||
+      !['alta', 'media', 'baja'].includes(datosVision.prioridad) ||
+      typeof datosVision.situacion !== 'string' ||
+      !datosVision.situacion.trim() ||
+      datosVision.situacion.length > 3000 ||
+      typeof datosVision.meta !== 'string' ||
+      !datosVision.meta.trim() ||
+      datosVision.meta.length > 3000
     )
       throw new ErrorExpediente(
         'Cada área registrada necesita situación, meta y prioridad válidas.',
       );
     return {
-      categoria: x.categoria,
-      situacion: x.situacion.trim(),
-      meta: x.meta.trim(),
-      prioridad: x.prioridad,
+      categoria: datosVision.categoria,
+      situacion: datosVision.situacion.trim(),
+      meta: datosVision.meta.trim(),
+      prioridad: datosVision.prioridad,
     };
   });
-  if (new Set(visiones.map((x) => x.categoria)).size !== visiones.length)
+  if (new Set(visiones.map((vision) => vision.categoria)).size !== visiones.length)
     throw new ErrorExpediente('No repitas áreas de desarrollo.');
   return {
     nombre: texto('nombre', 150, true),
-    zonaId: d.zonaId,
+    zonaId: datosExpediente.zonaId,
     municipio: texto('municipio', 120, true),
     departamento: texto('departamento', 120, true),
     latitud,

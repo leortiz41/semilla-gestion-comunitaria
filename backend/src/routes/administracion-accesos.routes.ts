@@ -66,7 +66,7 @@ administracionAccesosRouter.put('/cuentas/:id/permisos',async(req,res)=>{
   if(!usuario.rowCount){await client.query('ROLLBACK');res.status(404).json({message:'Usuario no disponible en tu organización.'});return;}
   const roles=await client.query(`SELECT r.nombre FROM usuarios_roles ur JOIN roles r ON r.id=ur.rol_id
     WHERE ur.usuario_id=$1 AND r.activo`,[id]);
-  if(roles.rows.some((r:{nombre:string})=>['SUPERADMINISTRADOR','ADMINISTRADOR'].includes(r.nombre))){
+  if(roles.rows.some((rolAsignado:{nombre:string})=>['SUPERADMINISTRADOR','ADMINISTRADOR'].includes(rolAsignado.nombre))){
    await client.query('ROLLBACK');res.status(403).json({message:'No se pueden restringir permisos de cuentas administradoras o de plataforma.'});return;
   }
   const base=await client.query(`SELECT DISTINCT p.id,p.codigo FROM usuarios_roles ur
@@ -76,22 +76,22 @@ administracionAccesosRouter.put('/cuentas/:id/permisos',async(req,res)=>{
       SELECT 1 FROM organizaciones_roles_permisos_restringidos bloq
       WHERE bloq.organizacion_id=$2 AND bloq.rol_id=r.id AND bloq.permiso_id=p.id
      )`,[id,org]);
-  const disponibles=new Set(base.rows.map((p:{codigo:string})=>p.codigo));
-  if(permitidos.some((p:string)=>!disponibles.has(p))){
+  const disponibles=new Set(base.rows.map((permisoBase:{codigo:string})=>permisoBase.codigo));
+  if(permitidos.some((codigoPermiso:string)=>!disponibles.has(codigoPermiso))){
    await client.query('ROLLBACK');res.status(400).json({message:'Solo podés limitar permisos incluidos en los roles asignados.'});return;
   }
   const anteriores=await client.query(`SELECT p.codigo FROM usuarios_permisos_restringidos restr
    JOIN permisos p ON p.id=restr.permiso_id WHERE restr.usuario_id=$1 AND restr.organizacion_id=$2`,[id,org]);
   await client.query('DELETE FROM usuarios_permisos_restringidos WHERE usuario_id=$1 AND organizacion_id=$2',[id,org]);
-  for(const p of base.rows as {id:string;codigo:string}[]){
-   if(!permitidos.includes(p.codigo))await client.query(`INSERT INTO usuarios_permisos_restringidos
+  for(const permisoBase of base.rows as {id:string;codigo:string}[]){
+   if(!permitidos.includes(permisoBase.codigo))await client.query(`INSERT INTO usuarios_permisos_restringidos
       (organizacion_id,usuario_id,permiso_id,actualizado_por_usuario_id) VALUES($1,$2,$3,$4)`,
-      [org,id,p.id,req.auth!.sub]);
+      [org,id,permisoBase.id,req.auth!.sub]);
   }
   await client.query(`INSERT INTO bitacora_auditoria
     (usuario_id,accion,nombre_entidad,entidad_id,valores_anteriores,valores_nuevos)
     VALUES($1,'RESTRINGIR_PERMISOS_USUARIO','usuarios',$2,$3::jsonb,$4::jsonb)`,
-    [req.auth!.sub,id,JSON.stringify({restringidos:anteriores.rows.map((r:{codigo:string})=>r.codigo)}),JSON.stringify({permitidos})]);
+    [req.auth!.sub,id,JSON.stringify({restringidos:anteriores.rows.map((permisoAnterior:{codigo:string})=>permisoAnterior.codigo)}),JSON.stringify({permitidos})]);
   await client.query('COMMIT');
   res.json({permisos:permitidos});
  }catch(error){await client.query('ROLLBACK');console.error('Error guardando permisos:',error);
@@ -118,12 +118,12 @@ administracionAccesosRouter.patch('/cuentas/:id/estado',async(req,res)=>{
   const retirada=await client.query(`SELECT 1 FROM bitacora_auditoria
     WHERE entidad_id=$1 AND nombre_entidad='usuarios' AND accion='RETIRAR_USUARIO_ORGANIZACION' LIMIT 1`,[id]);
   if(retirada.rowCount){await client.query('ROLLBACK');res.status(409).json({message:'Cuenta retirada: no puede reactivarse.'});return;}
-  const r=await client.query(`SELECT r.nombre FROM usuarios_roles ur JOIN roles r ON r.id=ur.rol_id
+  const resultadoRolesCuenta=await client.query(`SELECT r.nombre FROM usuarios_roles ur JOIN roles r ON r.id=ur.rol_id
     WHERE ur.usuario_id=$1`,[id]);
-  if(r.rows.some((x:{nombre:string})=>x.nombre==='SUPERADMINISTRADOR')){
+  if(resultadoRolesCuenta.rows.some((rolAsignado:{nombre:string})=>rolAsignado.nombre==='SUPERADMINISTRADOR')){
    await client.query('ROLLBACK');res.status(403).json({message:'Cuenta de plataforma protegida.'});return;
   }
-  if(!activo&&r.rows.some((x:{nombre:string})=>x.nombre==='ADMINISTRADOR')){
+  if(!activo&&resultadoRolesCuenta.rows.some((rolAsignado:{nombre:string})=>rolAsignado.nombre==='ADMINISTRADOR')){
    const otros=await client.query(`SELECT COUNT(DISTINCT u.id)::int AS total FROM usuarios u
     JOIN usuarios_roles ur ON ur.usuario_id=u.id JOIN roles r ON r.id=ur.rol_id AND r.activo
     WHERE u.organizacion_id=$1 AND u.activo AND r.nombre='ADMINISTRADOR' AND u.id<>$2`,[org,id]);
@@ -166,8 +166,8 @@ administracionAccesosRouter.put('/roles/:nombre/permisos',async(req,res)=>{
   const id=rol.rows[0].id;
   const base=await client.query(`SELECT p.id,p.codigo FROM roles_permisos rp JOIN permisos p ON p.id=rp.permiso_id
     WHERE rp.rol_id=$1`,[id]);
-  const conjunto=new Set(base.rows.map((p:{codigo:string})=>p.codigo));
-  if(permitidos.some((p:string)=>!conjunto.has(p))){
+  const conjunto=new Set(base.rows.map((permisoBase:{codigo:string})=>permisoBase.codigo));
+  if(permitidos.some((codigoPermiso:string)=>!conjunto.has(codigoPermiso))){
    await client.query('ROLLBACK');res.status(400).json({message:'No se pueden otorgar permisos externos al perfil base.'});return;
   }
   const anteriores=await client.query(`SELECT p.codigo FROM organizaciones_roles_permisos_restringidos a
@@ -182,7 +182,7 @@ administracionAccesosRouter.put('/roles/:nombre/permisos',async(req,res)=>{
   await client.query(`INSERT INTO bitacora_auditoria
    (usuario_id,accion,nombre_entidad,entidad_id,valores_anteriores,valores_nuevos)
    VALUES($1,'ACTUALIZAR_PERMISOS_ROL_TENANT','roles',$2,$3::jsonb,$4::jsonb)`,
-   [req.auth!.sub,id,JSON.stringify({restringidos:anteriores.rows.map((x:{codigo:string})=>x.codigo)}),
+   [req.auth!.sub,id,JSON.stringify({restringidos:anteriores.rows.map((permisoAnterior:{codigo:string})=>permisoAnterior.codigo)}),
     JSON.stringify({organizacionId:org,nombre,permitidos})]);
   await client.query('COMMIT');res.json({nombre,permisos:permitidos});
  }catch(error){await client.query('ROLLBACK');console.error('Error modificando permisos de rol del tenant:',error);

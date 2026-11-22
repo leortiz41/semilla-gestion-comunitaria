@@ -20,40 +20,40 @@ export interface DatosNecesidad {
   prioridad: 'POR_EVALUAR' | 'ALTA' | 'MEDIA' | 'BAJA';
   motivoPrioridad: string;
 }
-export function validarNecesidad(body: unknown): DatosNecesidad {
-  if (!body || typeof body !== 'object' || Array.isArray(body))
+export function validarNecesidad(entradaNecesidad: unknown): DatosNecesidad {
+  if (!entradaNecesidad || typeof entradaNecesidad !== 'object' || Array.isArray(entradaNecesidad))
     throw new ErrorExpediente('Datos de necesidad inválidos.');
-  const d = body as Record<string, unknown>;
+  const datosNecesidad = entradaNecesidad as Record<string, unknown>;
   if (
-    !esUuid(d.id) ||
-    !areasNecesidad.includes(d.area as DatosNecesidad['area'])
+    !esUuid(datosNecesidad.id) ||
+    !areasNecesidad.includes(datosNecesidad.area as DatosNecesidad['area'])
   )
     throw new ErrorExpediente('Identificador o área inválidos.');
-  if (d.metaId !== null && !esUuid(d.metaId))
+  if (datosNecesidad.metaId !== null && !esUuid(datosNecesidad.metaId))
     throw new ErrorExpediente('Meta de origen inválida.');
-  function texto(k: string, max: number, requerido = true): string | null {
-    const v = d[k];
-    if (!requerido && (v === null || v === '')) return null;
+  function texto(nombreCampo: string, limiteMaximo: number, requerido = true): string | null {
+    const valorCampo = datosNecesidad[nombreCampo];
+    if (!requerido && (valorCampo === null || valorCampo === '')) return null;
     if (
-      typeof v !== 'string' ||
-      v.trim().length > max ||
-      (requerido && !v.trim())
+      typeof valorCampo !== 'string' ||
+      valorCampo.trim().length > limiteMaximo ||
+      (requerido && !valorCampo.trim())
     )
-      throw new ErrorExpediente(`Revisa ${k}: máximo ${max} caracteres.`);
-    return v.trim() || null;
+      throw new ErrorExpediente(`Revisa ${nombreCampo}: máximo ${limiteMaximo} caracteres.`);
+    return valorCampo.trim() || null;
   }
-  function numero(k: string, max: number, entero: boolean): number | null {
-    const v = d[k];
-    if (v === null) return null;
+  function numero(nombreCampo: string, limiteMaximo: number, entero: boolean): number | null {
+    const valorCampo = datosNecesidad[nombreCampo];
+    if (valorCampo === null) return null;
     if (
-      typeof v !== 'number' ||
-      !Number.isFinite(v) ||
-      v < 0 ||
-      v > max ||
-      (entero && !Number.isInteger(v))
+      typeof valorCampo !== 'number' ||
+      !Number.isFinite(valorCampo) ||
+      valorCampo < 0 ||
+      valorCampo > limiteMaximo ||
+      (entero && !Number.isInteger(valorCampo))
     )
-      throw new ErrorExpediente(`Cantidad inválida en ${k}.`);
-    return v;
+      throw new ErrorExpediente(`Cantidad inválida en ${nombreCampo}.`);
+    return valorCampo;
   }
   const cantidadAfectada = numero('cantidadAfectada', 2147483647, true);
   const cantidadObjetivo = numero('cantidadObjetivo', 999999999999.99, false);
@@ -68,16 +68,16 @@ export function validarNecesidad(body: unknown): DatosNecesidad {
     throw new ErrorExpediente(
       'Indica una cantidad objetivo positiva con hasta dos decimales y su unidad, o deja ambas vacías.',
     );
-  if (!['POR_EVALUAR', 'ALTA', 'MEDIA', 'BAJA'].includes(d.prioridad as string))
+  if (!['POR_EVALUAR', 'ALTA', 'MEDIA', 'BAJA'].includes(datosNecesidad.prioridad as string))
     throw new ErrorExpediente('Prioridad inválida.');
-  if (d.estado !== undefined)
+  if (datosNecesidad.estado !== undefined)
     throw new ErrorExpediente(
       'El estado inicial se asigna al registrar la necesidad.',
     );
   return {
-    id: d.id,
-    area: d.area as DatosNecesidad['area'],
-    metaId: d.metaId as string | null,
+    id: datosNecesidad.id,
+    area: datosNecesidad.area as DatosNecesidad['area'],
+    metaId: datosNecesidad.metaId as string | null,
     titulo: texto('titulo', 180)!,
     descripcion: texto('descripcion', 3000)!,
     situacionInicial: texto('situacionInicial', 3000)!,
@@ -86,7 +86,7 @@ export function validarNecesidad(body: unknown): DatosNecesidad {
     resultadoEsperado: texto('resultadoEsperado', 3000)!,
     unidadMedida,
     cantidadObjetivo,
-    prioridad: d.prioridad as DatosNecesidad['prioridad'],
+    prioridad: datosNecesidad.prioridad as DatosNecesidad['prioridad'],
     motivoPrioridad: texto('motivoPrioridad', 2000)!,
   };
 }

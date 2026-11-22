@@ -10,14 +10,14 @@ perfilesFamiliaRouter.use(
 );
 const editar = [requireRole('ADMINISTRADOR', 'COORDINADOR'), requirePermission('comunidades.gestionar')];
 
-function numero(valor: unknown, max: number, entero = false): number | null {
+function numero(valor: unknown, valorMaximo: number, entero = false): number | null {
   if (valor === null || valor === '' || valor === undefined) return null;
-  if (typeof valor !== 'number' || !Number.isFinite(valor) || valor < 0 || valor > max ||
+  if (typeof valor !== 'number' || !Number.isFinite(valor) || valor < 0 || valor > valorMaximo ||
       (entero && !Number.isInteger(valor))) return null;
   return valor;
 }
-function texto(valor: unknown, max: number): string | null {
-  return typeof valor === 'string' && valor.trim().length <= max ? valor.trim() || null : null;
+function texto(valor: unknown, longitudMaxima: number): string | null {
+  return typeof valor === 'string' && valor.trim().length <= longitudMaxima ? valor.trim() || null : null;
 }
 function opcion(valor: unknown): boolean | null | undefined {
   if (valor === null || valor === undefined || valor === '') return null;
@@ -81,29 +81,29 @@ perfilesFamiliaRouter.get('/:familiaId/perfiles', async (req, res) => {
 
 perfilesFamiliaRouter.put('/:familiaId/perfiles/:proyectoId', ...editar, async (req, res) => {
   const { familiaId, proyectoId } = req.params;
-  const v = req.body || {};
-  const nIntegrantes = numero(v.numeroIntegrantes, 100, true);
-  const habitaciones = numero(v.numeroHabitaciones, 50, true);
-  const area = v.areaUtilConstruccion == null || v.areaUtilConstruccion === '' ? null : numero(v.areaUtilConstruccion, 100000);
-  const ingreso = v.ingresoMensual == null || v.ingresoMensual === '' ? null : numero(v.ingresoMensual, 100000000);
-  const riesgo = v.nivelRiesgo;
-  const tipoVivienda = texto(v.tipoVivienda, 150);
-  const condicionTerreno = texto(v.condicionTerreno, 120);
-  const estadoCivil = texto(v.estadoCivil, 80);
-  const telefono = texto(v.telefonoContacto, 50);
-  const fuenteIngresos = texto(v.fuenteIngresos, 200);
-  const observaciones = texto(v.observaciones, 3000);
-  const electricidad = opcion(v.tieneElectricidad);
-  const agua = opcion(v.tieneAgua);
-  const pila = opcion(v.tienePila);
-  const fosa = opcion(v.tieneFosa);
-  if (!esUuid(familiaId) || !esUuid(proyectoId) || nIntegrantes === null || nIntegrantes < 1 ||
-      habitaciones === null || (v.areaUtilConstruccion != null && v.areaUtilConstruccion !== '' && area === null) ||
-      (v.ingresoMensual != null && v.ingresoMensual !== '' && ingreso === null) ||
-      !['BAJO','MEDIO','ALTO','CRITICO'].includes(riesgo) ||
-      [electricidad,agua,pila,fosa].some((x) => x === undefined) ||
-      [v.tipoVivienda,v.condicionTerreno,v.estadoCivil,v.telefonoContacto,v.fuenteIngresos,v.observaciones]
-        .some((x) => x != null && typeof x !== 'string')) {
+  const datosPerfilFamiliar = req.body || {};
+  const numeroIntegrantes = numero(datosPerfilFamiliar.numeroIntegrantes, 100, true);
+  const numeroHabitaciones = numero(datosPerfilFamiliar.numeroHabitaciones, 50, true);
+  const areaUtilConstruccion = datosPerfilFamiliar.areaUtilConstruccion == null || datosPerfilFamiliar.areaUtilConstruccion === '' ? null : numero(datosPerfilFamiliar.areaUtilConstruccion, 100000);
+  const ingresoMensual = datosPerfilFamiliar.ingresoMensual == null || datosPerfilFamiliar.ingresoMensual === '' ? null : numero(datosPerfilFamiliar.ingresoMensual, 100000000);
+  const nivelRiesgo = datosPerfilFamiliar.nivelRiesgo;
+  const tipoVivienda = texto(datosPerfilFamiliar.tipoVivienda, 150);
+  const condicionTerreno = texto(datosPerfilFamiliar.condicionTerreno, 120);
+  const estadoCivil = texto(datosPerfilFamiliar.estadoCivil, 80);
+  const telefonoContacto = texto(datosPerfilFamiliar.telefonoContacto, 50);
+  const fuenteIngresos = texto(datosPerfilFamiliar.fuenteIngresos, 200);
+  const observaciones = texto(datosPerfilFamiliar.observaciones, 3000);
+  const tieneElectricidad = opcion(datosPerfilFamiliar.tieneElectricidad);
+  const tieneAgua = opcion(datosPerfilFamiliar.tieneAgua);
+  const tienePila = opcion(datosPerfilFamiliar.tienePila);
+  const tieneFosa = opcion(datosPerfilFamiliar.tieneFosa);
+  if (!esUuid(familiaId) || !esUuid(proyectoId) || numeroIntegrantes === null || numeroIntegrantes < 1 ||
+      numeroHabitaciones === null || (datosPerfilFamiliar.areaUtilConstruccion != null && datosPerfilFamiliar.areaUtilConstruccion !== '' && areaUtilConstruccion === null) ||
+      (datosPerfilFamiliar.ingresoMensual != null && datosPerfilFamiliar.ingresoMensual !== '' && ingresoMensual === null) ||
+      !['BAJO','MEDIO','ALTO','CRITICO'].includes(nivelRiesgo) ||
+      [tieneElectricidad,tieneAgua,tienePila,tieneFosa].some((opcionVivienda) => opcionVivienda === undefined) ||
+      [datosPerfilFamiliar.tipoVivienda,datosPerfilFamiliar.condicionTerreno,datosPerfilFamiliar.estadoCivil,datosPerfilFamiliar.telefonoContacto,datosPerfilFamiliar.fuenteIngresos,datosPerfilFamiliar.observaciones]
+        .some((valorCampo) => valorCampo != null && typeof valorCampo !== 'string')) {
     res.status(400).json({ message: 'Revisá los campos de la evaluación familiar.' }); return;
   }
   try {
@@ -133,9 +133,9 @@ perfilesFamiliaRouter.put('/:familiaId/perfiles/:proyectoId', ...editar, async (
          actualizado_en=NOW()
        WHERE perfiles_familia.estado IN ('PENDIENTE','EVALUADO')
        RETURNING id,estado`,
-      [familiaId,proyectoId,req.auth!.organizacionId,nIntegrantes,riesgo,habitaciones,
-        area,tipoVivienda,ingreso,observaciones,condicionTerreno,electricidad,agua,pila,
-        fosa,estadoCivil,telefono,fuenteIngresos,req.auth!.sub],
+      [familiaId,proyectoId,req.auth!.organizacionId,numeroIntegrantes,nivelRiesgo,numeroHabitaciones,
+        areaUtilConstruccion,tipoVivienda,ingresoMensual,observaciones,condicionTerreno,tieneElectricidad,tieneAgua,tienePila,
+        tieneFosa,estadoCivil,telefonoContacto,fuenteIngresos,req.auth!.sub],
     );
     if (!rows.length) {
       res.status(409).json({ message: 'La evaluación no puede modificarse; verificá el proyecto o su estado.' }); return;

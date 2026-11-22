@@ -13,11 +13,11 @@ export async function guardarExpediente(
   edicion?: { comunidadId: string; diagnosticoAnteriorId: string | null },
 ) {
   if (!pool) throw new Error('Base de datos no configurada.');
-  const c = await pool.connect();
+  const clienteTransaccion = await pool.connect();
   try {
-    await c.query('BEGIN');
+    await clienteTransaccion.query('BEGIN');
     if (!edicion) {
-      const zona = await c.query(
+      const zona = await clienteTransaccion.query(
         'SELECT id FROM zonas WHERE id=$1 AND organizacion_id=$2 AND activo=TRUE FOR SHARE',
         [datos.zonaId, organizacionId],
       );
@@ -26,7 +26,7 @@ export async function guardarExpediente(
           'Selecciona una zona activa de tu organización.',
         );
     }
-    const usuario = await c.query(
+    const usuario = await clienteTransaccion.query(
       'SELECT id FROM usuarios WHERE id=$1 AND organizacion_id=$2 AND activo=TRUE FOR SHARE',
       [usuarioId, organizacionId],
     );
@@ -35,15 +35,15 @@ export async function guardarExpediente(
         'La sesión no corresponde a un usuario activo de la organización.',
         403,
       );
-    let id: string;
+    let comunidadIdRegistrada: string;
     if (edicion) {
-      const comunidad = await c.query(
+      const comunidad = await clienteTransaccion.query(
         'SELECT id FROM comunidades WHERE id=$1 AND organizacion_id=$2 FOR UPDATE',
         [edicion.comunidadId, organizacionId],
       );
       if (!comunidad.rowCount)
         throw new ErrorExpediente('Comunidad no encontrada.', 404);
-      const anterior = await c.query(
+      const anterior = await clienteTransaccion.query(
         'SELECT id FROM diagnosticos_comunidad WHERE comunidad_id=$1 AND organizacion_id=$2 ORDER BY creado_en DESC,id DESC LIMIT 1',
         [edicion.comunidadId, organizacionId],
       );
@@ -52,9 +52,9 @@ export async function guardarExpediente(
           'El diagnóstico cambió desde que lo abriste. Cierra y vuelve a abrir el expediente antes de editar.',
           409,
         );
-      id = edicion.comunidadId;
+      comunidadIdRegistrada = edicion.comunidadId;
     } else {
-      const nueva = await c.query(
+      const nueva = await clienteTransaccion.query(
         `INSERT INTO comunidades (organizacion_id,zona_id,nombre,municipio,departamento,latitud,longitud) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
         [
           organizacionId,
@@ -66,13 +66,13 @@ export async function guardarExpediente(
           datos.longitud,
         ],
       );
-      id = nueva.rows[0].id as string;
+      comunidadIdRegistrada = nueva.rows[0].id as string;
     }
-    const diagnostico = await c.query(
+    const diagnostico = await clienteTransaccion.query(
       `INSERT INTO diagnosticos_comunidad (organizacion_id,comunidad_id,poblacion,viviendas,viviendas_intervencion,observaciones_organizaciones,potencial_productivo,creado_por_id,creado_en) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,clock_timestamp()) RETURNING id`,
       [
         organizacionId,
-        id,
+        comunidadIdRegistrada,
         datos.poblacion,
         datos.viviendas,
         datos.viviendasIntervencion,
@@ -82,16 +82,16 @@ export async function guardarExpediente(
       ],
     );
     const diagnosticoId = diagnostico.rows[0].id;
-    for (const v of datos.visiones)
-      await c.query(
+    for (const vision of datos.visiones)
+      await clienteTransaccion.query(
         'INSERT INTO visiones_comunidad (organizacion_id,diagnostico_id,categoria,situacion,meta,prioridad) VALUES ($1,$2,$3,$4,$5,$6)',
         [
           organizacionId,
           diagnosticoId,
-          v.categoria,
-          v.situacion,
-          v.meta,
-          v.prioridad,
+          vision.categoria,
+          vision.situacion,
+          vision.meta,
+          vision.prioridad,
         ],
       );
     const grupos = {
@@ -102,15 +102,15 @@ export async function guardarExpediente(
     };
     for (const [tipo, valores] of Object.entries(grupos))
       for (const nombre of valores)
-        await c.query(
+        await clienteTransaccion.query(
           'INSERT INTO elementos_diagnostico (organizacion_id,diagnostico_id,tipo,nombre) VALUES ($1,$2,$3,$4)',
           [organizacionId, diagnosticoId, tipo, nombre],
         );
-    await c.query(
+    await clienteTransaccion.query(
       `INSERT INTO bitacora_auditoria (usuario_id,accion,nombre_entidad,entidad_id,valores_nuevos) VALUES ($1,$4,'comunidades',$2,$3::jsonb)`,
       [
         usuarioId,
-        id,
+        comunidadIdRegistrada,
         JSON.stringify({
           organizacionId,
           diagnosticoId,
@@ -119,13 +119,13 @@ export async function guardarExpediente(
         edicion ? 'ACTUALIZAR_DIAGNOSTICO' : 'CREAR_EXPEDIENTE',
       ],
     );
-    await c.query('COMMIT');
-    return { id };
-  } catch (e) {
-    await c.query('ROLLBACK');
-    throw e;
+    await clienteTransaccion.query('COMMIT');
+    return { id: comunidadIdRegistrada };
+  } catch (error) {
+    await clienteTransaccion.query('ROLLBACK');
+    throw error;
   } finally {
-    c.release();
+    clienteTransaccion.release();
   }
 }
 
@@ -136,7 +136,7 @@ export async function obtenerExpediente(
 ) {
   if (!pool) throw new Error('Base de datos no configurada.');
   // Una consulta garantiza que comunidad, diagnóstico y detalles procedan del mismo snapshot.
-  const r = await pool.query(
+  const resultadoConsulta = await pool.query(
     `SELECT c.id,c.nombre,c.zona_id AS "zonaId",c.municipio,c.departamento,
     c.latitud::float8 AS latitud,c.longitud::float8 AS longitud,
     d.poblacion,d.viviendas,d.viviendas_intervencion AS "viviendasIntervencion",
@@ -149,12 +149,12 @@ export async function obtenerExpediente(
     WHERE c.id=$1 AND c.organizacion_id=$2`,
     [comunidadId, organizacionId],
   );
-  if (!r.rowCount) return null;
-  const { elementos, ...datos } = r.rows[0];
+  if (!resultadoConsulta.rowCount) return null;
+  const { elementos, ...datos } = resultadoConsulta.rows[0];
   const lista = (tipo: string) =>
     (elementos as { tipo: string; nombre: string }[])
-      .filter((e) => e.tipo === tipo)
-      .map((e) => e.nombre);
+      .filter((elemento) => elemento.tipo === tipo)
+      .map((elemento) => elemento.nombre);
   return {
     ...datos,
     tiposVivienda: lista('vivienda'),

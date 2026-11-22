@@ -12,11 +12,11 @@ export const plataformaRouter = Router();
 const rolesPermitidos = ['ADMINISTRADOR', 'COORDINADOR', 'FINANZAS', 'CAMPO', 'DONANTE'];
 const esUuid = (valor: unknown): valor is string => typeof valor === 'string' &&
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(valor);
-const rolesValidos = (v: unknown): v is string[] => Array.isArray(v) && v.length > 0 &&
-  v.length <= rolesPermitidos.length && v.every((r) => typeof r === 'string' && rolesPermitidos.includes(r)) &&
-  new Set(v).size === v.length && (!v.includes('DONANTE') || v.length === 1);
-const esCorreo = (v: unknown): v is string => typeof v === 'string' && v.length <= 150 &&
-  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+const rolesValidos = (rolesSolicitados: unknown): rolesSolicitados is string[] => Array.isArray(rolesSolicitados) && rolesSolicitados.length > 0 &&
+  rolesSolicitados.length <= rolesPermitidos.length && rolesSolicitados.every((nombreRol) => typeof nombreRol === 'string' && rolesPermitidos.includes(nombreRol)) &&
+  new Set(rolesSolicitados).size === rolesSolicitados.length && (!rolesSolicitados.includes('DONANTE') || rolesSolicitados.length === 1);
+const esCorreo = (correo: unknown): correo is string => typeof correo === 'string' && correo.length <= 150 &&
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo);
 const nombreError = (error: unknown) => (error as { code?: string }).code === '23505';
 const errorHttp = (error: unknown) => error instanceof Error ? error.message : 'ErrorDesconocido';
 
@@ -139,18 +139,18 @@ plataformaRouter.put('/organizaciones/:organizacionId/accesos/cuentas/:usuarioId
   const retirada=await client.query('SELECT 1 FROM bitacora_auditoria WHERE entidad_id=$1 AND nombre_entidad=$2 AND accion=$3 LIMIT 1',[id,'usuarios','RETIRAR_USUARIO_ORGANIZACION']);
   if(retirada.rowCount){await client.query('ROLLBACK');res.status(409).json({message:'Cuenta retirada.'});return;}
   const roles=await client.query('SELECT r.nombre FROM usuarios_roles ur JOIN roles r ON r.id=ur.rol_id AND r.activo WHERE ur.usuario_id=$1',[id]);
-  if(roles.rows.some((r:{nombre:string})=>['ADMINISTRADOR','SUPERADMINISTRADOR'].includes(r.nombre))){
+  if(roles.rows.some((rolAsignado:{nombre:string})=>['ADMINISTRADOR','SUPERADMINISTRADOR'].includes(rolAsignado.nombre))){
    await client.query('ROLLBACK');res.status(403).json({message:'Permisos de administrador protegidos.'});return;
   }
   const base=await client.query('SELECT DISTINCT p.id,p.codigo FROM usuarios_roles ur JOIN roles r ON r.id=ur.rol_id AND r.activo JOIN roles_permisos rp ON rp.rol_id=r.id JOIN permisos p ON p.id=rp.permiso_id WHERE ur.usuario_id=$1 AND NOT EXISTS(SELECT 1 FROM organizaciones_roles_permisos_restringidos b WHERE b.organizacion_id=$2 AND b.rol_id=r.id AND b.permiso_id=p.id)',[id,org]);
-  const validos=new Set(base.rows.map((p:{codigo:string})=>p.codigo));
-  if(permitidos.some((p:string)=>!validos.has(p))){await client.query('ROLLBACK');res.status(400).json({message:'Los permisos no pueden superar los perfiles asignados.'});return;}
+  const validos=new Set(base.rows.map((permisoBase:{codigo:string})=>permisoBase.codigo));
+  if(permitidos.some((codigoPermiso:string)=>!validos.has(codigoPermiso))){await client.query('ROLLBACK');res.status(400).json({message:'Los permisos no pueden superar los perfiles asignados.'});return;}
   const previos=await client.query('SELECT p.codigo FROM usuarios_permisos_restringidos r JOIN permisos p ON p.id=r.permiso_id WHERE r.usuario_id=$1 AND r.organizacion_id=$2',[id,org]);
   await client.query('DELETE FROM usuarios_permisos_restringidos WHERE usuario_id=$1 AND organizacion_id=$2',[id,org]);
-  for(const p of base.rows as {id:string;codigo:string}[]){
-   if(!permitidos.includes(p.codigo))await client.query('INSERT INTO usuarios_permisos_restringidos(organizacion_id,usuario_id,permiso_id,actualizado_por_usuario_id) VALUES($1,$2,$3,$4)',[org,id,p.id,req.auth!.sub]);
+  for(const permisoBase of base.rows as {id:string;codigo:string}[]){
+   if(!permitidos.includes(permisoBase.codigo))await client.query('INSERT INTO usuarios_permisos_restringidos(organizacion_id,usuario_id,permiso_id,actualizado_por_usuario_id) VALUES($1,$2,$3,$4)',[org,id,permisoBase.id,req.auth!.sub]);
   }
-  await client.query('INSERT INTO bitacora_auditoria(usuario_id,accion,nombre_entidad,entidad_id,valores_anteriores,valores_nuevos) VALUES($1,$2,$3,$4,$5::jsonb,$6::jsonb)',[req.auth!.sub,'PLATAFORMA_RESTRINGIR_PERMISOS','usuarios',id,JSON.stringify({organizacionId:org,restringidos:previos.rows.map((p:{codigo:string})=>p.codigo)}),JSON.stringify({organizacionId:org,permitidos})]);
+  await client.query('INSERT INTO bitacora_auditoria(usuario_id,accion,nombre_entidad,entidad_id,valores_anteriores,valores_nuevos) VALUES($1,$2,$3,$4,$5::jsonb,$6::jsonb)',[req.auth!.sub,'PLATAFORMA_RESTRINGIR_PERMISOS','usuarios',id,JSON.stringify({organizacionId:org,restringidos:previos.rows.map((permisoPrevio:{codigo:string})=>permisoPrevio.codigo)}),JSON.stringify({organizacionId:org,permitidos})]);
   await client.query('COMMIT');res.set('Cache-Control','no-store');res.json({permisos:permitidos});
  }catch(error){await client.query('ROLLBACK');console.error('Error guardando permisos por tenant:',errorHttp(error));res.status(500).json({message:'No fue posible actualizar permisos.'});}
  finally{client.release();}
@@ -176,20 +176,20 @@ plataformaRouter.put('/organizaciones/:organizacionId/accesos/roles/:nombre/perm
    if(!rol.rowCount){await client.query('ROLLBACK');res.status(404).json({message:'Perfil no disponible.'});return;}
    const id=rol.rows[0].id;
    const base=await client.query('SELECT p.id,p.codigo FROM roles_permisos rp JOIN permisos p ON p.id=rp.permiso_id WHERE rp.rol_id=$1',[id]);
-   const autorizados=new Set(base.rows.map((p:{codigo:string})=>p.codigo));
-   if(permitidos.some((p:string)=>!autorizados.has(p))){
+   const autorizados=new Set(base.rows.map((permisoBase:{codigo:string})=>permisoBase.codigo));
+   if(permitidos.some((codigoPermiso:string)=>!autorizados.has(codigoPermiso))){
      await client.query('ROLLBACK');res.status(400).json({message:'No se pueden conceder permisos fuera del rol base.'});return;
    }
    const anteriores=await client.query('SELECT p.codigo FROM organizaciones_roles_permisos_restringidos r JOIN permisos p ON p.id=r.permiso_id WHERE r.organizacion_id=$1 AND r.rol_id=$2',[org,id]);
    await client.query('DELETE FROM organizaciones_roles_permisos_restringidos WHERE organizacion_id=$1 AND rol_id=$2',[org,id]);
-   for(const p of base.rows as {id:string;codigo:string}[]){
-     if(!permitidos.includes(p.codigo)){
-       await client.query('INSERT INTO organizaciones_roles_permisos_restringidos (organizacion_id,rol_id,permiso_id,actualizado_por_usuario_id) VALUES($1,$2,$3,$4)',[org,id,p.id,req.auth!.sub]);
+   for(const permisoBase of base.rows as {id:string;codigo:string}[]){
+     if(!permitidos.includes(permisoBase.codigo)){
+       await client.query('INSERT INTO organizaciones_roles_permisos_restringidos (organizacion_id,rol_id,permiso_id,actualizado_por_usuario_id) VALUES($1,$2,$3,$4)',[org,id,permisoBase.id,req.auth!.sub]);
      }
    }
    await client.query('INSERT INTO bitacora_auditoria (usuario_id,accion,nombre_entidad,entidad_id,valores_anteriores,valores_nuevos) VALUES($1,$2,$3,$4,$5::jsonb,$6::jsonb)',[
      req.auth!.sub,'PLATAFORMA_PERMISOS_ROL_TENANT','roles',id,
-     JSON.stringify({organizacionId:org,rol:nombre,restringidos:anteriores.rows.map((p:{codigo:string})=>p.codigo)}),
+     JSON.stringify({organizacionId:org,rol:nombre,restringidos:anteriores.rows.map((permisoAnterior:{codigo:string})=>permisoAnterior.codigo)}),
      JSON.stringify({organizacionId:org,rol:nombre,permisos:permitidos})
    ]);
    await client.query('COMMIT');
@@ -479,13 +479,13 @@ plataformaRouter.post('/organizaciones/:organizacionId/cuentas/:usuarioId/retira
     if(!org.rowCount||!cuenta.rowCount){await client.query('ROLLBACK');res.status(404).json({message:'Cuenta u organización no disponible.'});return;}
     const roles=await client.query(`SELECT r.nombre FROM usuarios_roles ur JOIN roles r ON r.id=ur.rol_id
       WHERE ur.usuario_id=$1`,[usuarioId]);
-    if(roles.rows.some((r:{nombre:string})=>r.nombre==='SUPERADMINISTRADOR')){
+    if(roles.rows.some((rolAsignado:{nombre:string})=>rolAsignado.nombre==='SUPERADMINISTRADOR')){
       await client.query('ROLLBACK');res.status(403).json({message:'Cuenta de plataforma protegida.'});return;
     }
     const retirada=await client.query(`SELECT 1 FROM bitacora_auditoria WHERE entidad_id=$1 AND
       nombre_entidad='usuarios' AND accion='RETIRAR_USUARIO_ORGANIZACION' LIMIT 1`,[usuarioId]);
     if(retirada.rowCount){await client.query('ROLLBACK');res.status(409).json({message:'La cuenta ya fue retirada.'});return;}
-    if(roles.rows.some((r:{nombre:string})=>r.nombre==='ADMINISTRADOR')) {
+    if(roles.rows.some((rolAsignado:{nombre:string})=>rolAsignado.nombre==='ADMINISTRADOR')) {
       const otros=await client.query(`SELECT count(DISTINCT u.id)::int AS total FROM usuarios u
         JOIN usuarios_roles ur ON ur.usuario_id=u.id JOIN roles r ON r.id=ur.rol_id AND r.activo
         WHERE u.organizacion_id=$1 AND u.activo AND r.nombre='ADMINISTRADOR' AND u.id<>$2`,[organizacionId,usuarioId]);
@@ -561,10 +561,10 @@ plataformaRouter.put('/organizaciones/:organizacionId/cuentas/:usuarioId/roles',
     const actuales=await client.query(
       `SELECT r.nombre FROM usuarios_roles ur JOIN roles r ON r.id=ur.rol_id
        WHERE ur.usuario_id=$1`,[usuarioId]);
-    if(actuales.rows.some((r:{nombre:string})=>r.nombre==='SUPERADMINISTRADOR')) {
+    if(actuales.rows.some((rolAsignado:{nombre:string})=>rolAsignado.nombre==='SUPERADMINISTRADOR')) {
       await client.query('ROLLBACK');res.status(403).json({message:'La cuenta de plataforma no admite edición desde este módulo.'});return;
     }
-    if(actuales.rows.some((r:{nombre:string})=>r.nombre==='ADMINISTRADOR') && !roles.includes('ADMINISTRADOR')) {
+    if(actuales.rows.some((rolAsignado:{nombre:string})=>rolAsignado.nombre==='ADMINISTRADOR') && !roles.includes('ADMINISTRADOR')) {
       const otros=await client.query(
         `SELECT count(DISTINCT u.id)::int AS total FROM usuarios u
          JOIN usuarios_roles ur ON ur.usuario_id=u.id

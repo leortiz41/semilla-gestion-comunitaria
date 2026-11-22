@@ -135,17 +135,17 @@ export async function leerObjetoR2(clave: string): Promise<{datos:Uint8Array;mim
 export function diagnosticarErrorR2(error: unknown): {categoria:string;codigo:string;estado:number|null} {
   const visitar=(valor:unknown,nivel:number):{codigos:string[];estado:number|null}=>{
     if(!valor||typeof valor!=='object'||nivel>5)return {codigos:[],estado:null};
-    const e=valor as {
+    const errorInspeccionado=valor as {
       name?:unknown;code?:unknown;cause?:unknown;errors?:unknown;
       $metadata?:{httpStatusCode?:number};
     };
-    const propios=[e.code,e.name].filter((v):v is string=>typeof v==='string');
-    const anidados=[e.cause,...(Array.isArray(e.errors)?e.errors.slice(0,5):[])]
-      .map(x=>visitar(x,nivel+1));
+    const codigosPropios=[errorInspeccionado.code,errorInspeccionado.name].filter((codigo):codigo is string=>typeof codigo==='string');
+    const erroresAnidados=[errorInspeccionado.cause,...(Array.isArray(errorInspeccionado.errors)?errorInspeccionado.errors.slice(0,5):[])]
+      .map(causa=>visitar(causa,nivel+1));
     return {
-      codigos:[...anidados.flatMap(x=>x.codigos),...propios],
-      estado:typeof e.$metadata?.httpStatusCode==='number'?e.$metadata.httpStatusCode
-        :anidados.find(x=>x.estado!==null)?.estado??null,
+      codigos:[...erroresAnidados.flatMap(errorAnidado=>errorAnidado.codigos),...codigosPropios],
+      estado:typeof errorInspeccionado.$metadata?.httpStatusCode==='number'?errorInspeccionado.$metadata.httpStatusCode
+        :erroresAnidados.find(errorAnidado=>errorAnidado.estado!==null)?.estado??null,
     };
   };
   const inspeccion=visitar(error,0);
@@ -156,17 +156,17 @@ export function diagnosticarErrorR2(error: unknown): {categoria:string;codigo:st
     CREDENCIALES_O_PERMISOS:/AccessDenied|InvalidAccessKey|SignatureDoesNotMatch|InvalidToken|Forbidden/i,
     BUCKET:/NoSuchBucket|NotFound/i,
   };
-  const pista=inspeccion.codigos.find(c=>Object.values(patrones).some(p=>p.test(c)))
-    ||inspeccion.codigos.find(c=>c!=='Error')||'DESCONOCIDO';
+  const codigoIdentificado=inspeccion.codigos.find(codigoError=>Object.values(patrones).some(patron=>patron.test(codigoError)))
+    ||inspeccion.codigos.find(codigoError=>codigoError!=='Error')||'DESCONOCIDO';
   let categoria='ALMACENAMIENTO';
   for(const [grupo,patron] of Object.entries(patrones)){
-    if(inspeccion.codigos.some(c=>patron.test(c))){categoria=grupo;break;}
+    if(inspeccion.codigos.some(codigoError=>patron.test(codigoError))){categoria=grupo;break;}
   }
   if(categoria==='ALMACENAMIENTO'){
     if([401,403].includes(inspeccion.estado??0))categoria='CREDENCIALES_O_PERMISOS';
     if(inspeccion.estado===404)categoria='BUCKET';
   }
   // Whitelist: no publicar mensajes, hosts, rutas, objetos, firmas o secretos.
-  const seguro=/^[A-Za-z][A-Za-z0-9_]{0,79}$/.test(pista)?pista:'DESCONOCIDO';
-  return {categoria,codigo:seguro,estado:inspeccion.estado};
+  const codigoSeguro=/^[A-Za-z][A-Za-z0-9_]{0,79}$/.test(codigoIdentificado)?codigoIdentificado:'DESCONOCIDO';
+  return {categoria,codigo:codigoSeguro,estado:inspeccion.estado};
 }

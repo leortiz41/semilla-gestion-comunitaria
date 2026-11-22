@@ -5,8 +5,8 @@ import { authenticateAccessToken, requireRole, requirePermission } from '../midd
 export const configuracionInstitucionalRouter=Router();
 configuracionInstitucionalRouter.use(authenticateAccessToken);
 const administrar=[requireRole('ADMINISTRADOR'),requirePermission('usuarios.gestionar')];
-const color=(x:unknown)=>typeof x==='string'&&/^#[0-9a-fA-F]{6}$/.test(x);
-const texto=(x:unknown,n:number)=>typeof x==='string'&&x.length<=n&&!/[<>\x00-\x08\x0B\x0C\x0E-\x1F]/.test(x);
+const color=(valorColor:unknown)=>typeof valorColor==='string'&&/^#[0-9a-fA-F]{6}$/.test(valorColor);
+const texto=(valorTexto:unknown,longitudMaxima:number)=>typeof valorTexto==='string'&&valorTexto.length<=longitudMaxima&&!/[<>\x00-\x08\x0B\x0C\x0E-\x1F]/.test(valorTexto);
 const formatoLogo=(tipo:string,datos:string)=>{
  if(!['image/png','image/jpeg','image/webp'].includes(tipo)||datos.length>280000||
   !/^[A-Za-z0-9+/]+={0,2}$/.test(datos)||datos.length%4!==0)return false;
@@ -16,19 +16,19 @@ const formatoLogo=(tipo:string,datos:string)=>{
  if(tipo==='image/jpeg')return bytes[0]===255&&bytes[1]===216&&bytes[2]===255;
  return bytes.subarray(0,4).toString()==='RIFF'&&bytes.subarray(8,12).toString()==='WEBP';
 };
-const respuesta=(r:Record<string,unknown>)=>({
- organizacionId:r.organizacionId,
- nombrePublico:r.nombrePublico||r.nombreOrganizacion,
- lema:r.lema||'Recursos que generan desarrollo',
- bienvenidaTitulo:r.bienvenidaTitulo||'Bienvenido a Semilla',
- bienvenidaTexto:r.bienvenidaTexto||'Gestioná tus iniciativas y conocé su impacto comunitario.',
- colorPrimario:r.colorPrimario||'#2D7545',
- colorSecundario:r.colorSecundario||'#D98B36',
- colorFondo:r.colorFondo||'#F5F8F2',
- logo:r.logoBase64&&r.logoTipo?'data:'+r.logoTipo+';base64,'+r.logoBase64:null,
- pdfPapel:r.pdfPapel||'A4',pdfOrientacion:r.pdfOrientacion||'portrait',
- pdfMargenMm:r.pdfMargenMm??18,
- pdfMostrarLogo:r.pdfMostrarLogo??true,pdfMostrarLema:r.pdfMostrarLema??true,
+const respuesta=(datosInstitucion:Record<string,unknown>)=>({
+ organizacionId:datosInstitucion.organizacionId,
+ nombrePublico:datosInstitucion.nombrePublico||datosInstitucion.nombreOrganizacion,
+ lema:datosInstitucion.lema||'Recursos que generan desarrollo',
+ bienvenidaTitulo:datosInstitucion.bienvenidaTitulo||'Bienvenido a Semilla',
+ bienvenidaTexto:datosInstitucion.bienvenidaTexto||'Gestioná tus iniciativas y conocé su impacto comunitario.',
+ colorPrimario:datosInstitucion.colorPrimario||'#2D7545',
+ colorSecundario:datosInstitucion.colorSecundario||'#D98B36',
+ colorFondo:datosInstitucion.colorFondo||'#F5F8F2',
+ logo:datosInstitucion.logoBase64&&datosInstitucion.logoTipo?'data:'+datosInstitucion.logoTipo+';base64,'+datosInstitucion.logoBase64:null,
+ pdfPapel:datosInstitucion.pdfPapel||'A4',pdfOrientacion:datosInstitucion.pdfOrientacion||'portrait',
+ pdfMargenMm:datosInstitucion.pdfMargenMm??18,
+ pdfMostrarLogo:datosInstitucion.pdfMostrarLogo??true,pdfMostrarLema:datosInstitucion.pdfMostrarLema??true,
 });
 const query=`SELECT o.id AS "organizacionId",o.nombre AS "nombreOrganizacion",
  c.nombre_publico AS "nombrePublico",c.lema,c.bienvenida_titulo AS "bienvenidaTitulo",
@@ -48,28 +48,28 @@ configuracionInstitucionalRouter.get('/',async(req,res)=>{
   if(!rows.length){res.status(404).json({message:'Organización no disponible.'});return;}
   res.set('Cache-Control','no-store');
   res.json({configuracion:respuesta(rows[0])});
- }catch(e){console.error('Error consultando configuración institucional:',e);
+ }catch(error){console.error('Error consultando configuración institucional:',error);
   res.status(500).json({message:'No se pudo consultar la configuración.'});}
 });
 
 configuracionInstitucionalRouter.put('/',...administrar,async(req,res)=>{
- const d=req.body||{};
- if(!texto(d.nombrePublico,150)||!d.nombrePublico.trim()||
-  !texto(d.lema,240)||!texto(d.bienvenidaTitulo,160)||!d.bienvenidaTitulo.trim()||
-  !texto(d.bienvenidaTexto,500)||
-  !color(d.colorPrimario)||!color(d.colorSecundario)||!color(d.colorFondo)||
-  !['A4','LETTER','LEGAL'].includes(d.pdfPapel)||
-  !['portrait','landscape'].includes(d.pdfOrientacion)||
-  !Number.isInteger(d.pdfMargenMm)||d.pdfMargenMm<8||d.pdfMargenMm>35||
-  typeof d.pdfMostrarLogo!=='boolean'||typeof d.pdfMostrarLema!=='boolean'||
-  !(d.logo===null||d.logo===undefined||(typeof d.logo==='string'&&d.logo.length<=280100))){
+ const datosConfiguracion=req.body||{};
+ if(!texto(datosConfiguracion.nombrePublico,150)||!datosConfiguracion.nombrePublico.trim()||
+  !texto(datosConfiguracion.lema,240)||!texto(datosConfiguracion.bienvenidaTitulo,160)||!datosConfiguracion.bienvenidaTitulo.trim()||
+  !texto(datosConfiguracion.bienvenidaTexto,500)||
+  !color(datosConfiguracion.colorPrimario)||!color(datosConfiguracion.colorSecundario)||!color(datosConfiguracion.colorFondo)||
+  !['A4','LETTER','LEGAL'].includes(datosConfiguracion.pdfPapel)||
+  !['portrait','landscape'].includes(datosConfiguracion.pdfOrientacion)||
+  !Number.isInteger(datosConfiguracion.pdfMargenMm)||datosConfiguracion.pdfMargenMm<8||datosConfiguracion.pdfMargenMm>35||
+  typeof datosConfiguracion.pdfMostrarLogo!=='boolean'||typeof datosConfiguracion.pdfMostrarLema!=='boolean'||
+  !(datosConfiguracion.logo===null||datosConfiguracion.logo===undefined||(typeof datosConfiguracion.logo==='string'&&datosConfiguracion.logo.length<=280100))){
   res.status(400).json({message:'Revisá los campos institucionales, colores, logo y opciones de PDF.'});return;
  }
  let tipo:string|null=null,datos:string|null=null;
- if(typeof d.logo==='string'){
-  const m=/^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/=]+)$/.exec(d.logo);
-  if(!m||!formatoLogo(m[1],m[2])){res.status(400).json({message:'Logo inválido. Utilizá PNG, JPEG o WEBP de hasta 200 KB.'});return;}
-  tipo=m[1];datos=m[2];
+ if(typeof datosConfiguracion.logo==='string'){
+  const coincidenciaLogo=/^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/=]+)$/.exec(datosConfiguracion.logo);
+  if(!coincidenciaLogo||!formatoLogo(coincidenciaLogo[1],coincidenciaLogo[2])){res.status(400).json({message:'Logo inválido. Utilizá PNG, JPEG o WEBP de hasta 200 KB.'});return;}
+  tipo=coincidenciaLogo[1];datos=coincidenciaLogo[2];
  }
  if(!databasePool){res.status(503).json({message:'Configuración no disponible.'});return;}
  const client=await databasePool.connect();
@@ -93,22 +93,22 @@ configuracionInstitucionalRouter.put('/',...administrar,async(req,res)=>{
    pdf_mostrar_logo=EXCLUDED.pdf_mostrar_logo,pdf_mostrar_lema=EXCLUDED.pdf_mostrar_lema,
    actualizado_por_usuario_id=EXCLUDED.actualizado_por_usuario_id,actualizado_en=NOW()
   RETURNING organizacion_id`,[
-   org,d.nombrePublico.trim(),d.lema.trim(),d.bienvenidaTitulo.trim(),d.bienvenidaTexto.trim(),
-   d.colorPrimario.toUpperCase(),d.colorSecundario.toUpperCase(),d.colorFondo.toUpperCase(),
-   datos,tipo,d.pdfPapel,d.pdfOrientacion,d.pdfMargenMm,d.pdfMostrarLogo,d.pdfMostrarLema,req.auth!.sub,
+   org,datosConfiguracion.nombrePublico.trim(),datosConfiguracion.lema.trim(),datosConfiguracion.bienvenidaTitulo.trim(),datosConfiguracion.bienvenidaTexto.trim(),
+   datosConfiguracion.colorPrimario.toUpperCase(),datosConfiguracion.colorSecundario.toUpperCase(),datosConfiguracion.colorFondo.toUpperCase(),
+   datos,tipo,datosConfiguracion.pdfPapel,datosConfiguracion.pdfOrientacion,datosConfiguracion.pdfMargenMm,datosConfiguracion.pdfMostrarLogo,datosConfiguracion.pdfMostrarLema,req.auth!.sub,
   ]);
   await client.query(`INSERT INTO bitacora_auditoria
    (usuario_id,accion,nombre_entidad,entidad_id,valores_anteriores,valores_nuevos)
    VALUES($1,'CONFIGURAR_IDENTIDAD_INSTITUCIONAL','configuraciones_institucionales',$2,$3::jsonb,$4::jsonb)`,[
     req.auth!.sub,org,
     JSON.stringify({nombre:actual.rows[0].nombrePublico,colorPrimario:actual.rows[0].colorPrimario}),
-    JSON.stringify({nombre:d.nombrePublico,colorPrimario:d.colorPrimario,pdfPapel:d.pdfPapel,logoActualizado:true}),
+    JSON.stringify({nombre:datosConfiguracion.nombrePublico,colorPrimario:datosConfiguracion.colorPrimario,pdfPapel:datosConfiguracion.pdfPapel,logoActualizado:true}),
    ]);
   await client.query('COMMIT');
   if(!nuevo.rows.length)throw Error('NO_GUARDADO');
   const lectura=await databasePool.query(query,[org]);
   res.set('Cache-Control','no-store');res.json({configuracion:respuesta(lectura.rows[0])});
- }catch(e){await client.query('ROLLBACK');console.error('Error guardando identidad institucional:',e);
+ }catch(error){await client.query('ROLLBACK');console.error('Error guardando identidad institucional:',error);
   res.status(500).json({message:'No fue posible guardar los cambios.'});
  }finally{client.release();}
 });
