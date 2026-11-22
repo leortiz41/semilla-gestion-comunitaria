@@ -112,8 +112,8 @@ test('HTTP: permisos vigentes, separación de organizaciones y revocación inmed
     assert.equal((await consultar('/consulta', token(usuarioAjenoId, otraOrganizacionId))).status, 200);
 
     await db.query(
-      'INSERT INTO usuarios_permisos_restringidos(organizacion_id,usuario_id,permiso_id) VALUES($1,$2,$3)',
-      [organizacionId, usuarioId, permisoId],
+      'INSERT INTO usuarios_permisos_restringidos(organizacion_id,usuario_id,permiso_id,actualizado_por_usuario_id) VALUES($1,$2,$3,$4)',
+      [organizacionId, usuarioId, permisoId, usuarioId],
     );
     assert.equal((await consultar('/consulta', credencialPrincipal)).status, 403);
     await db.query(
@@ -123,8 +123,8 @@ test('HTTP: permisos vigentes, separación de organizaciones y revocación inmed
     assert.equal((await consultar('/consulta', credencialPrincipal)).status, 200);
 
     await db.query(
-      'INSERT INTO organizaciones_roles_permisos_restringidos(organizacion_id,rol_id,permiso_id) VALUES($1,$2,$3)',
-      [organizacionId, rolId, permisoId],
+      'INSERT INTO organizaciones_roles_permisos_restringidos(organizacion_id,rol_id,permiso_id,actualizado_por_usuario_id) VALUES($1,$2,$3,$4)',
+      [organizacionId, rolId, permisoId, usuarioId],
     );
     assert.equal((await consultar('/consulta', credencialPrincipal)).status, 403);
     assert.equal((await consultar('/consulta', token(usuarioAjenoId, otraOrganizacionId))).status, 200);
