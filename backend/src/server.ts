@@ -5,7 +5,7 @@ import helmet from 'helmet';
 import { checkDatabaseConnection } from './config/database.js';
 import { authRouter } from './routes/auth.routes.js';
 import { perfilRouter } from './routes/perfil.routes.js';
-import { comunidadesRouter } from './routes/comunidades.routes.js';
+import { comunidadesRouter } from './modules/comunidades/comunidades.routes.js';
 import { familiasRouter } from './routes/familias.routes.js';
 import { asignacionesFamiliasRouter } from './routes/asignaciones-familias.routes.js';
 import { asignacionViviendasRouter } from './routes/asignacion-viviendas.routes.js';

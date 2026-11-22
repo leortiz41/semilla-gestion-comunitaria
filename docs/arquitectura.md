@@ -58,7 +58,7 @@ flowchart TD
     P --> DB[(Base de datos)]
 ```
 
-La organización actual separa presentación, comunicación HTTP, autorización, dominio y servicios. Algunas rutas contienen consultas SQL directas; no se afirma que exista una capa de repositorios uniforme. Se utiliza el controlador pg para las consultas de negocio y se mantienen dependencias y utilidades de Prisma. Los cambios del esquema se versionan en scripts SQL.
+La organización actual separa presentación, comunicación HTTP, autorización, dominio y servicios. La modularización es incremental: comunidades agrupa sus rutas y servicio, y extrae su consulta de listado a un repositorio. Las reglas de dominio de metas y necesidades, así como los servicios de capacidades y necesidades, ahora también se agrupan en el módulo, conservando adaptadores de importación para sus consumidores anteriores. Otras operaciones de comunidades y otras rutas todavía contienen SQL en servicios o controladores; por tanto, aún no existe una capa de repositorios uniforme. Se utiliza el controlador pg para las consultas de negocio y se mantienen dependencias y utilidades de Prisma. Los cambios del esquema se versionan en scripts SQL.
 
 ## 4. Organización del repositorio
 
@@ -74,12 +74,23 @@ semilla-gestion-comunitaria/
 │       └── main.tsx
 ├── backend/
 │   ├── src/
-│   │   ├── config/
-│   │   ├── domain/
-│   │   ├── middleware/
-│   │   ├── routes/
+│   │   ├── config/                    # Configuración común vigente
+│   │   ├── domain/                    # Dominio compartido / en transición
+│   │   ├── middleware/                # Autenticación y permisos
+│   │   ├── modules/
+│   │   │   └── comunidades/
+│   │   │       ├── comunidades.routes.ts
+│   │   │       ├── comunidades.service.ts
+│   │   │       ├── comunidades.repository.ts
+│   │   │       ├── capacidades.routes.ts
+│   │   │       ├── capacidades.service.ts
+│   │   │       ├── necesidades.routes.ts
+│   │   │       ├── necesidades.service.ts
+│   │   │       ├── necesidades.domain.ts
+│   │   │       └── metas-vision.domain.ts
+│   │   ├── routes/                    # Rutas restantes y adaptadores
 │   │   ├── security/
-│   │   ├── services/
+│   │   ├── services/                  # Servicios restantes y adaptadores
 │   │   └── server.ts
 │   └── tests/
 ├── database/sql/
@@ -90,6 +101,24 @@ semilla-gestion-comunitaria/
 ```
 
 React Flow se utiliza para visualizar relaciones y avances; Gridstack permite organizar indicadores; ECharts apoya las visualizaciones. El editor Tiptap forma parte de las dependencias del módulo de contratos.
+
+### Primera migración funcional: comunidades
+
+Se conserva una única aplicación Express (`server.ts`), el punto de entrada `/api/comunidades`, las rutas anidadas de capacidades y necesidades, el middleware de permisos y las respuestas JSON. Los archivos anteriores de `routes/comunidades.routes.ts`, `routes/capacidades.routes.ts`, `routes/necesidades.routes.ts` y `services/comunidades.service.ts` son adaptadores de reexportación para no romper consumidores existentes.
+
+```mermaid
+flowchart TD
+    S[server.ts / una API] --> R[modules/comunidades/comunidades.routes.ts]
+    R --> A[Permisos existentes]
+    R --> V[Servicio del módulo]
+    V --> Q[Repositorio: listado por organización]
+    Q --> P[(PostgreSQL / Neon)]
+    V --> L[Consultas transaccionales aún en el servicio]
+    L --> P
+    R --> E[Servicios de expediente y dominio compartido]
+```
+
+La extracción de operaciones de escritura al repositorio, y la migración de `proyectos` y `donantes`, son pasos futuros condicionados por pruebas de integración. No se crea una nueva conexión ni se cambia la estructura de las tablas. Véase [ADR 004](decisiones/004-migracion-modular-comunidades.md).
 
 ## 5. Segundo flujo de negocio: seguimiento y validación de proyectos
 
