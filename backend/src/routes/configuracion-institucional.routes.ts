@@ -60,7 +60,7 @@ configuracionInstitucionalRouter.put('/',...administrar,async(req,res)=>{
   !color(datosConfiguracion.colorPrimario)||!color(datosConfiguracion.colorSecundario)||!color(datosConfiguracion.colorFondo)||
   !['A4','LETTER','LEGAL'].includes(datosConfiguracion.pdfPapel)||
   !['portrait','landscape'].includes(datosConfiguracion.pdfOrientacion)||
-  !NumbedatosInstitucion.isInteger(datosConfiguracion.pdfMargenMm)||datosConfiguracion.pdfMargenMm<8||datosConfiguracion.pdfMargenMm>35||
+  !Number.isInteger(datosConfiguracion.pdfMargenMm)||datosConfiguracion.pdfMargenMm<8||datosConfiguracion.pdfMargenMm>35||
   typeof datosConfiguracion.pdfMostrarLogo!=='boolean'||typeof datosConfiguracion.pdfMostrarLema!=='boolean'||
   !(datosConfiguracion.logo===null||datosConfiguracion.logo===undefined||(typeof datosConfiguracion.logo==='string'&&datosConfiguracion.logo.length<=280100))){
   res.status(400).json({message:'Revisá los campos institucionales, colores, logo y opciones de PDF.'});return;
