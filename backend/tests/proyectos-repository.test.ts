@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { Pool } from 'pg';
-import { consultarAccesoEvidenciaAvance, consultarIndiceEvidencias, consultarCatalogoProyectos, consultarResponsablesProyecto } from '../src/modules/proyectos/proyectos.repository.js';
+import { consultarAccesoEvidenciaAvance, consultarIndiceEvidencias, consultarCatalogoProyectos, consultarResponsablesProyecto, consultarAvancesPendientes, consultarMetaActividad } from '../src/modules/proyectos/proyectos.repository.js';
 
 const organizacionId = 'a63f86ca-318e-492b-8bc6-d5e2700062ba';
 const proyectoId = 'f0cc242b-b341-46a9-98af-4e6d224f218e';
@@ -77,4 +77,28 @@ test('Proyectos: responsables se limitan al proyecto y organización y excluyen 
   } as unknown as Pool;
   const responsables = await consultarResponsablesProyecto(pool, proyectoId, organizacionId);
   assert.equal(responsables.length, 1);
+});
+
+test('Proyectos: bandeja de revisión filtra organización, estado ENVIADO y autor', async () => {
+  const usuarioId = 'f84bc9ac-eb2e-4749-af68-2d7d7fbc5fc7';
+  const pool = {
+    query: async (consulta: string, parametros: unknown[]) => {
+      assert.match(consulta, /c\.organizacion_id\s*=\s*\$1/);
+      assert.match(consulta, /av.estado_revision = 'ENVIADO'/);
+      assert.deepEqual(parametros, [organizacionId, usuarioId]);
+      return { rows: [{ id: avanceId }] };
+    },
+  } as unknown as Pool;
+  assert.deepEqual(await consultarAvancesPendientes(pool, organizacionId, usuarioId), [{ id: avanceId }]);
+});
+
+test('Proyectos: la meta de actividad pertenece al proyecto y tenant solicitados', async () => {
+  const pool = {
+    query: async (consulta: string, parametros: unknown[]) => {
+      assert.match(consulta, /c\.organizacion_id\s*=\s*\$3/);
+      assert.deepEqual(parametros, [proyectoId, actividadId, organizacionId]);
+      return { rows: [{ meta_cantidad: 30 }] };
+    },
+  } as unknown as Pool;
+  assert.deepEqual(await consultarMetaActividad(pool, proyectoId, actividadId, organizacionId), [{ meta_cantidad: 30 }]);
 });
