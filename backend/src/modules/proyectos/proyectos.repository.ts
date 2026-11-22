@@ -146,3 +146,23 @@ export async function consultarMetaActividad(pool: Consultable, proyectoId: stri
         );
   return contexto.rows;
 }
+
+/** Requiere que el controlador haya validado el acceso al avance y al tenant. */
+export async function consultarEvidenciasAvance(pool: Consultable, proyectoId: string, avanceId: string) {
+    const { rows } = await pool.query(
+      `SELECT id, titulo, descripcion, tipo_mime AS "tipoMime", archivo_url AS "archivoUrl", creado_en AS "creadoEn"
+       FROM evidencias WHERE proyecto_id=$1 AND avance_proyecto_id=$2
+       ORDER BY creado_en DESC, id DESC`, [proyectoId, avanceId],
+    );
+  return rows;
+}
+
+/** Requiere autorización previa del avance antes de recuperar la clave privada. */
+export async function consultarClaveEvidencia(pool: Consultable, evidenciaId: string, proyectoId: string, avanceId: string) {
+    const encontrado=await pool.query(
+      `SELECT e.archivo_url AS clave FROM evidencias e
+       WHERE e.id=$1 AND e.proyecto_id=$2 AND e.avance_proyecto_id=$3`,
+      [evidenciaId,proyectoId,avanceId]);
+    const clave=encontrado.rows[0]?.clave as string|undefined;
+  return clave;
+}
