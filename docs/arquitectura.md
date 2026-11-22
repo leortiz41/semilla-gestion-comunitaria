@@ -80,7 +80,9 @@ semilla-gestion-comunitaria/
 │   │   ├── modules/
 │   │   │   ├── proyectos/
 │   │   │   │   ├── proyectos.routes.ts
+│   │   │   │   ├── proyectos.repository.ts
 │   │   │   │   ├── avances-actividad.service.ts
+│   │   │   │   ├── avances-actividad.repository.ts
 │   │   │   │   └── avances-actividad.domain.ts
 │   │   │   └── comunidades/
 │   │   │       ├── comunidades.routes.ts
@@ -128,7 +130,7 @@ La extracción de operaciones de escritura al repositorio, y la migración de `p
 
 El módulo `src/modules/proyectos/` centraliza el router existente, el servicio de avances por actividad y sus validaciones. `server.ts` monta el mismo router en `/api/proyectos`. Los antiguos archivos `routes/proyectos.routes.ts`, `services/avances-actividad.service.ts` y `domain/avances-actividad.ts` son adaptadores `export *`, conservando referencias de los consumidores y las pruebas HU-12.
 
-**Estado actual de la persistencia:** `proyectos.repository.ts` concentra ya las consultas del índice documental y la comprobación de pertenencia de evidencias, filtradas explícitamente por organización y con pruebas. La ruta de Proyectos todavía contiene otras consultas SQL directas, especialmente operaciones de escritura y transacciones; la capa de repositorios continúa incompleta. El mapa de impacto, las evidencias R2, los permisos y la base de datos permanecen compartidos. El desacoplamiento de persistencia se planificará en una etapa posterior con transacciones y pruebas específicas.
+**Persistencia reorganizada:** `proyectos.routes.ts` no contiene consultas SQL directas. `proyectos.repository.ts` agrupa listado, permisos documentales, bandeja, responsables, presupuestos, guardado de proyectos y evidencias bajo transacciones. `avances-actividad.repository.ts` contiene las cuatro operaciones SQL para listar, registrar, revisar y corregir avances. `avances-actividad.service.ts` mantiene el resultado ponderado y la coordinación de la lógica de aplicación. Las consultas SQL preservan filtros por `organizacion_id`, auditoría y bloqueos. La autenticación, almacenamiento R2 y conexiones a PostgreSQL siguen compartidos; el router coordina la verificación y subida de fotografías por el servicio R2. Mapa de Impacto y Donantes siguen fuera de este módulo. Antes del merge se requiere validación funcional de Proyectos. Véase [ADR 005](decisiones/005-modularizacion-proyectos.md).
 
 ## 5. Segundo flujo de negocio: seguimiento y validación de proyectos
 
