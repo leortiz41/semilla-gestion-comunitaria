@@ -9,7 +9,7 @@ pagosRouter.use(authenticateAccessToken,requireRole('ADMINISTRADOR','COORDINADOR
 pagosRouter.get('/resumen',async(req,res)=>{
  if(!databasePool){res.status(503).json({message:'Base de datos no disponible.'});return;}
  try{
-  const org=req.auth!.organizacionId;
+  const organizacionId=req.auth!.organizacionId;
   const [solicitudes,pagos,contratos]=await Promise.all([
     databasePool.query(
       `SELECT sp.id,sp.proyecto_id AS "proyectoId",p.nombre AS proyecto,
@@ -34,7 +34,7 @@ pagosRouter.get('/resumen',async(req,res)=>{
        LEFT JOIN personas per ON per.id=pc.persona_id
        WHERE (sp.proveedor_id IS NULL OR prov.id IS NOT NULL)
          AND (sp.personal_contratado_id IS NULL OR pc.id IS NOT NULL)
-       ORDER BY sp.fecha_solicitud DESC,sp.id DESC LIMIT 250`,[org]),
+       ORDER BY sp.fecha_solicitud DESC,sp.id DESC LIMIT 250`,[organizacionId]),
     databasePool.query(
       `SELECT pa.id,pa.solicitud_pago_id AS "solicitudId",pa.monto::float8 AS monto,
          pa.fecha_pago::text AS fecha,pa.estado_pago AS estado,pa.metodo_pago AS metodo,
@@ -42,7 +42,7 @@ pagosRouter.get('/resumen',async(req,res)=>{
        FROM pagos pa JOIN solicitudes_pago sp ON sp.id=pa.solicitud_pago_id
        JOIN proyectos p ON p.id=sp.proyecto_id
        JOIN comunidades c ON c.id=p.comunidad_id AND c.organizacion_id=$1
-       ORDER BY pa.fecha_pago DESC,pa.id DESC LIMIT 250`,[org]),
+       ORDER BY pa.fecha_pago DESC,pa.id DESC LIMIT 250`,[organizacionId]),
     databasePool.query(
       `SELECT pc.id,p.nombre AS proyecto,pc.cargo,pc.tipo_contrato AS tipo,
          pc.valor_contrato::float8 AS valor,pc.estado,
@@ -50,7 +50,7 @@ pagosRouter.get('/resumen',async(req,res)=>{
        FROM personal_contratado pc JOIN proyectos p ON p.id=pc.proyecto_id
        JOIN comunidades c ON c.id=p.comunidad_id AND c.organizacion_id=$1
        JOIN personas per ON per.id=pc.persona_id
-       ORDER BY pc.creado_en DESC,pc.id DESC LIMIT 250`,[org]),
+       ORDER BY pc.creado_en DESC,pc.id DESC LIMIT 250`,[organizacionId]),
   ]);
   res.set('Cache-Control','no-store');
   res.json({solicitudes:solicitudes.rows,pagos:pagos.rows,contratos:contratos.rows});
