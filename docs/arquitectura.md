@@ -128,7 +128,7 @@ La extracción de operaciones de escritura al repositorio, y la migración de `p
 
 El módulo `src/modules/proyectos/` centraliza el router existente, el servicio de avances por actividad y sus validaciones. `server.ts` monta el mismo router en `/api/proyectos`. Los antiguos archivos `routes/proyectos.routes.ts`, `services/avances-actividad.service.ts` y `domain/avances-actividad.ts` son adaptadores `export *`, conservando referencias de los consumidores y las pruebas HU-12.
 
-**Límite actual:** la ruta de Proyectos aún ejecuta consultas SQL directamente, por lo que esta fase es una agrupación funcional y no una separación terminada de repositorios. El mapa de impacto, las evidencias R2, los permisos y la base de datos permanecen compartidos. El desacoplamiento de persistencia se planificará en una etapa posterior con transacciones y pruebas específicas.
+**Estado actual de la persistencia:** `proyectos.repository.ts` concentra ya las consultas del índice documental y la comprobación de pertenencia de evidencias, filtradas explícitamente por organización y con pruebas. La ruta de Proyectos todavía contiene otras consultas SQL directas, especialmente operaciones de escritura y transacciones; la capa de repositorios continúa incompleta. El mapa de impacto, las evidencias R2, los permisos y la base de datos permanecen compartidos. El desacoplamiento de persistencia se planificará en una etapa posterior con transacciones y pruebas específicas.
 
 ## 5. Segundo flujo de negocio: seguimiento y validación de proyectos
 
