@@ -32,6 +32,6 @@ test('Módulo Proyectos: rutas, dominio y servicios mantienen la misma implement
 test('Módulo Proyectos: rutas y servicios de avances no contienen consultas SQL directas', () => {
   for (const nombre of ['proyectos.routes.ts', 'avances-actividad.service.ts']) {
     const contenido = readFileSync(new URL('../src/modules/proyectos/' + nombre, import.meta.url), 'utf8');
-    assert.doesNotMatch(contenido, /\\.query\\s*\\(/, nombre);
+    assert.equal(contenido.includes('.query('), false, nombre);
   }
 });
