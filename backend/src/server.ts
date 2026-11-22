@@ -19,7 +19,7 @@ import { usuariosRouter } from './routes/usuarios.routes.js';
 import { auditoriaRouter } from './routes/auditoria.routes.js';
 import { configuracionInstitucionalRouter } from './routes/configuracion-institucional.routes.js';
 import { administracionAccesosRouter } from './routes/administracion-accesos.routes.js';
-import { proyectosRouter } from './routes/proyectos.routes.js';
+import { proyectosRouter } from './modules/proyectos/proyectos.routes.js';
 import { proveedoresRouter } from './routes/proveedores.routes.js';
 import { pagosRouter } from './routes/pagos.routes.js';
 import { gestorContratosRouter } from './routes/gestor-contratos.routes.js';
