@@ -98,7 +98,7 @@ export default function CierreProyecto({
           )}
         </>
       )}
-      {estado === 'FINALIZADO' && puedeGestionar && (
+      {estado === 'FINALIZADO' && verificacion?.puedeReabrir && (
         <details className="cierre-proyecto__reapertura">
           <summary>Reapertura excepcional (solo administración)</summary>
           <p>Explicá qué debe corregirse. El motivo y la persona responsable quedarán en Auditoría.</p>
