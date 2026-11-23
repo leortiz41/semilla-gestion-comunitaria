@@ -229,6 +229,7 @@ export default function DetalleProyecto({
     if (!avanceFormulario || guardando ||
         (!puedeRegistrarAvance && !(avanceFormulario.corregir && puedeCorregirAvance))) return;
     const campos = new FormData(evento.currentTarget);
+    const enviarDirectamente = (evento.nativeEvent as SubmitEvent).submitter?.getAttribute('value') === 'enviar';
     const meta = avanceFormulario.actividad.metaCantidad;
     const datos: DatosAvanceActividadProyecto = {
       cantidadReportada: meta === null ? null : Number(campos.get('cantidadReportada')),
@@ -252,16 +253,23 @@ export default function DetalleProyecto({
         await editarAvanceActividadProyecto(
           token, proyectoId, avanceFormulario.actividad.id, avanceFormulario.avance.id, datos,
         );
-        setMensaje('Borrador actualizado.');
+        if (enviarDirectamente) {
+          await enviarAvanceActividadProyecto(token, proyectoId, avanceFormulario.actividad.id, avanceFormulario.avance.id);
+        }
+        setMensaje(enviarDirectamente ? 'Avance enviado a revisión.' : 'Guardado en Mis avances pendientes.');
       } else {
-        await registrarAvanceActividadProyecto(token, proyectoId, avanceFormulario.actividad.id, datos);
-        setMensaje('Borrador guardado. Envíalo a revisión cuando esté listo.');
+        const creado = await registrarAvanceActividadProyecto(token, proyectoId, avanceFormulario.actividad.id, datos);
+        if (enviarDirectamente) {
+          await enviarAvanceActividadProyecto(token, proyectoId, avanceFormulario.actividad.id, creado.id);
+        }
+        setMensaje(enviarDirectamente ? 'Avance enviado a revisión.' : 'Guardado en Mis avances pendientes.');
       }
       setAvanceFormulario(null);
       if (!avanceFormulario.avance) setClaveIdempotencia(nuevaClaveIdempotencia());
       refrescar();
     } catch (fallo) {
-      setError(fallo instanceof Error ? fallo.message : 'No fue posible guardar el avance.');
+      setError(fallo instanceof Error ? `${fallo.message} Si el avance se guardó pero no pudo enviarse, encontrarás el borrador en el historial de ejecución.` : 'No fue posible guardar o enviar el avance. Revisá el historial antes de intentarlo nuevamente.');
+      refrescar();
     } finally {
       setGuardando(false);
     }
@@ -452,11 +460,16 @@ export default function DetalleProyecto({
               </label>
             )}
           </div>
-          <p>El usuario de la sesión queda como responsable del registro. Un avance guardado como borrador no afecta resultados.</p>
+          <p>Tu avance se contará en los resultados solo después de que coordinación lo valide. Si aún faltan datos o fotografías, guardalo para continuar después desde el historial de ejecución.</p>
           <div className="actividad-avance-form__acciones">
-            <button type="submit" disabled={guardando}>
-              {guardando ? 'Guardando…' : corregir ? 'Guardar corrección y enviar' : avance ? 'Guardar cambios' : 'Guardar borrador'}
+            <button type="submit" name="accionAvance" value="enviar" disabled={guardando}>
+              {guardando ? 'Procesando…' : corregir ? 'Guardar corrección y enviar' : 'Enviar avance a revisión'}
             </button>
+            {!corregir && (
+              <button type="submit" name="accionAvance" value="guardar" className="brigadas-accion" disabled={guardando}>
+                Guardar para continuar después
+              </button>
+            )}
             <button type="button" className="brigadas-accion" disabled={guardando}
               onClick={() => setAvanceFormulario(null)}>Cancelar</button>
           </div>
@@ -504,7 +517,7 @@ export default function DetalleProyecto({
                 aria-label={`Avance validado de ${actividad.nombre}`} />
             </div>
             <section className="actividad-avances" aria-label={`Historial de avances de ${actividad.nombre}`}>
-              <header className="actividad-avances__encabezado"><h5>Registro de ejecución</h5><span>{actividad.avances.length}</span></header>
+              <header className="actividad-avances__encabezado"><h5>Historial de ejecución y mis avances pendientes</h5><span>{actividad.avances.length}</span></header>
               {!actividad.avances.length && <p className="actividad-avances__vacio">Aún no hay avances registrados.</p>}
               <ol className="actividad-avances__lista">
                 {actividad.avances.map((avance) => (
