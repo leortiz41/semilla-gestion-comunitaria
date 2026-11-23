@@ -66,3 +66,20 @@ test('ADR-006: catálogo y revisión solo delegan a controladores y servicios', 
   assert.equal(servicio.includes('express'), false);
   assert.equal(servicio.includes('.query('), false);
 });
+
+test('ADR-006: planificación delega controlador, servicio y dominio sin SQL fuera del repositorio', () => {
+  const directorio = '../src/modules/proyectos/';
+  const rutas = readFileSync(new URL(directorio + 'proyectos.routes.ts', import.meta.url), 'utf8');
+  const controlador = readFileSync(new URL(directorio + 'planificacion-actividad.controller.ts', import.meta.url), 'utf8');
+  const servicio = readFileSync(new URL(directorio + 'planificacion-actividad.service.ts', import.meta.url), 'utf8');
+  const dominio = readFileSync(new URL(directorio + 'planificacion-actividad.domain.ts', import.meta.url), 'utf8');
+  assert.match(rutas, /post\('\/:proyectoId\/actividades',[\s\S]*?guardarActividadPlanificada\)/);
+  assert.match(rutas, /put\('\/:proyectoId\/actividades\/:actividadId',[\s\S]*?guardarActividadPlanificada\)/);
+  assert.equal(rutas.includes('const guardarActividad: RequestHandler'), false);
+  assert.equal(controlador.includes('.query('), false);
+  assert.equal(controlador.includes('proyectos.repository'), false);
+  assert.equal(servicio.includes('express'), false);
+  assert.equal(servicio.includes('.query('), false);
+  assert.equal(dominio.includes('express'), false);
+  assert.equal(dominio.includes('databasePool'), false);
+});
