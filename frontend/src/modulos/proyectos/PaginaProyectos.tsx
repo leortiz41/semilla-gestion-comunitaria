@@ -64,6 +64,11 @@ function PaginaProyectos({
   });
   const avanceSeleccionado = pendientesFiltrados.find((item) => item.id === avanceSeleccionadoId) ??
     pendientesFiltrados[0];
+  const excedeMeta = (item: AvancePendienteRevision | undefined) =>
+    Boolean(item && item.metaCantidad !== null && item.cantidadReportada !== null &&
+      Number(item.cantidadValidada) + Number(item.cantidadReportada) > Number(item.metaCantidad) + 0.000001);
+  const mensajeMeta = (item: AvancePendienteRevision) =>
+    `La meta planificada es ${item.metaCantidad} ${item.unidadMedida ?? 'unidades'}, ya hay ${item.cantidadValidada} validadas y se reportan ${item.cantidadReportada}. Corregí la meta en Planificación o devolvé el avance para corregir su cantidad.`;
 
   const proyecto = formulario === 'nuevo' ? null : formulario;
   const proyectosVisibles = (datos?.proyectos ?? []).filter((item) => {
@@ -101,6 +106,11 @@ function PaginaProyectos({
 
   async function decidirAvance(item: AvancePendienteRevision, accion: 'validar' | 'devolver') {
     if (guardando || !puedeRevisarAvance) return;
+    if (accion === 'validar' && excedeMeta(item)) {
+      setError(mensajeMeta(item));
+      setConfirmarRevision(null);
+      return;
+    }
     const motivo = motivos[item.id]?.trim();
     if (accion === 'devolver' && !motivo) {
       setError('Escribí el motivo de devolución antes de continuar.');
@@ -255,6 +265,12 @@ function PaginaProyectos({
                       </div>
                       <p className="revision-centro__muted">{avanceSeleccionado.proyecto} · {avanceSeleccionado.comunidad}</p>
                       <p className="revision-centro__fotos-resumen">Evidencias adjuntas: {avanceSeleccionado.cantidadEvidencias ?? 0} {(avanceSeleccionado.cantidadEvidencias ?? 0) === 1 ? 'fotografía' : 'fotografías'}</p>
+                      {excedeMeta(avanceSeleccionado) && (
+                        <p role="alert" className="revision-centro__nota">
+                          <strong>No se puede validar: se supera la meta.</strong>{' '}
+                          {mensajeMeta(avanceSeleccionado)}
+                        </p>
+                      )}
                       <FotografiasAvance token={token} proyectoId={avanceSeleccionado.proyectoId}
                         actividadId={avanceSeleccionado.actividadId} avanceId={avanceSeleccionado.id} />
                       <dl className="revision-centro__meta">
@@ -307,7 +323,8 @@ function PaginaProyectos({
                             }}>
                             {mostrarDevolucion ? 'Continuar devolución' : 'Devolver avance'}
                           </button>
-                          <button type="button" className="revision-centro__validar" disabled={guardando}
+                          <button type="button" className="revision-centro__validar" disabled={guardando || excedeMeta(avanceSeleccionado)}
+                            title={excedeMeta(avanceSeleccionado) ? 'El avance supera la meta planificada' : undefined}
                             onClick={() => { setMostrarDevolucion(false); setConfirmarRevision('validar'); }}>
                             Validar avance
                           </button>
