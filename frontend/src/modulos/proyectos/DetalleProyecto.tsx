@@ -594,11 +594,18 @@ export default function DetalleProyecto({
                 ))}
               </ol>
             </section>
-            {puedeRegistrarAvance && !avanceFormulario && (
+            {puedeRegistrarAvance && !avanceFormulario && actividad.porcentajeResultado < 100 &&
+              actividad.estado !== 'COMPLETADA' && actividad.estado !== 'CANCELADA' && (
               <button type="button" className="brigadas-accion"
                 onClick={() => { setClaveIdempotencia(nuevaClaveIdempotencia()); setAvanceFormulario({ actividad }); }}>
                 + Registrar avance
               </button>
+            )}
+            {puedeRegistrarAvance && actividad.porcentajeResultado >= 100 && (
+              <p role="status" className="actividad-avance__meta-alcanzada">
+                Meta alcanzada (100% validado). No se permiten nuevos avances físicos;
+                los reportes existentes siguen disponibles para revisión y corrección autorizada.
+              </p>
             )}
             {avanceFormulario?.actividad.id === actividad.id && (
               <div>{formularioAvanceUI(actividad, avanceFormulario.avance, avanceFormulario.corregir)}</div>
