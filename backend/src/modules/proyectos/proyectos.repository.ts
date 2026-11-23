@@ -394,3 +394,29 @@ export async function registrarEvidenciaEnRepositorio(
     cliente.release();
   }
 }
+
+/** Explica un rechazo de validación sin exponer avances de otras organizaciones. */
+export async function consultarLimiteDeValidacion(pool: Consultable, avanceId: string, actividadId: string, proyectoId: string, organizacionId: string) {
+              const { rows: limites } = await pool.query<{
+                meta: number; total: number; unidad: string | null;
+              }>(
+                `SELECT a.meta_cantidad::float AS meta,
+                   (COALESCE((SELECT SUM(previo.cantidad_reportada)
+                     FROM avances_proyecto previo
+                     WHERE previo.actividad_id = a.id
+                       AND previo.proyecto_id = p.id AND previo.id <> av.id
+                       AND previo.estado_revision = 'VALIDADO'), 0)
+                    + COALESCE(av.cantidad_reportada, 0))::float AS total,
+                   a.unidad_medida AS unidad
+                 FROM avances_proyecto av
+                 JOIN actividades_programadas a ON a.id = av.actividad_id
+                   AND a.proyecto_id = av.proyecto_id
+                 JOIN proyectos p ON p.id = a.proyecto_id
+                 JOIN comunidades c ON c.id = p.comunidad_id
+                 WHERE av.id = $1 AND av.actividad_id = $2 AND av.proyecto_id = $3
+                   AND c.organizacion_id = $4 AND av.estado_revision = 'ENVIADO'
+                   AND a.meta_cantidad IS NOT NULL`,
+                [avanceId, actividadId, proyectoId, organizacionId],
+              );
+  return limites[0];
+}
