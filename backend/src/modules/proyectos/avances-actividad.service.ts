@@ -63,12 +63,22 @@ export async function listarActividadesProyecto(
 
   const pesoConfigurado = actividades.reduce((total, actividad) =>
     total + (actividad.pesoResultado === null ? 0 : Number(actividad.pesoResultado)), 0);
-  const proyectoTienePesosCompletos = actividades.length > 0 &&
+  const todosLosPesosConfigurados = actividades.length > 0 &&
     actividades.every((actividad) => actividad.pesoResultado !== null) && pesoConfigurado > 0;
-  const porcentajeProyecto = proyectoTienePesosCompletos
-    ? actividades.reduce((total, actividad) =>
-      total + Number(actividad.pesoResultado) * actividad.porcentajeResultado, 0) / pesoConfigurado
-    : null;
+  const ningunPesoConfigurado = actividades.every((actividad) => actividad.pesoResultado === null);
+  // Para una actividad no hace falta ponderación. Para varias, si ninguna
+  // tiene peso manual, se usa reparto equitativo sin alterar la planificación.
+  // Una ponderación parcialmente configurada se deja pendiente para evitar
+  // mostrar un resultado global potencialmente engañoso.
+  const porcentajeProyecto = actividades.length === 1
+    ? Number(actividades[0].porcentajeResultado)
+    : todosLosPesosConfigurados
+      ? actividades.reduce((total, actividad) =>
+          total + Number(actividad.pesoResultado) * actividad.porcentajeResultado, 0) / pesoConfigurado
+      : actividades.length > 1 && ningunPesoConfigurado
+        ? actividades.reduce((total, actividad) =>
+            total + Number(actividad.porcentajeResultado), 0) / actividades.length
+        : null;
 
   return { actividades, porcentajeProyecto, pesoConfigurado };
 }
