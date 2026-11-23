@@ -59,7 +59,7 @@ export async function guardarRecursosBrigada(pool: Pool, proyectoId: string, bri
        JOIN proyectos p ON p.id = $2
        JOIN comunidades c ON c.id = p.comunidad_id
        WHERE b.id = $1 AND b.activo AND d.activo
-         AND d.organizacion_id = $3 AND c.organizacion_id = $3`,
+         AND d.organizacion_id = $3 AND c.organizacion_id = $3 AND p.estado <> 'FINALIZADO'`,
       [brigadaId, proyectoId, organizacionId],
     );
     if (!rows.length) {
