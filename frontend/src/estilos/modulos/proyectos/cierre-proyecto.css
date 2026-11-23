@@ -1,0 +1,14 @@
+.cierre-proyecto{display:grid;gap:1rem;padding:1.25rem;margin-top:1.5rem;border:1px solid #cbdcc9;border-radius:1rem;background:#f8fbf6;color:#2d4e37}
+.cierre-proyecto h3{margin:0;color:#275c39;font-size:1.18rem}
+.cierre-proyecto p{margin:0;line-height:1.55}
+.cierre-proyecto__lista{list-style:none;display:grid;gap:.6rem;margin:0;padding:0}
+.cierre-proyecto__lista li{display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;border-radius:.65rem;padding:.85rem 1rem;background:#fff;border:1px solid #e0e9dc}
+.cierre-proyecto__opcion{display:flex;align-items:flex-start;gap:.7rem;line-height:1.45;padding:.8rem 1rem;border:1px solid #d6e5d5;border-radius:.7rem;background:#fff}
+.cierre-proyecto__opcion input{flex:0 0 auto;appearance:auto;width:1.2rem;height:1.2rem;margin:.05rem 0;accent-color:#34764c}
+.cierre-proyecto button{justify-self:start;padding:.75rem 1rem;border-radius:.7rem;background:#2e7148;color:#fff}
+.cierre-proyecto button:disabled{opacity:.55;cursor:not-allowed}
+.cierre-proyecto__reapertura{border-top:1px solid #dae6d8;padding-top:1rem}
+.cierre-proyecto__reapertura summary{cursor:pointer;font-weight:700}
+.cierre-proyecto__reapertura label{display:grid;gap:.5rem;margin:1rem 0}
+.cierre-proyecto__reapertura textarea{width:100%;min-height:90px;padding:.7rem;border:1px solid #bfcfbe;border-radius:.7rem;box-sizing:border-box}
+@media(max-width:650px){.cierre-proyecto{padding:1rem}.cierre-proyecto button{width:100%}}
