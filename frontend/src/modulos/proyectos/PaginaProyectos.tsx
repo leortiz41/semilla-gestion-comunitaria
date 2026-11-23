@@ -383,8 +383,10 @@ function PaginaProyectos({
                   </label>
                   <label>Estado
                     <select name="estado" defaultValue={proyecto?.estado ?? 'PLANIFICADO'}>
-                      {Object.entries(estados).map(([codigo, nombre]) => <option key={codigo} value={codigo}>{nombre}</option>)}
+                      {Object.entries(estados).filter(([codigo]) => codigo !== 'FINALIZADO')
+                        .map(([codigo, nombre]) => <option key={codigo} value={codigo}>{nombre}</option>)}
                     </select>
+                    <small>Para finalizar un proyecto, usá la pestaña Resultados y su revisión administrativa.</small>
                   </label>
                   <label>Fecha de inicio<input name="fechaInicio" type="date" required defaultValue={proyecto?.fechaInicio} /></label>
                   <label>Fecha de fin<input name="fechaFin" type="date" defaultValue={proyecto?.fechaFin ?? ''} /></label>
@@ -459,7 +461,8 @@ function PaginaProyectos({
                       }}>
                       {proyectoAbierto === item.id ? 'Proyecto abierto' : 'Abrir proyecto'}
                     </button>
-                    {puedeGestionar && <button type="button" className="brigadas-accion" disabled={guardando}
+                    {puedeGestionar && item.estado !== 'FINALIZADO' &&
+                      <button type="button" className="brigadas-accion" disabled={guardando}
                       onClick={() => { setError(''); setMensaje(''); setFormulario(item); }}>
                       Editar
                     </button>}
@@ -486,6 +489,12 @@ function PaginaProyectos({
                 key={proyectoSeleccionado.id}
                 token={token}
                 proyectoId={proyectoSeleccionado.id}
+                estadoProyecto={proyectoSeleccionado.estado}
+                onCambioEstado={(accion) => {
+                  setProyectoAbierto(null);
+                  setFiltroProyectos(accion === 'finalizado' ? 'finalizados' : 'activos');
+                  setRecarga((n) => n + 1);
+                }}
                 usuarioEmail={usuarioEmail}
                 presupuestoProyecto={Number(proyectoSeleccionado.presupuesto)}
                 moneda={datos.moneda}
