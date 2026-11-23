@@ -13,7 +13,7 @@ import { documentosFamiliaRouter } from './routes/documentos-familia.routes.js';
 import { perfilesFamiliaRouter } from './routes/perfiles-familia.routes.js';
 import { integrantesFamiliaRouter } from './routes/integrantes-familia.routes.js';
 import { dashboardRouter } from './routes/dashboard.routes.js';
-import { donantesRouter } from './routes/donantes.routes.js';
+import { donantesRouter } from './modules/donantes/donantes.routes.js';
 import { zonasRouter } from './routes/zonas.routes.js';
 import { usuariosRouter } from './routes/usuarios.routes.js';
 import { auditoriaRouter } from './routes/auditoria.routes.js';
