@@ -232,6 +232,141 @@ proyectosRouter.get('/', async (req, res) => {
   }
 });
 
+// Brigadas y recursos: las asociaciones existentes se reutilizan; los aportes no
+// modifican el progreso físico de las actividades.
+proyectosRouter.get('/:proyectoId/brigadas-recursos', requirePermission('proyectos.gestionar'), async (req, res) => {
+  const { proyectoId } = req.params;
+  if (!esUuid(proyectoId)) { res.status(400).json({ message: 'Seleccioná un proyecto válido.' }); return; }
+  try {
+    if (!databasePool) throw new Error('Base de datos no disponible');
+    const proyecto = await databasePool.query(
+      `SELECT 1 FROM proyectos p JOIN comunidades c ON c.id = p.comunidad_id
+       WHERE p.id = $1 AND c.organizacion_id = $2`,
+      [proyectoId, req.auth!.organizacionId],
+    );
+    if (!proyecto.rowCount) { res.status(404).json({ message: 'Proyecto no disponible.' }); return; }
+    const { rows } = await databasePool.query(
+      `SELECT b.id, d.nombre AS donante, b.lider, b.miembros,
+         (bp.proyecto_id IS NOT NULL) AS vinculada,
+         COALESCE(r.monto_comprometido, 0)::double precision AS "montoComprometido",
+         COALESCE(r.monto_recibido, 0)::double precision AS "montoRecibido",
+         COALESCE(r.voluntarios_previstos, b.miembros) AS "voluntariosPrevistos",
+         r.materiales_comprometidos AS "materialesComprometidos",
+         r.materiales_entregados AS "materialesEntregados",
+         r.observaciones,
+         COALESCE(ARRAY(
+           SELECT ba.actividad_id FROM brigadas_actividades_proyecto ba
+           JOIN actividades_programadas a ON a.id = ba.actividad_id AND a.proyecto_id = $1
+           WHERE ba.brigada_id = b.id AND ba.proyecto_id = $1
+           ORDER BY a.nombre
+         ), ARRAY[]::uuid[]) AS "actividadIds"
+       FROM brigadas_donantes b
+       JOIN donantes d ON d.id = b.donante_id
+       LEFT JOIN brigadas_donantes_proyectos bp ON bp.brigada_id = b.id AND bp.proyecto_id = $1
+       LEFT JOIN brigadas_recursos_proyecto r ON r.brigada_id = b.id AND r.proyecto_id = $1
+       WHERE d.organizacion_id = $2 AND b.activo AND d.activo
+       ORDER BY (bp.proyecto_id IS NOT NULL) DESC, d.nombre, b.lider, b.id`,
+      [proyectoId, req.auth!.organizacionId],
+    );
+    res.json({ brigadas: rows });
+  } catch (error) {
+    console.error('Error consultando brigadas y recursos:', error);
+    res.status(500).json({ message: 'No fue posible consultar las brigadas y sus recursos. Revisá si está aplicada la migración 021.' });
+  }
+});
+
+proyectosRouter.put('/:proyectoId/brigadas-recursos/:brigadaId', requirePermission('proyectos.gestionar'), async (req, res) => {
+  const { proyectoId, brigadaId } = req.params;
+  const body = req.body ?? {};
+  const { vinculada, actividadIds, materialesComprometidos, materialesEntregados, observaciones } = body;
+  const montoComprometido = body.montoComprometido;
+  const montoRecibido = body.montoRecibido;
+  const voluntariosPrevistos = body.voluntariosPrevistos;
+  const textoValido = (valor: unknown) => valor === null || (typeof valor === 'string' && valor.length <= 3000);
+  if (!esUuid(proyectoId) || !esUuid(brigadaId) || typeof vinculada !== 'boolean' ||
+      !Array.isArray(actividadIds) || !actividadIds.every(esUuid) ||
+      new Set(actividadIds).size !== actividadIds.length ||
+      ![materialesComprometidos, materialesEntregados, observaciones].every(textoValido) ||
+      typeof montoComprometido !== 'number' || !Number.isFinite(montoComprometido) || montoComprometido < 0 ||
+      Math.round(montoComprometido * 100) !== montoComprometido * 100 ||
+      typeof montoRecibido !== 'number' || !Number.isFinite(montoRecibido) ||
+      montoRecibido < 0 || montoRecibido > montoComprometido ||
+      Math.round(montoRecibido * 100) !== montoRecibido * 100 ||
+      !Number.isInteger(voluntariosPrevistos) || voluntariosPrevistos < 0) {
+    res.status(400).json({ message: 'Revisá brigada, actividades y cantidades. Lo recibido no puede superar lo comprometido.' });
+    return;
+  }
+  if (!databasePool) { res.status(503).json({ message: 'Base de datos no disponible.' }); return; }
+  const cliente = await databasePool.connect();
+  try {
+    await cliente.query('BEGIN');
+    const { rows } = await cliente.query(
+      `SELECT b.id FROM brigadas_donantes b
+       JOIN donantes d ON d.id = b.donante_id
+       JOIN proyectos p ON p.id = $2
+       JOIN comunidades c ON c.id = p.comunidad_id
+       WHERE b.id = $1 AND b.activo AND d.activo
+         AND d.organizacion_id = $3 AND c.organizacion_id = $3`,
+      [brigadaId, proyectoId, req.auth!.organizacionId],
+    );
+    if (!rows.length) {
+      await cliente.query('ROLLBACK');
+      res.status(404).json({ message: 'Brigada o proyecto no disponibles en tu organización.' }); return;
+    }
+    const actividades = await cliente.query(
+      `SELECT id FROM actividades_programadas
+       WHERE proyecto_id = $1 AND id = ANY($2::uuid[])`,
+      [proyectoId, actividadIds],
+    );
+    if (!vinculada && actividadIds.length) {
+      await cliente.query('ROLLBACK');
+      res.status(400).json({ message: 'No es posible asignar actividades sin vincular la brigada.' }); return;
+    }
+    if (actividades.rowCount !== actividadIds.length) {
+      await cliente.query('ROLLBACK');
+      res.status(400).json({ message: 'Una actividad no corresponde a este proyecto.' }); return;
+    }
+    if (vinculada) {
+      await cliente.query(
+        `INSERT INTO brigadas_donantes_proyectos (brigada_id, proyecto_id)
+         VALUES ($1, $2) ON CONFLICT DO NOTHING`, [brigadaId, proyectoId],
+      );
+      await cliente.query(
+        `INSERT INTO brigadas_recursos_proyecto
+           (brigada_id, proyecto_id, monto_comprometido, monto_recibido,
+            voluntarios_previstos, materiales_comprometidos, materiales_entregados, observaciones)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+         ON CONFLICT (brigada_id, proyecto_id) DO UPDATE SET
+           monto_comprometido = EXCLUDED.monto_comprometido,
+           monto_recibido = EXCLUDED.monto_recibido,
+           voluntarios_previstos = EXCLUDED.voluntarios_previstos,
+           materiales_comprometidos = EXCLUDED.materiales_comprometidos,
+           materiales_entregados = EXCLUDED.materiales_entregados,
+           observaciones = EXCLUDED.observaciones, actualizado_en = NOW()`,
+        [brigadaId, proyectoId, montoComprometido, montoRecibido, voluntariosPrevistos,
+          materialesComprometidos ?? null, materialesEntregados ?? null, observaciones ?? null],
+      );
+      await cliente.query('DELETE FROM brigadas_actividades_proyecto WHERE brigada_id = $1 AND proyecto_id = $2',
+        [brigadaId, proyectoId]);
+      await cliente.query(
+        `INSERT INTO brigadas_actividades_proyecto (brigada_id, proyecto_id, actividad_id)
+         SELECT $1, $2, unnest($3::uuid[])`, [brigadaId, proyectoId, actividadIds],
+      );
+    } else {
+      await cliente.query('DELETE FROM brigadas_donantes_proyectos WHERE brigada_id = $1 AND proyecto_id = $2',
+        [brigadaId, proyectoId]);
+    }
+    await cliente.query('COMMIT');
+    res.sendStatus(204);
+  } catch (error) {
+    await cliente.query('ROLLBACK');
+    console.error('Error actualizando brigada de proyecto:', error);
+    res.status(500).json({ message: 'No fue posible actualizar la brigada y sus recursos.' });
+  } finally {
+    cliente.release();
+  }
+});
+
 const guardarProyecto: RequestHandler = async (req, res) => {
   const { id } = req.params;
   const { comunidadId, estado, fechaInicio } = req.body ?? {};
