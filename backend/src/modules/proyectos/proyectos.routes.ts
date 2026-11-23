@@ -2,9 +2,10 @@ import { randomUUID } from 'node:crypto';
 import { Router, raw, type RequestHandler } from 'express';
 import { firmarObjetoR2, r2Disponible, verificarObjetoR2, cargarObjetoR2, leerObjetoR2, diagnosticarErrorR2 } from '../../services/r2-evidencias.service.js';
 import { databasePool } from '../../config/database.js';
-import { consultarAccesoEvidenciaAvance, consultarIndiceEvidencias, consultarCatalogoProyectos, consultarResponsablesProyecto, consultarAvancesPendientes, consultarMetaActividad, consultarEvidenciasAvance, consultarClaveEvidencia, guardarActividadEnRepositorio, existeProyectoEnOrganizacion, consultarSaldoActividad, guardarProyectoEnRepositorio, registrarEvidenciaEnRepositorio, consultarLimiteDeValidacion } from './proyectos.repository.js';
+import { consultarAccesoEvidenciaAvance, consultarIndiceEvidencias, consultarResponsablesProyecto, consultarMetaActividad, consultarEvidenciasAvance, consultarClaveEvidencia, guardarActividadEnRepositorio, existeProyectoEnOrganizacion, consultarSaldoActividad, guardarProyectoEnRepositorio, registrarEvidenciaEnRepositorio, consultarLimiteDeValidacion } from './proyectos.repository.js';
 import { listarBrigadasRecursos, guardarRecursosBrigada } from './brigadas-recursos.repository.js';
 import { obtenerEstadoCierre, confirmarFinalizacionProyecto, confirmarReaperturaProyecto } from './cierre-proyecto.controller.js';
+import { listarCatalogoProyectos, listarAvancesPendientesRevision } from './consultas-proyectos.controller.js';
 import { areasNecesidad } from '../../domain/necesidades.js';
 import { esUuid } from '../../domain/expediente.js';
 import { esFecha } from '../../domain/fecha.js';
@@ -211,28 +212,10 @@ proyectosRouter.post(rutaEvidencias + '/confirmar', requirePermission('evidencia
   }
 });
 
-// Bandeja centralizada: solo avances enviados de proyectos de la organización activa.
-proyectosRouter.get('/revision/pendientes', requirePermission('actividades.avance.revisar'), async (req, res) => {
-  try {
-    if (!databasePool) throw new Error('Base de datos no disponible');
-    const rows = await consultarAvancesPendientes(databasePool, req.auth!.organizacionId, req.auth!.sub);
-    res.json({ pendientes: rows });
-  } catch (error) {
-    console.error('Error consultando avances pendientes:', error);
-    res.status(500).json({ message: 'No fue posible consultar los avances pendientes.' });
-  }
-});
-
-proyectosRouter.get('/', async (req, res) => {
-  try {
-    if (!databasePool) throw new Error('Base de datos no disponible');
-    const catalogo = await consultarCatalogoProyectos(databasePool, req.auth!.organizacionId);
-    res.json(catalogo);
-  } catch (error) {
-    console.error('Error consultando proyectos:', error);
-    res.status(500).json({ message: 'No fue posible consultar los proyectos.' });
-  }
-});
+// Las rutas de consulta conservan permisos y contrato JSON original.
+proyectosRouter.get('/revision/pendientes', requirePermission('actividades.avance.revisar'),
+  listarAvancesPendientesRevision);
+proyectosRouter.get('/', listarCatalogoProyectos);
 
 // Brigadas y recursos: las asociaciones existentes se reutilizan; los aportes no
 // modifican el progreso físico de las actividades.
