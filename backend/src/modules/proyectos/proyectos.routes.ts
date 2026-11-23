@@ -593,6 +593,36 @@ export function crearRouterActividades(pool: typeof databasePool = databasePool)
             req.auth!.roles.some((rol) => rol === 'ADMINISTRADOR' || rol === 'COORDINADOR'),
           );
           if (!actualizado) {
+            if (accion === 'validar') {
+              const { rows: limites } = await pool.query<{
+                meta: number; total: number; unidad: string | null;
+              }>(
+                `SELECT a.meta_cantidad::float AS meta,
+                   (COALESCE((SELECT SUM(previo.cantidad_reportada)
+                     FROM avances_proyecto previo
+                     WHERE previo.actividad_id = a.id
+                       AND previo.proyecto_id = p.id AND previo.id <> av.id
+                       AND previo.estado_revision = 'VALIDADO'), 0)
+                    + COALESCE(av.cantidad_reportada, 0))::float AS total,
+                   a.unidad_medida AS unidad
+                 FROM avances_proyecto av
+                 JOIN actividades_programadas a ON a.id = av.actividad_id
+                   AND a.proyecto_id = av.proyecto_id
+                 JOIN proyectos p ON p.id = a.proyecto_id
+                 JOIN comunidades c ON c.id = p.comunidad_id
+                 WHERE av.id = $1 AND av.actividad_id = $2 AND av.proyecto_id = $3
+                   AND c.organizacion_id = $4 AND av.estado_revision = 'ENVIADO'
+                   AND a.meta_cantidad IS NOT NULL`,
+                [avanceId, actividadId, proyectoId, req.auth!.organizacionId],
+              );
+              const limite = limites[0];
+              if (limite && limite.total > limite.meta) {
+                res.status(409).json({
+                  message: `No se puede validar: el total reportado (${limite.total} ${limite.unidad ?? 'unidades'}) supera la meta planificada (${limite.meta}). Corregí la planificación o devolvé el avance.`,
+                });
+                return;
+              }
+            }
             res.status(409).json({ message: 'El avance no está disponible para esta revisión o no tenés autorización para revisarlo.' });
             return;
           }
