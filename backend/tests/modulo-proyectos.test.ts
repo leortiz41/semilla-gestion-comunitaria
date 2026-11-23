@@ -35,3 +35,21 @@ test('Módulo Proyectos: rutas y servicios de avances no contienen consultas SQL
     assert.equal(contenido.includes('.query('), false, nombre);
   }
 });
+
+test('ADR-006: rutas de cierre delegan a controladores y servicio no depende de Express', () => {
+  const directorio = '../src/modules/proyectos/';
+  const rutas = readFileSync(new URL(directorio + 'proyectos.routes.ts', import.meta.url), 'utf8');
+  const controlador = readFileSync(new URL(directorio + 'cierre-proyecto.controller.ts', import.meta.url), 'utf8');
+  const servicio = readFileSync(new URL(directorio + 'cierre-proyecto.service.ts', import.meta.url), 'utf8');
+  const repositorio = readFileSync(new URL(directorio + 'cierre-proyecto.repository.ts', import.meta.url), 'utf8');
+
+  assert.match(rutas, /post\('\/:proyectoId\/finalizar',[\s\S]*?confirmarFinalizacionProyecto\)/);
+  assert.match(rutas, /post\('\/:proyectoId\/reabrir',[\s\S]*?confirmarReaperturaProyecto\)/);
+  assert.equal(rutas.includes('.query('), false);
+  assert.equal(controlador.includes('.query('), false);
+  assert.equal(controlador.includes('cierre-proyecto.repository'), false);
+  assert.equal(servicio.includes('express'), false);
+  assert.equal(servicio.includes('.query('), false);
+  assert.match(repositorio, /FINALIZAR_PROYECTO/);
+  assert.match(repositorio, /REABRIR_PROYECTO/);
+});
