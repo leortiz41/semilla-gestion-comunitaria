@@ -8,6 +8,7 @@ import { PGlite } from '@electric-sql/pglite';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { validarAvanceActividad } from '../src/domain/avances-actividad.js';
+import { listarActividadesProyecto } from '../src/modules/proyectos/avances-actividad.service.js';
 import { crearRouterActividades } from '../src/routes/proyectos.routes.js';
 import { crearAutenticacion, requirePermission } from '../src/middleware/auth.middleware.js';
 import { createAccessToken } from '../src/security/token.js';
@@ -40,6 +41,29 @@ async function aplicarMigracion(db: PGlite, nombre: string) {
   )).replaceAll('CREATE EXTENSION IF NOT EXISTS pgcrypto;', '');
   await db.exec(sql);
 }
+
+test('avance general automático con una o varias actividades sin ponderación', async () => {
+  const crearPool = (actividades: Array<{ porcentajeResultado: number; pesoResultado: number | null }>) => ({
+    query: async () => ({ rows: [{ actividades }] }),
+  });
+  const consultar = (actividades: Array<{ porcentajeResultado: number; pesoResultado: number | null }>) =>
+    listarActividadesProyecto(crearPool(actividades) as unknown as Pool, randomUUID(), randomUUID());
+
+  assert.equal((await consultar([{ porcentajeResultado: 15, pesoResultado: null }]))?.porcentajeProyecto, 15);
+  assert.equal((await consultar([
+    { porcentajeResultado: 30, pesoResultado: null },
+    { porcentajeResultado: 70, pesoResultado: null },
+  ]))?.porcentajeProyecto, 50);
+  assert.equal((await consultar([
+    { porcentajeResultado: 30, pesoResultado: 25 },
+    { porcentajeResultado: 70, pesoResultado: 75 },
+  ]))?.porcentajeProyecto, 60);
+  assert.equal((await consultar([
+    { porcentajeResultado: 30, pesoResultado: 25 },
+    { porcentajeResultado: 70, pesoResultado: null },
+  ]))?.porcentajeProyecto, null);
+  assert.equal((await consultar([]))?.porcentajeProyecto, null);
+});
 
 test('validarAvanceActividad valida avances cuantitativos y estimaciones justificadas', () => {
   const estimacion = {
