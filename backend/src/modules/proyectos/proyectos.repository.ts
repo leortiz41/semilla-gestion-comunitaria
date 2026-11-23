@@ -281,7 +281,7 @@ export async function guardarProyectoEnRepositorio(
         `UPDATE proyectos p SET nombre = $3, tipo = $4, estado = $5,
            fecha_inicio = $6, fecha_fin = $7, descripcion = $8, presupuesto_asignado = COALESCE($9, p.presupuesto_asignado), actualizado_en = NOW()
          FROM comunidades c
-         WHERE p.id = $10 AND ($11::boolean OR p.tipo = $4) AND p.comunidad_id = c.id AND c.id = $1 AND c.organizacion_id = $2
+         WHERE p.id = $10 AND ($11::boolean OR p.tipo = $4) AND p.comunidad_id = c.id AND c.id = $1 AND c.organizacion_id = $2 AND p.estado <> 'FINALIZADO'
          RETURNING p.id`,
         [...parametros, id, tipoDeDiagnostico],
       )
