@@ -498,10 +498,11 @@ function PaginaProyectos({
                 usuarioEmail={usuarioEmail}
                 presupuestoProyecto={Number(proyectoSeleccionado.presupuesto)}
                 moneda={datos.moneda}
-                puedeGestionar={puedeGestionar}
-                puedeRegistrarAvance={puedeRegistrarAvance}
-                puedeRevisarAvance={puedeRevisarAvance}
-                puedeCorregirAvance={puedeCorregirAvance}
+                puedeGestionar={puedeGestionar && proyectoSeleccionado.estado !== 'FINALIZADO'}
+                puedeAdministrarCierre={puedeGestionar}
+                puedeRegistrarAvance={puedeRegistrarAvance && proyectoSeleccionado.estado !== 'FINALIZADO'}
+                puedeRevisarAvance={puedeRevisarAvance && proyectoSeleccionado.estado !== 'FINALIZADO'}
+                puedeCorregirAvance={puedeCorregirAvance && proyectoSeleccionado.estado !== 'FINALIZADO'}
               />
             </section>
           )}
