@@ -359,7 +359,7 @@ proyectosRouter.get('/:proyectoId/cierre', async (req, res) => {
     if (!databasePool) throw new Error('Base de datos no disponible');
     const estado = await consultarCierreProyecto(databasePool, proyectoId, req.auth!.organizacionId);
     if (!estado) { res.status(404).json({ message: 'Proyecto no encontrado.' }); return; }
-    res.json(estado);
+    res.json({ ...estado, puedeReabrir: req.auth!.roles.includes('ADMINISTRADOR') });
   } catch (error) {
     console.error('Error consultando cierre:', error);
     res.status(500).json({ message: 'No fue posible consultar el cierre del proyecto.' });
