@@ -111,8 +111,25 @@ export async function insertarAvance(pool: Consultable, proyectoId: string, acti
        JOIN comunidades c ON c.id = p.comunidad_id
        JOIN usuarios u ON u.id = $4 AND u.organizacion_id = c.organizacion_id AND u.activo
        WHERE a.id = $2 AND a.proyecto_id = $1 AND c.organizacion_id = $3
-         AND ((a.meta_cantidad IS NOT NULL AND $5::numeric IS NULL AND $6::numeric IS NOT NULL)
-           OR (a.meta_cantidad IS NULL AND $5::numeric IS NOT NULL AND $6::numeric IS NULL))
+         AND p.estado NOT IN ('FINALIZADO', 'CANCELADO')
+         AND a.estado NOT IN ('COMPLETADA', 'CANCELADA')
+         AND (
+           (a.meta_cantidad IS NOT NULL AND $5::numeric IS NULL AND $6::numeric IS NOT NULL
+             AND COALESCE((
+               SELECT SUM(previo.cantidad_reportada)
+               FROM avances_proyecto previo
+               WHERE previo.actividad_id = a.id AND previo.proyecto_id = p.id
+                 AND previo.estado_revision = 'VALIDADO'
+             ), 0) < a.meta_cantidad)
+           OR (a.meta_cantidad IS NULL AND $5::numeric IS NOT NULL AND $6::numeric IS NULL
+             AND COALESCE((
+               SELECT previo.porcentaje_avance FROM avances_proyecto previo
+               WHERE previo.actividad_id = a.id AND previo.proyecto_id = p.id
+                 AND previo.estado_revision = 'VALIDADO' AND previo.porcentaje_avance IS NOT NULL
+               ORDER BY previo.revisado_en DESC, previo.creado_en DESC, previo.id DESC
+               LIMIT 1
+             ), 0) < 100)
+         )
      ), nuevo AS (
        INSERT INTO avances_proyecto (
          proyecto_id, actividad_id, responsable_usuario_id, clave_idempotencia,
