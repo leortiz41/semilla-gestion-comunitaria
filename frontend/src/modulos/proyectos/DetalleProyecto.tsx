@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import FotografiasAvance from './FotografiasAvance';
+import BrigadasRecursosProyecto from './BrigadasRecursosProyecto';
 import '../../estilos/modulos/proyectos/ejecucion.css';
 import {
   corregirAvanceValidadoProyecto,
@@ -70,7 +71,7 @@ export default function DetalleProyecto({
   const [porcentajeProyecto, setPorcentajeProyecto] = useState<number | null>(null);
   const [pesoConfigurado, setPesoConfigurado] = useState(0);
   const [responsables, setResponsables] = useState<{ id: string; nombre: string }[]>([]);
-  const [vista, setVista] = useState<'resumen' | 'planificacion' | 'ejecucion' | 'resultados'>('resumen');
+  const [vista, setVista] = useState<'resumen' | 'planificacion' | 'brigadas' | 'ejecucion' | 'resultados'>('resumen');
   const [formularioActividad, setFormularioActividad] = useState<ActividadProyecto | 'nueva' | null>(null);
   const [avanceFormulario, setAvanceFormulario] = useState<{ actividad: ActividadProyecto; avance?: AvanceActividadProyecto; corregir?: boolean } | null>(null);
   const [devolucion, setDevolucion] = useState<{ actividad: ActividadProyecto; avance: AvanceActividadProyecto } | null>(null);
@@ -625,6 +626,7 @@ export default function DetalleProyecto({
             {([
               ['resumen', 'Resumen'],
               ['planificacion', 'Planificación'],
+              ...(puedeGestionar ? [['brigadas', 'Brigadas y recursos'] as const] : []),
               ['ejecucion', 'Ejecución'],
               ['resultados', 'Resultados'],
             ] as const).map(([id, etiqueta]) => (
@@ -685,6 +687,10 @@ export default function DetalleProyecto({
                   {actividades.map((actividad) => tarjetaActividad(actividad, 'planificacion'))}
                 </div>
               </>
+            )}
+            {vista === 'brigadas' && puedeGestionar && (
+              <BrigadasRecursosProyecto token={token} proyectoId={proyectoId}
+                actividades={actividades} moneda={moneda} puedeGestionar={puedeGestionar} />
             )}
             {vista === 'ejecucion' && (
               <>
