@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import '../../estilos/modulos/proyectos/brigadas-recursos.css';
 import {
   guardarBrigadaRecursoProyecto, obtenerBrigadasRecursosProyecto,
   type ActividadProyecto, type BrigadaRecursoProyecto, type DatosBrigadaRecursoProyecto,
@@ -129,9 +130,9 @@ export default function BrigadasRecursosProyecto({ token, proyectoId, actividade
             <div><span>Dinero recibido</span><strong>{formatear(totalRecibido)} {moneda}</strong></div>
             <div><span>Pendiente de recibir</span><strong>{formatear(totalComprometido - totalRecibido)} {moneda}</strong></div>
           </div>
-          <div className="proyecto-detalle__lista">
+          <div className="proyecto-detalle__lista proyecto-brigadas-recursos__lista">
             {vinculadas.map((brigada) => (
-              <article key={brigada.id} className="brigadas-tarjeta">
+              <article key={brigada.id} className="brigadas-tarjeta proyecto-brigadas-recursos__tarjeta">
                 <h4>{brigada.donante}</h4>
                 <p>Líder: {brigada.lider} · {brigada.voluntariosPrevistos} voluntarios previstos</p>
                 <p>Comprometido: {formatear(brigada.montoComprometido)} {moneda} · Recibido: {formatear(brigada.montoRecibido)} {moneda}</p>
@@ -151,11 +152,11 @@ export default function BrigadasRecursosProyecto({ token, proyectoId, actividade
             {!vinculadas.length && <p>No hay brigadas vinculadas a este proyecto.</p>}
           </div>
           {puedeGestionar && (
-            <form className="actividad-plan-form" onSubmit={(evento) => void guardar(evento)}>
+            <form className="actividad-plan-form proyecto-brigadas-recursos__formulario" onSubmit={(evento) => void guardar(evento)}>
               <fieldset disabled={guardando}>
                 <legend>{seleccionada && brigadas.find((b) => b.id === seleccionada)?.vinculada ? 'Actualizar brigada' : 'Vincular nueva brigada'}</legend>
-                <div className="donantes-campos">
-                  <label>Seleccioná una brigada registrada
+                <div className="proyecto-brigadas-recursos__campos">
+                  <label className="proyecto-brigadas-recursos__campo proyecto-brigadas-recursos__campo--completo">Seleccioná una brigada registrada
                     <select value={seleccionada} required onChange={(evento) => seleccionar(evento.target.value)}>
                       <option value="">Elegir brigada…</option>
                       {brigadas.map((brigada) => (
@@ -164,35 +165,35 @@ export default function BrigadasRecursosProyecto({ token, proyectoId, actividade
                     </select>
                     <small>Las brigadas se crean una sola vez en Donantes y pueden participar en varios proyectos.</small>
                   </label>
-                  <label>Dinero comprometido ({moneda})
+                  <label className="proyecto-brigadas-recursos__campo">Dinero comprometido ({moneda})
                     <input type="number" min="0" step="0.01" value={datos.montoComprometido}
                       onChange={(evento) => setDatos((actual) => ({ ...actual, montoComprometido: Number(evento.target.value) }))} />
                   </label>
-                  <label>Dinero recibido ({moneda})
+                  <label className="proyecto-brigadas-recursos__campo">Dinero recibido ({moneda})
                     <input type="number" min="0" step="0.01" max={datos.montoComprometido} value={datos.montoRecibido}
                       onChange={(evento) => setDatos((actual) => ({ ...actual, montoRecibido: Number(evento.target.value) }))} />
                     <small>Registrá únicamente el dinero efectivamente entregado.</small>
                   </label>
-                  <label>Voluntarios previstos
+                  <label className="proyecto-brigadas-recursos__campo">Voluntarios previstos
                     <input type="number" min="0" step="1" value={datos.voluntariosPrevistos}
                       onChange={(evento) => setDatos((actual) => ({ ...actual, voluntariosPrevistos: Number(evento.target.value) }))} />
                   </label>
-                  <label>Materiales comprometidos
+                  <label className="proyecto-brigadas-recursos__campo">Materiales comprometidos
                     <textarea maxLength={3000} value={datos.materialesComprometidos ?? ''}
                       onChange={(evento) => setDatos((actual) => ({ ...actual, materialesComprometidos: evento.target.value || null }))}
                       placeholder="Ej. 100 bolsas de cemento, 20 láminas" />
                   </label>
-                  <label>Materiales entregados
+                  <label className="proyecto-brigadas-recursos__campo">Materiales entregados
                     <textarea maxLength={3000} value={datos.materialesEntregados ?? ''}
                       onChange={(evento) => setDatos((actual) => ({ ...actual, materialesEntregados: evento.target.value || null }))}
                       placeholder="Ej. 60 bolsas de cemento recibidas" />
                   </label>
                 </div>
-                <section className="actividad-plan-form__grupo">
+                <section className="actividad-plan-form__grupo proyecto-brigadas-recursos__actividades">
                   <h4>Actividades que apoyará</h4>
                   <p>Dejá todas sin seleccionar si la brigada brindará apoyo general al proyecto.</p>
                   {actividades.map((actividad) => (
-                    <label key={actividad.id} className="actividad-plan-form__descripcion">
+                    <label key={actividad.id} className="proyecto-brigadas-recursos__actividad">
                       <input type="checkbox" checked={datos.actividadIds.includes(actividad.id)}
                         onChange={(evento) => setDatos((actual) => ({
                           ...actual,
@@ -204,11 +205,11 @@ export default function BrigadasRecursosProyecto({ token, proyectoId, actividade
                     </label>
                   ))}
                 </section>
-                <label>Observaciones
+                <label className="proyecto-brigadas-recursos__campo proyecto-brigadas-recursos__observaciones">Observaciones
                   <textarea maxLength={3000} value={datos.observaciones ?? ''}
                     onChange={(evento) => setDatos((actual) => ({ ...actual, observaciones: evento.target.value || null }))} />
                 </label>
-                <div className="actividad-plan-form__acciones">
+                <div className="actividad-plan-form__acciones proyecto-brigadas-recursos__acciones">
                   <button type="submit" disabled={!seleccionada || guardando}>{guardando ? 'Guardando…' : 'Guardar brigada y recursos'}</button>
                   {seleccionada && <button type="button" className="brigadas-accion" onClick={() => setSeleccionada('')}>Cancelar</button>}
                 </div>
