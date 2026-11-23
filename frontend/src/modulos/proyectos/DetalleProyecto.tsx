@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import FotografiasAvance from './FotografiasAvance';
 import BrigadasRecursosProyecto from './BrigadasRecursosProyecto';
+import CierreProyecto from './CierreProyecto';
 import '../../estilos/modulos/proyectos/ejecucion.css';
 import {
   corregirAvanceValidadoProyecto,
@@ -49,6 +50,8 @@ const nuevaClaveIdempotencia = () => globalThis.crypto.randomUUID();
 export default function DetalleProyecto({
   token,
   proyectoId,
+  estadoProyecto,
+  onCambioEstado,
   usuarioEmail,
   presupuestoProyecto,
   moneda,
@@ -59,6 +62,8 @@ export default function DetalleProyecto({
 }: {
   token: string;
   proyectoId: string;
+  estadoProyecto: string;
+  onCambioEstado: (accion: 'finalizado' | 'reabierto') => void;
   usuarioEmail: string;
   presupuestoProyecto: number;
   moneda: string;
@@ -759,6 +764,9 @@ export default function DetalleProyecto({
                     </article>
                   ))}
                 </div>
+                <CierreProyecto token={token} proyectoId={proyectoId}
+                  estado={estadoProyecto} puedeGestionar={puedeGestionar}
+                  onCambio={onCambioEstado} />
               </>
             )}
           </section>
