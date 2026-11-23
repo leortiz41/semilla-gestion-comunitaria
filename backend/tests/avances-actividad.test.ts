@@ -387,6 +387,20 @@ test('HU-12: conserva avances legados y audita estados, permisos, resultados e a
     await crearCantidad(4);
     await crearCantidad(3);
 
+    // No se permite aprobar más unidades que las definidas en la meta.
+    const avanceExcedenteResponse = await crearAvance(actividadCuantificable, tokenCampo, {
+      porcentajeAvance: null,
+      cantidadReportada: 4,
+      fecha: '2026-11-09',
+      descripcion: 'Cuatro hogares adicionales.',
+      observaciones: null,
+      claveIdempotencia: randomUUID(),
+    });
+    assert.equal(avanceExcedenteResponse.status, 201);
+    const avanceExcedente = await avanceExcedenteResponse.json() as { id: string };
+    assert.equal((await enviar(actividadCuantificable, avanceExcedente.id)).status, 204);
+    assert.equal((await revisar(actividadCuantificable, avanceExcedente.id, 'validar', tokenRevisor)).status, 409);
+
     const consultaPersistida = await consultar();
     const persistida = await consultaPersistida.json() as {
       actividades: {
