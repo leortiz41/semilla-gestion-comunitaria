@@ -422,7 +422,7 @@ export function crearRouterActividades(pool: typeof databasePool = databasePool)
           datos,
         );
         if (!avance) {
-          res.status(409).json({ message: 'La clave de envío ya fue utilizada; actualizá el historial antes de reintentar.' });
+          res.status(409).json({ message: 'No se pudo crear el avance. Es posible que la meta ya esté alcanzada, que la actividad esté cerrada o que el envío se haya registrado anteriormente. Actualizá la ejecución y revisá el historial antes de reintentar.' });
           return;
         }
         res.status(201).json(avance);
