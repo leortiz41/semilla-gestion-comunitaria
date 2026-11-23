@@ -835,6 +835,8 @@ export async function subirFotoAvance(
 }
 
 export interface AvancePendienteRevision {
+  metaCantidad: number | null;
+  cantidadValidada: number;
   id: string;
   actividadId: string;
   proyectoId: string;
