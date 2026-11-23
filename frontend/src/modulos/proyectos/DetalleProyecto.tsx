@@ -411,7 +411,6 @@ export default function DetalleProyecto({
                 onClick={() => setPesoBorrador(String(Math.round(10000 / Math.max(1, (actividades?.length ?? 0) + (actividad ? 0 : 1))) / 100))}>
                 Sugerir reparto equitativo
               </button>
-            </div>
             <p className={Math.abs(pesoProyectado - 100) < 0.001 ? 'actividad-plan-form__balance actividad-plan-form__balance--completo' : 'actividad-plan-form__balance'}>
               Ponderación prevista del proyecto: <strong>{formatoCantidad(pesoProyectado)}%</strong> de 100%.
               {Math.abs(pesoProyectado - 100) >= 0.001 && ' Revisá los pesos antes de publicar indicadores globales.'}
