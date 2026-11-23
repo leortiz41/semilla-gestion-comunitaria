@@ -283,15 +283,14 @@ proyectosRouter.put('/:proyectoId/brigadas-recursos/:brigadaId', requirePermissi
   const montoRecibido = body.montoRecibido;
   const voluntariosPrevistos = body.voluntariosPrevistos;
   const textoValido = (valor: unknown) => valor === null || (typeof valor === 'string' && valor.length <= 3000);
+  const dineroValido = (valor: unknown) => typeof valor === 'number' && Number.isFinite(valor) &&
+    valor >= 0 && /^\\d{1,12}(?:\\.\\d{1,2})?$/.test(String(valor));
   if (!esUuid(proyectoId) || !esUuid(brigadaId) || typeof vinculada !== 'boolean' ||
       !Array.isArray(actividadIds) || !actividadIds.every(esUuid) ||
       new Set(actividadIds).size !== actividadIds.length ||
       ![materialesComprometidos, materialesEntregados, observaciones].every(textoValido) ||
-      typeof montoComprometido !== 'number' || !Number.isFinite(montoComprometido) || montoComprometido < 0 ||
-      Math.round(montoComprometido * 100) !== montoComprometido * 100 ||
-      typeof montoRecibido !== 'number' || !Number.isFinite(montoRecibido) ||
-      montoRecibido < 0 || montoRecibido > montoComprometido ||
-      Math.round(montoRecibido * 100) !== montoRecibido * 100 ||
+      !dineroValido(montoComprometido) || !dineroValido(montoRecibido) ||
+      montoRecibido > montoComprometido ||
       !Number.isInteger(voluntariosPrevistos) || voluntariosPrevistos < 0) {
     res.status(400).json({ message: 'Revisá brigada, actividades y cantidades. Lo recibido no puede superar lo comprometido.' });
     return;
@@ -353,6 +352,17 @@ proyectosRouter.put('/:proyectoId/brigadas-recursos/:brigadaId', requirePermissi
          SELECT $1, $2, unnest($3::uuid[])`, [brigadaId, proyectoId, actividadIds],
       );
     } else {
+      const entregas = await cliente.query(
+        `SELECT 1 FROM brigadas_recursos_proyecto
+         WHERE brigada_id = $1 AND proyecto_id = $2
+           AND (monto_recibido > 0 OR NULLIF(TRIM(materiales_entregados), '') IS NOT NULL)`,
+        [brigadaId, proyectoId],
+      );
+      if (entregas.rowCount) {
+        await cliente.query('ROLLBACK');
+        res.status(409).json({ message: 'La brigada tiene recursos entregados. Conservá su historial antes de desvincularla.' });
+        return;
+      }
       await cliente.query('DELETE FROM brigadas_donantes_proyectos WHERE brigada_id = $1 AND proyecto_id = $2',
         [brigadaId, proyectoId]);
     }
