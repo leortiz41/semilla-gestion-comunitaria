@@ -489,6 +489,8 @@ function PaginaProyectos({
                 key={proyectoSeleccionado.id}
                 token={token}
                 proyectoId={proyectoSeleccionado.id}
+                nombreProyecto={proyectoSeleccionado.nombre}
+                comunidadProyecto={proyectoSeleccionado.comunidad}
                 estadoProyecto={proyectoSeleccionado.estado}
                 onCambioEstado={(accion) => {
                   setProyectoAbierto(null);
