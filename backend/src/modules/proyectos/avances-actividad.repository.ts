@@ -186,7 +186,7 @@ export async function actualizarEstadoAvance(pool: Consultable, proyectoId: stri
        JOIN proyectos p ON p.id = a.proyecto_id
        JOIN comunidades c ON c.id = p.comunidad_id
        JOIN usuarios actor ON actor.id = $5 AND actor.organizacion_id = c.organizacion_id AND actor.activo
-       WHERE p.id = $1 AND a.id = $2 AND av.id = $3 AND c.organizacion_id = $4
+       WHERE p.id = $1 AND a.id = $2 AND av.id = $3 AND c.organizacion_id = $4 AND p.estado <> 'FINALIZADO'
          AND CASE
            WHEN $6 = 'ENVIAR' THEN av.estado_revision IN ('BORRADOR', 'DEVUELTO')
              AND av.responsable_usuario_id = $5
@@ -259,7 +259,7 @@ export async function modificarAvance(pool: Consultable, proyectoId: string, act
        JOIN proyectos p ON p.id = a.proyecto_id
        JOIN comunidades c ON c.id = p.comunidad_id
        JOIN usuarios actor ON actor.id = $5 AND actor.organizacion_id = c.organizacion_id AND actor.activo
-       WHERE p.id = $1 AND a.id = $2 AND av.id = $3 AND c.organizacion_id = $4
+       WHERE p.id = $1 AND a.id = $2 AND av.id = $3 AND c.organizacion_id = $4 AND p.estado <> 'FINALIZADO'
          AND ((NOT $11 AND av.estado_revision IN ('BORRADOR', 'DEVUELTO')
                AND av.responsable_usuario_id = $5)
            OR ($11 AND av.estado_revision = 'VALIDADO'))
