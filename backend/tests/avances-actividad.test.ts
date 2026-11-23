@@ -179,6 +179,7 @@ test('HU-12: conserva avances legados y audita estados, permisos, resultados e a
     await aplicarMigracion(db, '021_autorrevision_avances');
     await aplicarMigracion(db, '034_restricciones_permisos_usuarios_tenant');
     await aplicarMigracion(db, '035_permisos_roles_tenant');
+    await aplicarMigracion(db, '038_brigadas_recursos_proyecto');
 
     const legadoMigrado = (await db.query<{ estado_revision: string }>(
       'SELECT estado_revision FROM avances_proyecto WHERE id = $1',
@@ -193,6 +194,47 @@ test('HU-12: conserva avances legados y audita estados, permisos, resultados e a
     await db.query(
       'UPDATE actividades_programadas SET peso_resultado = 50 WHERE proyecto_id = $1',
       [proyecto],
+    );
+
+    // Brigadas: vínculos múltiples, recursos y aislamiento de actividades por proyecto.
+    const donantePrueba = (await db.query<{ id: string }>(
+      "INSERT INTO donantes (organizacion_id, nombre, correo) VALUES ($1, 'Brigada de prueba', 'prueba@semilla.test') RETURNING id",
+      [org],
+    )).rows[0].id;
+    const brigadaPrueba = (await db.query<{ id: string }>(
+      "INSERT INTO brigadas_donantes (donante_id, lider, miembros) VALUES ($1, 'Líder de prueba', 8) RETURNING id",
+      [donantePrueba],
+    )).rows[0].id;
+    await db.query(
+      "INSERT INTO brigadas_donantes_proyectos (brigada_id, proyecto_id) VALUES ($1,$2), ($1,$3)",
+      [brigadaPrueba, proyecto, otroProyecto],
+    );
+    await db.query(
+      `INSERT INTO brigadas_recursos_proyecto
+       (brigada_id, proyecto_id, monto_comprometido, monto_recibido, voluntarios_previstos)
+       VALUES ($1,$2,1000.50,400.25,8)`, [brigadaPrueba, proyecto],
+    );
+    await db.query(
+      "INSERT INTO brigadas_actividades_proyecto (brigada_id, proyecto_id, actividad_id) VALUES ($1,$2,$3)",
+      [brigadaPrueba, proyecto, actividad],
+    );
+    const recurso = (await db.query<{ monto_comprometido: string; monto_recibido: string }>(
+      "SELECT monto_comprometido, monto_recibido FROM brigadas_recursos_proyecto WHERE brigada_id=$1 AND proyecto_id=$2",
+      [brigadaPrueba, proyecto],
+    )).rows[0];
+    assert.equal(Number(recurso.monto_comprometido), 1000.5);
+    assert.equal(Number(recurso.monto_recibido), 400.25);
+    await assert.rejects(
+      db.query(
+        "INSERT INTO brigadas_actividades_proyecto (brigada_id, proyecto_id, actividad_id) VALUES ($1,$2,$3)",
+        [brigadaPrueba, proyecto, actividadOtroProyecto],
+      ),
+    );
+    await assert.rejects(
+      db.query(
+        `UPDATE brigadas_recursos_proyecto SET monto_recibido=1001
+         WHERE brigada_id=$1 AND proyecto_id=$2`, [brigadaPrueba, proyecto],
+      ),
     );
 
     const rolesConPermiso = (await db.query<{ nombre: string }>(
