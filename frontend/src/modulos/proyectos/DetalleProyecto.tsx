@@ -314,7 +314,7 @@ export default function DetalleProyecto({
       <form className="actividad-plan-form" key={actividad?.id ?? 'nueva'} onSubmit={guardarActividad} noValidate>
         <fieldset disabled={guardando}>
           <legend>{actividad ? 'Editar planificación' : 'Nueva actividad del proyecto'}</legend>
-          <p className="actividad-plan-form__intro">Definí el trabajo, la meta que se espera lograr y cómo contribuye al proyecto.</p>
+          <p className="actividad-plan-form__intro">Definí qué trabajo se realizará, quién lo hará y cuál es la meta a alcanzar. Semilla calcula el progreso con los avances validados.</p>
           {errorPlanificacion && <p className="actividad-plan-form__error" role="alert">{errorPlanificacion}</p>}
           <section className="actividad-plan-form__grupo" aria-labelledby="grupo-trabajo">
             <h4 id="grupo-trabajo">1. ¿Qué actividad vamos a realizar?</h4>
@@ -384,7 +384,7 @@ export default function DetalleProyecto({
             <small>Ejemplo: meta de 3 viviendas. El avance físico será la cantidad terminada y validada respecto a esas 3 viviendas.</small>
           </section>
           <section className="actividad-plan-form__grupo" aria-labelledby="grupo-recursos">
-            <h4 id="grupo-recursos">3. ¿Qué recursos y contribución tendrá?</h4>
+            <h4 id="grupo-recursos">3. ¿Qué presupuesto necesita esta actividad?</h4>
             <div className="donantes-campos">
               <label>Presupuesto estimado de la actividad ({moneda})
                 <input name="presupuestoEstimado" type="text" inputMode="decimal" value={presupuestoBorrador}
@@ -393,15 +393,15 @@ export default function DetalleProyecto({
                 {erroresCamposPlan.presupuestoEstimado && <small className="actividad-plan-form__campo-error">{erroresCamposPlan.presupuestoEstimado}</small>}
                 <small>Disponible para esta actividad: {formatoCantidad(presupuestoDisponible)} {moneda}.</small>
               </label>
-              <label>Contribución al avance global del proyecto (%)
+              <details className="actividad-plan-form__descripcion"><summary>Configuración avanzada: peso de esta actividad en los resultados</summary><label>Importancia relativa de la actividad (%)
                 <input name="pesoResultado" type="text" inputMode="decimal" value={pesoBorrador}
                   onChange={(evento) => setPesoBorrador(evento.target.value)}
                   aria-invalid={Boolean(erroresCamposPlan.pesoResultado)} placeholder="Ej. 75" />
                 {erroresCamposPlan.pesoResultado && <small className="actividad-plan-form__campo-error">{erroresCamposPlan.pesoResultado}</small>}
-                <small>Es la importancia relativa de la actividad, no el porcentaje ejecutado ni el dinero asignado.</small>
-              </label>
+                <small>No es un aporte de brigadas ni el porcentaje ejecutado. Déjalo vacío para el cálculo automático cuando ninguna actividad tenga pesos manuales.</small>
+              </label></details>
             </div>
-            <div className="actividad-plan-form__sugerencias">
+            <details className="actividad-plan-form__sugerencias"><summary>Opciones de ponderación manual (avanzado)</summary>
               <span>Ponderación manual asistida</span>
               <button type="button" className="brigadas-accion" onClick={() => setPesoBorrador(String(sugerenciaRestante))}>
                 Asignar porcentaje restante ({formatoCantidad(sugerenciaRestante)}%)
@@ -415,7 +415,7 @@ export default function DetalleProyecto({
               Ponderación prevista del proyecto: <strong>{formatoCantidad(pesoProyectado)}%</strong> de 100%.
               {Math.abs(pesoProyectado - 100) >= 0.001 && ' Revisá los pesos antes de publicar indicadores globales.'}
             </p>
-            <small>El backend actualmente normaliza los pesos entre actividades. Estas sugerencias no cambian otras actividades ni guardan automáticamente.</small>
+            <small>En proyectos con una sola actividad no se necesita ponderación. Si todas las actividades carecen de peso manual, Semilla reparte el avance por igual. Una configuración parcial queda pendiente.</small></details>
           </section>
           <div className="actividad-plan-form__acciones">
             <button type="submit" disabled={guardando}>{guardando ? 'Guardando…' : 'Guardar planificación'}</button>
@@ -498,7 +498,7 @@ export default function DetalleProyecto({
               <div><dt>Responsable</dt><dd>{actividad.responsableAsignado ?? 'Sin asignar'}</dd></div>
               <div><dt>Meta</dt><dd>{actividad.metaCantidad === null ? 'No cuantificable' : `${actividad.metaCantidad} ${actividad.unidadMedida}`}</dd></div>
               <div><dt>Recursos</dt><dd>{actividad.presupuestoEstimado === null ? 'Sin asignación' : `${actividad.presupuestoEstimado.toLocaleString('es-HN')} ${moneda}`}</dd></div>
-              <div><dt>Contribución</dt><dd>{actividad.pesoResultado === null ? 'Pendiente' : `${actividad.pesoResultado}%`}</dd></div>
+              {actividad.pesoResultado !== null && <div><dt>Peso de resultados (avanzado)</dt><dd>{actividad.pesoResultado}%</dd></div>}
             </dl>
             {puedeGestionar && !formularioActividad && (
               <button type="button" className="brigadas-accion" onClick={() => abrirPlanificacion(actividad)}>
@@ -654,7 +654,7 @@ export default function DetalleProyecto({
                 </div>
                 {porcentajeProyecto !== null && porcentajeProyecto >= 100 && (
                   <p className="proyecto-resumen__cierre">
-                    Las metas ponderadas alcanzaron el 100 %. Revisá las evidencias, los recursos y las obligaciones
+                    Las actividades alcanzaron el 100 % de avance validado. Revisá las evidencias, los recursos y las obligaciones
                     antes de marcar administrativamente el proyecto como finalizado.
                   </p>
                 )}
@@ -711,7 +711,7 @@ export default function DetalleProyecto({
                   <div className="ejecucion-progreso__pie">
                     <span>{actividades.length} actividades planificadas</span>
                     <span>{actividades.filter((a) => a.estado === 'EN_PROCESO').length} en proceso</span>
-                    {porcentajeProyecto === null && <span>Definí los pesos de las actividades para obtener el porcentaje global.</span>}
+                    {porcentajeProyecto === null && <span>Hay pesos configurados parcialmente. Complétalos o quítalos para usar un reparto automático.</span>}
                   </div>
                 </section>
                 <p>Las cantidades son incrementales. Las estimaciones no cuantificables son acumuladas y justificadas.</p>
@@ -724,9 +724,9 @@ export default function DetalleProyecto({
               <>
                 <h3>Resultados</h3>
                 <article className="resultado-proyecto">
-                  <span>Avance ponderado del proyecto</span>
-                  <strong>{porcentajeProyecto === null ? 'Pendiente de ponderación' : `${porcentajeProyecto.toLocaleString('es-HN', { maximumFractionDigits: 2 })}%`}</strong>
-                  <p>Peso configurado: {pesoConfigurado.toLocaleString('es-HN', { maximumFractionDigits: 2 })}. Las actividades canceladas conservan su peso con resultado cero.</p>
+                  <span>Avance validado del proyecto</span>
+                  <strong>{porcentajeProyecto === null ? 'Pendiente de configuración' : `${porcentajeProyecto.toLocaleString('es-HN', { maximumFractionDigits: 2 })}%`}</strong>
+                  <p>{actividades.length === 1 ? 'Progreso de la única actividad, sin ponderación.' : pesoConfigurado === 0 ? 'Promedio de actividades con reparto equitativo automático.' : 'Se usan pesos manuales cuando están configurados en todas las actividades.'} Los avances solo cuentan después de ser validados.</p>
                 </article>
                 {!actividades.length && <p>El proyecto todavía no tiene actividades.</p>}
                 <div className="proyecto-detalle__lista">
@@ -743,7 +743,7 @@ export default function DetalleProyecto({
                         <progress value={actividad.porcentajeResultado} max={100} />
                         <strong>{actividad.porcentajeResultado.toLocaleString('es-HN', { maximumFractionDigits: 2 })}%</strong>
                       </label>
-                      <p>Contribución al resultado global · {actividad.pesoResultado === null ? 'Pendiente' : `${actividad.pesoResultado}%`}</p>
+                      {actividad.pesoResultado !== null && <p>Peso configurado (avanzado) · {actividad.pesoResultado}%</p>}
                     </article>
                   ))}
                 </div>
