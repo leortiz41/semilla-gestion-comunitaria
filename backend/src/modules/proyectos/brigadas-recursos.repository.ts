@@ -115,7 +115,6 @@ export async function guardarRecursosBrigada(pool: Pool, proyectoId: string, bri
       if (entregas.rowCount) {
         await cliente.query('ROLLBACK');
         return 'TIENE_ENTREGAS';
-        return;
       }
       await cliente.query('DELETE FROM brigadas_donantes_proyectos WHERE brigada_id = $1 AND proyecto_id = $2',
         [brigadaId, proyectoId]);
