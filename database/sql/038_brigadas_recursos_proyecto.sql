@@ -17,10 +17,16 @@ CREATE TABLE brigadas_recursos_proyecto (
     REFERENCES brigadas_donantes_proyectos (brigada_id, proyecto_id) ON DELETE CASCADE
 );
 
+-- Garantiza que la actividad asignada realmente pertenece al proyecto.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_actividades_programadas_proyecto_id
+  ON actividades_programadas(proyecto_id, id);
+
 CREATE TABLE brigadas_actividades_proyecto (
   brigada_id UUID NOT NULL,
   proyecto_id UUID NOT NULL,
-  actividad_id UUID NOT NULL REFERENCES actividades_programadas(id) ON DELETE CASCADE,
+  actividad_id UUID NOT NULL,
+  FOREIGN KEY (proyecto_id, actividad_id)
+    REFERENCES actividades_programadas(proyecto_id, id) ON DELETE CASCADE,
   PRIMARY KEY (brigada_id, proyecto_id, actividad_id),
   FOREIGN KEY (brigada_id, proyecto_id)
     REFERENCES brigadas_donantes_proyectos (brigada_id, proyecto_id) ON DELETE CASCADE
