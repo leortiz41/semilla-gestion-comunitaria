@@ -869,6 +869,7 @@ export function guardarProyectoAdministrativo(token: string, datos: DatosProyect
 }
 
 export interface VerificacionCierreProyecto {
+  puedeReabrir: boolean;
   estado: string;
   actividades: number;
   metasCumplidas: number;
