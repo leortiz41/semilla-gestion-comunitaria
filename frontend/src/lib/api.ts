@@ -998,3 +998,47 @@ export function corregirAvanceValidadoProyecto(token: string, proyectoId: string
     body: JSON.stringify({ ...datos, motivoCorreccion }),
   });
 }
+
+
+export interface BrigadaRecursoProyecto {
+  id: string;
+  donante: string;
+  lider: string;
+  miembros: number;
+  vinculada: boolean;
+  montoComprometido: number;
+  montoRecibido: number;
+  voluntariosPrevistos: number;
+  materialesComprometidos: string | null;
+  materialesEntregados: string | null;
+  observaciones: string | null;
+  actividadIds: string[];
+}
+
+export interface DatosBrigadaRecursoProyecto {
+  vinculada: boolean;
+  montoComprometido: number;
+  montoRecibido: number;
+  voluntariosPrevistos: number;
+  materialesComprometidos: string | null;
+  materialesEntregados: string | null;
+  observaciones: string | null;
+  actividadIds: string[];
+}
+
+export function obtenerBrigadasRecursosProyecto(token: string, proyectoId: string) {
+  return request<{ brigadas: BrigadaRecursoProyecto[] }>(
+    `/proyectos/${proyectoId}/brigadas-recursos`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+}
+
+export function guardarBrigadaRecursoProyecto(
+  token: string, proyectoId: string, brigadaId: string, datos: DatosBrigadaRecursoProyecto,
+) {
+  return request<void>(`/proyectos/${proyectoId}/brigadas-recursos/${brigadaId}`, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(datos),
+  });
+}
