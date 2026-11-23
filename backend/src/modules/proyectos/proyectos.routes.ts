@@ -271,7 +271,7 @@ proyectosRouter.get('/:proyectoId/brigadas-recursos', requirePermission('proyect
     res.json({ brigadas: rows });
   } catch (error) {
     console.error('Error consultando brigadas y recursos:', error);
-    res.status(500).json({ message: 'No fue posible consultar las brigadas y sus recursos. Revisá si está aplicada la migración 021.' });
+    res.status(500).json({ message: 'No fue posible consultar las brigadas y sus recursos. Revisá si está aplicada la migración 038.' });
   }
 });
 
