@@ -868,6 +868,37 @@ export function guardarProyectoAdministrativo(token: string, datos: DatosProyect
   });
 }
 
+export interface VerificacionCierreProyecto {
+  estado: string;
+  actividades: number;
+  metasCumplidas: number;
+  pendientes: number;
+  sinEvidencia: number;
+  listo: boolean;
+}
+
+export function obtenerVerificacionCierre(token: string, proyectoId: string) {
+  return request<VerificacionCierreProyecto>(`/proyectos/${proyectoId}/cierre`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function finalizarProyectoAdministrativo(token: string, proyectoId: string) {
+  return request<void>(`/proyectos/${proyectoId}/finalizar`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ evidenciasRevisadas: true, recursosRevisados: true }),
+  });
+}
+
+export function reabrirProyectoAdministrativo(token: string, proyectoId: string, motivo: string) {
+  return request<void>(`/proyectos/${proyectoId}/reabrir`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ motivo }),
+  });
+}
+
 export interface ActividadProyecto {
   id: string;
   nombre: string;
