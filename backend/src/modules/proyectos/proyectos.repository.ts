@@ -116,7 +116,14 @@ export async function consultarAvancesPendientes(pool: Consultable, organizacion
          av.fecha_avance::text AS fecha, av.comentarios AS descripcion,
          av.observaciones, av.cantidad_reportada::double precision AS "cantidadReportada",
          av.porcentaje_avance::double precision AS "porcentajeAvance",
-         a.unidad_medida AS "unidadMedida", autor.email AS responsable,
+         a.unidad_medida AS "unidadMedida",
+         a.meta_cantidad::double precision AS "metaCantidad",
+         COALESCE((
+           SELECT SUM(v.cantidad_reportada) FROM avances_proyecto v
+           WHERE v.actividad_id = a.id AND v.proyecto_id = p.id
+             AND v.estado_revision = 'VALIDADO' AND v.id <> av.id
+         ), 0)::double precision AS "cantidadValidada",
+         autor.email AS responsable,
          (SELECT COUNT(*)::int FROM evidencias ev WHERE ev.avance_proyecto_id = av.id
            AND ev.proyecto_id = p.id
            AND ev.tipo_mime IN ('image/jpeg', 'image/png', 'image/webp')) AS "cantidadEvidencias",
