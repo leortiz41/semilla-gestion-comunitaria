@@ -183,7 +183,7 @@ export async function guardarActividadEnRepositorio(pool: Consultable, actividad
         `WITH proyecto AS MATERIALIZED (
            SELECT p.id, p.presupuesto_asignado, c.organizacion_id
            FROM proyectos p JOIN comunidades c ON c.id = p.comunidad_id
-           WHERE p.id = $1 AND c.organizacion_id = $2
+           WHERE p.id = $1 AND c.organizacion_id = $2 AND p.estado <> 'FINALIZADO'
            FOR UPDATE OF p
          ), otros AS (
            SELECT COALESCE(SUM(a.presupuesto_estimado), 0) AS total
@@ -206,7 +206,7 @@ export async function guardarActividadEnRepositorio(pool: Consultable, actividad
         `WITH proyecto AS MATERIALIZED (
            SELECT p.id, p.presupuesto_asignado, c.organizacion_id
            FROM proyectos p JOIN comunidades c ON c.id = p.comunidad_id
-           WHERE p.id = $1 AND c.organizacion_id = $2
+           WHERE p.id = $1 AND c.organizacion_id = $2 AND p.estado <> 'FINALIZADO'
            FOR UPDATE OF p
          ), otros AS (
            SELECT COALESCE(SUM(a.presupuesto_estimado), 0) AS total
