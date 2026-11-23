@@ -53,3 +53,16 @@ test('ADR-006: rutas de cierre delegan a controladores y servicio no depende de 
   assert.match(repositorio, /FINALIZAR_PROYECTO/);
   assert.match(repositorio, /REABRIR_PROYECTO/);
 });
+
+test('ADR-006: catálogo y revisión solo delegan a controladores y servicios', () => {
+  const raiz = '../src/modules/proyectos/';
+  const rutas = readFileSync(new URL(raiz + 'proyectos.routes.ts', import.meta.url), 'utf8');
+  const controlador = readFileSync(new URL(raiz + 'consultas-proyectos.controller.ts', import.meta.url), 'utf8');
+  const servicio = readFileSync(new URL(raiz + 'consultas-proyectos.service.ts', import.meta.url), 'utf8');
+  assert.match(rutas, /get\('\/revision\/pendientes',[\s\S]*?listarAvancesPendientesRevision\)/);
+  assert.match(rutas, /get\('\/', listarCatalogoProyectos\)/);
+  assert.equal(controlador.includes('.query('), false);
+  assert.equal(controlador.includes('proyectos.repository'), false);
+  assert.equal(servicio.includes('express'), false);
+  assert.equal(servicio.includes('.query('), false);
+});
