@@ -56,6 +56,7 @@ export default function DetalleProyecto({
   presupuestoProyecto,
   moneda,
   puedeGestionar,
+  puedeAdministrarCierre,
   puedeRegistrarAvance,
   puedeRevisarAvance,
   puedeCorregirAvance,
@@ -68,6 +69,7 @@ export default function DetalleProyecto({
   presupuestoProyecto: number;
   moneda: string;
   puedeGestionar: boolean;
+  puedeAdministrarCierre: boolean;
   puedeRegistrarAvance: boolean;
   puedeRevisarAvance: boolean;
   puedeCorregirAvance: boolean;
@@ -765,7 +767,7 @@ export default function DetalleProyecto({
                   ))}
                 </div>
                 <CierreProyecto token={token} proyectoId={proyectoId}
-                  estado={estadoProyecto} puedeGestionar={puedeGestionar}
+                  estado={estadoProyecto} puedeGestionar={puedeAdministrarCierre}
                   onCambio={onCambioEstado} />
               </>
             )}
