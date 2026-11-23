@@ -2,10 +2,11 @@ import { randomUUID } from 'node:crypto';
 import { Router, raw, type RequestHandler } from 'express';
 import { firmarObjetoR2, r2Disponible, verificarObjetoR2, cargarObjetoR2, leerObjetoR2, diagnosticarErrorR2 } from '../../services/r2-evidencias.service.js';
 import { databasePool } from '../../config/database.js';
-import { consultarAccesoEvidenciaAvance, consultarIndiceEvidencias, consultarResponsablesProyecto, consultarMetaActividad, consultarEvidenciasAvance, consultarClaveEvidencia, guardarActividadEnRepositorio, existeProyectoEnOrganizacion, consultarSaldoActividad, guardarProyectoEnRepositorio, registrarEvidenciaEnRepositorio, consultarLimiteDeValidacion } from './proyectos.repository.js';
+import { consultarAccesoEvidenciaAvance, consultarIndiceEvidencias, consultarResponsablesProyecto, consultarMetaActividad, consultarEvidenciasAvance, consultarClaveEvidencia, guardarProyectoEnRepositorio, registrarEvidenciaEnRepositorio, consultarLimiteDeValidacion } from './proyectos.repository.js';
 import { listarBrigadasRecursos, guardarRecursosBrigada } from './brigadas-recursos.repository.js';
 import { obtenerEstadoCierre, confirmarFinalizacionProyecto, confirmarReaperturaProyecto } from './cierre-proyecto.controller.js';
 import { listarCatalogoProyectos, listarAvancesPendientesRevision } from './consultas-proyectos.controller.js';
+import { guardarActividadPlanificada } from './planificacion-actividad.controller.js';
 import { areasNecesidad } from '../../domain/necesidades.js';
 import { esUuid } from '../../domain/expediente.js';
 import { esFecha } from '../../domain/fecha.js';
@@ -341,7 +342,6 @@ proyectosRouter.post('/:proyectoId/finalizar',
 proyectosRouter.post('/:proyectoId/reabrir',
   requirePermission('proyectos.gestionar'), confirmarReaperturaProyecto);
 
-const estadosActividad = ['PLANIFICADA', 'EN_PROCESO', 'COMPLETADA', 'CANCELADA'];
 
 export function crearRouterActividades(pool: typeof databasePool = databasePool) {
   const router = Router();
@@ -559,67 +559,8 @@ export function crearRouterActividades(pool: typeof databasePool = databasePool)
 
 proyectosRouter.use(crearRouterActividades());
 
-const guardarActividad: RequestHandler = async (req, res) => {
-  const { proyectoId, actividadId } = req.params;
-  const { estado, fechaInicio, fechaFin } = req.body ?? {};
-  const responsableAsignadoId = req.body?.responsableAsignadoId || null;
-  const metaCantidad = req.body?.metaCantidad === '' ? null : req.body?.metaCantidad ?? null;
-  const unidadMedida = typeof req.body?.unidadMedida === 'string' ? req.body.unidadMedida.trim() : '';
-  const presupuestoEstimado = req.body?.presupuestoEstimado === '' ? null : req.body?.presupuestoEstimado ?? null;
-  const pesoResultado = req.body?.pesoResultado === '' ? null : req.body?.pesoResultado ?? null;
-  const nombre = typeof req.body?.nombre === 'string' ? req.body.nombre.trim() : '';
-  const descripcion = req.body?.descripcion ?? '';
-  const metaValida = metaCantidad === null || (typeof metaCantidad === 'number' &&
-    Number.isFinite(metaCantidad) && metaCantidad > 0 &&
-    /^\d{1,11}(?:\.\d{1,3})?$/.test(String(metaCantidad)));
-  const presupuestoValido = presupuestoEstimado === null || (typeof presupuestoEstimado === 'number' &&
-    Number.isFinite(presupuestoEstimado) && presupuestoEstimado >= 0 &&
-    /^\d{1,12}(?:\.\d{1,2})?$/.test(String(presupuestoEstimado)));
-  const pesoValido = pesoResultado === null || (typeof pesoResultado === 'number' &&
-    Number.isFinite(pesoResultado) && pesoResultado >= 0 && pesoResultado <= 100 &&
-    /^\d{1,3}(?:\.\d{1,2})?$/.test(String(pesoResultado)));
-  if (!esUuid(proyectoId) || (actividadId !== undefined && !esUuid(actividadId)) ||
-      !nombre || nombre.length > 180 || typeof descripcion !== 'string' || descripcion.length > 3000 ||
-      (responsableAsignadoId !== null && !esUuid(responsableAsignadoId)) ||
-      !metaValida || (metaCantidad === null) !== !unidadMedida ||
-      unidadMedida.length > 80 || !presupuestoValido || !pesoValido ||
-      !estadosActividad.includes(estado) ||
-      (fechaInicio != null && !esFecha(fechaInicio)) ||
-      (fechaFin != null && (!esFecha(fechaFin) || (fechaInicio != null && fechaFin < fechaInicio)))) {
-    res.status(400).json({ message: 'Revisá el nombre, las metas, la unidad, los recursos, el responsable, el estado y las fechas de la actividad.' });
-    return;
-  }
-  try {
-    if (!databasePool) throw new Error('Base de datos no disponible');
-    const valores = [proyectoId, req.auth!.organizacionId, nombre, descripcion.trim() || null,
-      estado, fechaInicio ?? null, fechaFin ?? null, actividadId ?? null,
-      presupuestoEstimado, responsableAsignadoId, metaCantidad, unidadMedida || null, pesoResultado];
-    const rows = await guardarActividadEnRepositorio(databasePool, actividadId ?? null, valores);
-    if (!rows.length) {
-      const disponible = await existeProyectoEnOrganizacion(databasePool, proyectoId, req.auth!.organizacionId);
-      if (!disponible) {
-        res.status(404).json({ message: 'No se encontró el proyecto o la actividad.' });
-        return;
-      }
-      const saldos = await consultarSaldoActividad(databasePool, proyectoId, req.auth!.organizacionId, actividadId ?? null);
-      if (saldos.length && Number(presupuestoEstimado ?? 0) >
-        Number(saldos[0].presupuesto) - Number(saldos[0].asignado)) {
-        res.status(400).json({
-          message: 'El presupuesto estimado supera el saldo disponible del proyecto. Revisá las asignaciones de las demás actividades.',
-        });
-        return;
-      }
-      res.status(400).json({
-        message: 'Revisá el responsable asignado: debe ser un usuario activo de esta organización.',
-      });
-      return;
-    }
-    res.status(actividadId ? 200 : 201).json(rows[0]);
-  } catch (error) {
-    console.error('Error guardando actividad:', error);
-    res.status(500).json({ message: 'No fue posible guardar la actividad.' });
-  }
-};
-
-proyectosRouter.post('/:proyectoId/actividades', requirePermission('proyectos.gestionar'), guardarActividad);
-proyectosRouter.put('/:proyectoId/actividades/:actividadId', requirePermission('proyectos.gestionar'), guardarActividad);
+// La planificación se adapta por el controlador y se orquesta en el servicio.
+proyectosRouter.post('/:proyectoId/actividades',
+  requirePermission('proyectos.gestionar'), guardarActividadPlanificada);
+proyectosRouter.put('/:proyectoId/actividades/:actividadId',
+  requirePermission('proyectos.gestionar'), guardarActividadPlanificada);
