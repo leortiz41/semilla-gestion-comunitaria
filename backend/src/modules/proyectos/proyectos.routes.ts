@@ -284,7 +284,7 @@ proyectosRouter.put('/:proyectoId/brigadas-recursos/:brigadaId', requirePermissi
   const voluntariosPrevistos = body.voluntariosPrevistos;
   const textoValido = (valor: unknown) => valor === null || (typeof valor === 'string' && valor.length <= 3000);
   const dineroValido = (valor: unknown) => typeof valor === 'number' && Number.isFinite(valor) &&
-    valor >= 0 && /^\\d{1,12}(?:\\.\\d{1,2})?$/.test(String(valor));
+    valor >= 0 && /^\d{1,12}(?:\.\d{1,2})?$/.test(String(valor));
   if (!esUuid(proyectoId) || !esUuid(brigadaId) || typeof vinculada !== 'boolean' ||
       !Array.isArray(actividadIds) || !actividadIds.every(esUuid) ||
       new Set(actividadIds).size !== actividadIds.length ||
