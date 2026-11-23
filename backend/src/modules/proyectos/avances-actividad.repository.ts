@@ -177,7 +177,19 @@ export async function actualizarEstadoAvance(pool: Consultable, proyectoId: stri
              AND (av.responsable_usuario_id <> $5 OR $8::boolean)
            ELSE FALSE
          END
-       FOR UPDATE OF av
+         AND (
+           $6 <> 'VALIDAR'
+           OR a.meta_cantidad IS NULL
+           OR (
+             COALESCE((
+               SELECT SUM(previo.cantidad_reportada)
+               FROM avances_proyecto previo
+               WHERE previo.proyecto_id = p.id AND previo.actividad_id = a.id
+                 AND previo.estado_revision = 'VALIDADO' AND previo.id <> av.id
+             ), 0) + COALESCE(av.cantidad_reportada, 0) <= a.meta_cantidad
+           )
+         )
+       FOR UPDATE OF av, a
      ), actualizado AS (
        UPDATE avances_proyecto av SET
          estado_revision = CASE $6 WHEN 'ENVIAR' THEN 'ENVIADO'
