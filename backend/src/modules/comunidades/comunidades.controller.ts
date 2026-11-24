@@ -1,5 +1,5 @@
 import type { RequestHandler } from 'express';
-import { listarComunidadesPorOrganizacion, crearComunidadBasica } from './comunidades.service.js';
+import { listarComunidadesPorOrganizacion, crearComunidadBasica, obtenerDiagnosticoPoblacionVivienda, guardarDiagnosticoPoblacionVivienda } from './comunidades.service.js';
 
 /** Adaptadores HTTP para listado y alta de comunidades; permisos en rutas. */
 export const listarComunidades: RequestHandler = async (req, res) => {
@@ -74,5 +74,97 @@ export const crearComunidad: RequestHandler = async (req, res) => {
 
       console.error('Error creando comunidad:', error);
       res.status(500).json({ message: 'No fue posible registrar la comunidad.' });
+    }
+  };
+
+function esEnteroNoNegativoONulo(valor: unknown): valor is number | null {
+  return valor === null || (typeof valor === 'number' && Number.isInteger(valor) && valor >= 0);
+}
+
+export const obtenerDiagnosticoComunidad: RequestHandler = async (req, res) => {
+    const comunidadId = typeof req.params.id === 'string' ? req.params.id : null;
+
+    if (!req.auth?.organizacionId) {
+      res.status(401).json({ message: 'La sesión no contiene una organización válida.' });
+      return;
+    }
+
+    if (!comunidadId) {
+      res.status(400).json({ message: 'El identificador de la comunidad no es válido.' });
+      return;
+    }
+
+    try {
+      const diagnostico = await obtenerDiagnosticoPoblacionVivienda(
+        req.auth.organizacionId,
+        comunidadId,
+      );
+
+      if (diagnostico === undefined) {
+        res.status(404).json({ message: 'La comunidad no existe en la organización activa.' });
+        return;
+      }
+
+      res.json({ diagnostico });
+    } catch (error) {
+      console.error('Error obteniendo diagnóstico comunitario:', error);
+      res.status(500).json({ message: 'No fue posible obtener el diagnóstico comunitario.' });
+    }
+  };
+
+export const guardarDiagnosticoComunidad: RequestHandler = async (req, res) => {
+    const comunidadId = typeof req.params.id === 'string' ? req.params.id : null;
+
+    if (!req.auth?.organizacionId) {
+      res.status(401).json({ message: 'La sesión no contiene una organización válida.' });
+      return;
+    }
+
+    if (!comunidadId) {
+      res.status(400).json({ message: 'El identificador de la comunidad no es válido.' });
+      return;
+    }
+
+    const poblacionAproximada = req.body?.poblacionAproximada ?? null;
+    const viviendasAproximadas = req.body?.viviendasAproximadas ?? null;
+    const viviendasIntervencion = req.body?.viviendasIntervencion ?? null;
+    const tiposVivienda =
+      typeof req.body?.tiposVivienda === 'string' ? req.body.tiposVivienda.trim() || null : null;
+
+    if (
+      !esEnteroNoNegativoONulo(poblacionAproximada) ||
+      !esEnteroNoNegativoONulo(viviendasAproximadas) ||
+      !esEnteroNoNegativoONulo(viviendasIntervencion)
+    ) {
+      res.status(400).json({ message: 'Las cantidades deben ser números enteros iguales o mayores a cero.' });
+      return;
+    }
+
+    if (tiposVivienda?.length > 2000) {
+      res.status(400).json({ message: 'La descripción de viviendas no puede superar 2000 caracteres.' });
+      return;
+    }
+
+    try {
+      const diagnostico = await guardarDiagnosticoPoblacionVivienda(
+        req.auth.organizacionId,
+        comunidadId,
+        {
+          poblacionAproximada,
+          viviendasAproximadas,
+          viviendasIntervencion,
+          tiposVivienda,
+        },
+      );
+
+      if (!diagnostico) {
+        res.status(404).json({ message: 'La comunidad no existe en la organización activa.' });
+        return;
+      }
+
+      res.json({ diagnostico });
+    } catch (error) {
+      console.error('Error guardando diagnóstico comunitario:', error);
+      res.status(500).json({ message: 'No fue posible guardar el diagnóstico comunitario.' });
     }
   };
