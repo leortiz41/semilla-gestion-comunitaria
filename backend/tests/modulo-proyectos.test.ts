@@ -83,3 +83,22 @@ test('ADR-006: planificación delega controlador, servicio y dominio sin SQL fue
   assert.equal(dominio.includes('express'), false);
   assert.equal(dominio.includes('databasePool'), false);
 });
+
+test('ADR-006: registro, edición, envío, revisión y corrección delegados a controladores', () => {
+  const directorio = '../src/modules/proyectos/';
+  const rutas = readFileSync(new URL(directorio + 'proyectos.routes.ts', import.meta.url), 'utf8');
+  const controlador = readFileSync(new URL(directorio + 'avances-actividad.controller.ts', import.meta.url), 'utf8');
+  const servicio = readFileSync(new URL(directorio + 'avances-actividad.service.ts', import.meta.url), 'utf8');
+
+  for (const operacion of ['registrar', 'editar', 'enviar', 'corregir', 'revisar']) {
+    assert.match(rutas, new RegExp('controladores\\.' + operacion), operacion);
+    assert.match(controlador, new RegExp('\\b' + operacion + '\\b'), operacion);
+  }
+  assert.equal(rutas.includes('const contexto = { rows: await consultarMetaActividad'), false);
+  assert.equal(controlador.includes('.query('), false);
+  assert.equal(controlador.includes('proyectos.repository'), false);
+  assert.equal(servicio.includes('.query('), false);
+  assert.equal(servicio.includes('express'), false);
+  assert.match(servicio, /comprobarTipoDeMetaAvance/);
+  assert.match(servicio, /consultarExcesoDeMeta/);
+});
