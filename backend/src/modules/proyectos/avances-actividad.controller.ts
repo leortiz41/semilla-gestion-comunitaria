@@ -3,8 +3,7 @@ import type { Pool } from 'pg';
 import { databasePool } from '../../config/database.js';
 import { esUuid } from '../../domain/expediente.js';
 import { validarAvanceActividad } from './avances-actividad.domain.js';
-import { consultarMetaActividad, consultarLimiteDeValidacion } from './proyectos.repository.js';
-import { registrarAvanceActividad, editarAvanceActividad, transicionarAvanceActividad } from './avances-actividad.service.js';
+import { registrarAvanceActividad, editarAvanceActividad, transicionarAvanceActividad, comprobarTipoDeMetaAvance, consultarExcesoDeMeta } from './avances-actividad.service.js';
 
 /** Adaptadores HTTP de avances: reciben el pool por inyección para conservar pruebas y compatibilidad. */
 export function crearControladoresAvances(pool: Pool | null = databasePool) {
@@ -17,13 +16,14 @@ export function crearControladoresAvances(pool: Pool | null = databasePool) {
       }
       try {
         if (!pool) throw new Error('Base de datos no disponible');
-        const contexto = { rows: await consultarMetaActividad(pool, proyectoId, actividadId, req.auth!.organizacionId) };
-        if (!contexto.rows.length) {
+        const tipoMeta = await comprobarTipoDeMetaAvance(
+          pool, proyectoId, actividadId, req.auth!.organizacionId, datos,
+        );
+        if (tipoMeta === 'NO_ENCONTRADO') {
           res.status(404).json({ message: 'No se encontró la actividad del proyecto en la organización activa.' });
           return;
         }
-        const cuantificable = contexto.rows[0].meta_cantidad !== null;
-        if (cuantificable !== (datos.cantidadReportada !== null)) {
+        if (tipoMeta === 'TIPO_INCORRECTO') {
           res.status(400).json({ message: 'El avance debe reportar una cantidad para esta meta o una estimación justificada.' });
           return;
         }
@@ -136,9 +136,9 @@ export function crearControladoresAvances(pool: Pool | null = databasePool) {
           );
           if (!actualizado) {
             if (accion === 'validar') {
-              const limite = await consultarLimiteDeValidacion(pool, avanceId, actividadId,
+              const limite = await consultarExcesoDeMeta(pool, avanceId, actividadId,
                 proyectoId, req.auth!.organizacionId);
-              if (limite && limite.total > limite.meta) {
+              if (limite) {
                 res.status(409).json({
                   message: `No se puede validar: el total reportado (${limite.total} ${limite.unidad ?? 'unidades'}) supera la meta planificada (${limite.meta}). Corregí la planificación o devolvé el avance.`,
                 });
