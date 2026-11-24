@@ -396,46 +396,8 @@ export function crearRouterActividades(pool: typeof databasePool = databasePool)
     requirePermission('actividades.avance.gestionar'), controladores.enviar);
 
   for (const accion of ['validar', 'devolver'] as const) {
-    router.post(
-      `/:proyectoId/actividades/:actividadId/avances/:avanceId/${accion}`,
-      requirePermission('actividades.avance.revisar'),
-      async (req, res) => {
-        const { proyectoId, actividadId, avanceId } = req.params;
-        const motivo = req.body?.motivo;
-        if (!esUuid(proyectoId) || !esUuid(actividadId) || !esUuid(avanceId) ||
-            (accion === 'devolver' && (typeof motivo !== 'string' || !motivo.trim() || motivo.trim().length > 3000))) {
-          res.status(400).json({ message: 'Revisá el avance y el motivo de devolución.' });
-          return;
-        }
-        try {
-          if (!pool) throw new Error('Base de datos no disponible');
-          const actualizado = await transicionarAvanceActividad(
-            pool, proyectoId, actividadId, avanceId, req.auth!.organizacionId,
-            req.auth!.sub, accion === 'validar' ? 'VALIDAR' : 'DEVOLVER',
-            accion === 'devolver' ? motivo.trim() : undefined,
-            req.auth!.roles.some((rol) => rol === 'ADMINISTRADOR' || rol === 'COORDINADOR'),
-          );
-          if (!actualizado) {
-            if (accion === 'validar') {
-              const limite = await consultarLimiteDeValidacion(pool, avanceId, actividadId,
-                proyectoId, req.auth!.organizacionId);
-              if (limite && limite.total > limite.meta) {
-                res.status(409).json({
-                  message: `No se puede validar: el total reportado (${limite.total} ${limite.unidad ?? 'unidades'}) supera la meta planificada (${limite.meta}). Corregí la planificación o devolvé el avance.`,
-                });
-                return;
-              }
-            }
-            res.status(409).json({ message: 'El avance no está disponible para esta revisión o no tenés autorización para revisarlo.' });
-            return;
-          }
-          res.sendStatus(204);
-        } catch (error) {
-          console.error(`Error al ${accion} avance:`, error);
-          res.status(500).json({ message: `No fue posible ${accion} el avance.` });
-        }
-      },
-    );
+    router.post(`/:proyectoId/actividades/:actividadId/avances/:avanceId/${accion}`,
+      requirePermission('actividades.avance.revisar'), controladores.revisar(accion));
   }
 
   router.post('/:proyectoId/actividades/:actividadId/avances/:avanceId/corregir',
