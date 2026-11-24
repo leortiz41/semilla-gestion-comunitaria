@@ -1,5 +1,6 @@
 import type { RequestHandler } from 'express';
-import { ErrorExpediente, esUuid } from '../../domain/expediente.js';
+import { ErrorExpediente, esUuid, validarExpediente } from '../../domain/expediente.js';
+import { guardarExpediente, obtenerExpediente } from '../../services/expedientes.service.js';
 import { validarMetasVision } from './metas-vision.domain.js';
 import { listarComunidadesPorOrganizacion, crearComunidadBasica, obtenerDiagnosticoPoblacionVivienda, guardarDiagnosticoPoblacionVivienda, obtenerVisionesDesarrolloComunitaria, guardarVisionDesarrolloComunitaria, type AreaVisionDesarrollo, editarComunidadBasica, cambiarEstadoComunidad } from './comunidades.service.js';
 
@@ -370,5 +371,125 @@ export const actualizarEstadoComunidad: RequestHandler = async (req, res) => {
     } catch (error) {
       console.error('Error cambiando estado de comunidad:', error);
       res.status(500).json({ message: 'No fue posible cambiar el estado de la comunidad.' });
+    }
+  };
+
+export const crearExpedienteComunidad: RequestHandler = async (req, res) => {
+    if (!req.auth?.organizacionId) {
+      res.status(401).json({ message: 'Sesión sin organización.' });
+      return;
+    }
+    try {
+      const datos = validarExpediente(req.body);
+      const comunidad = await guardarExpediente(
+        req.auth.organizacionId,
+        req.auth.sub,
+        datos,
+      );
+      res.status(201).json({ comunidad });
+    } catch (e) {
+      if (e instanceof ErrorExpediente) {
+        res.status(e.status).json({ message: e.message });
+        return;
+      }
+      if (
+        typeof e === 'object' &&
+        e !== null &&
+        'code' in e &&
+        e.code === '23505'
+      ) {
+        res.status(409).json({
+          message: 'Ya existe una comunidad con ese nombre y ubicación.',
+        });
+        return;
+      }
+      console.error('Error guardando expediente:', e);
+      res.status(500).json({
+        message:
+          'No fue posible guardar el expediente. No se guardaron cambios parciales.',
+      });
+    }
+  };
+
+export const consultarExpedienteComunidad: RequestHandler = async (req, res) => {
+    if (!req.auth?.organizacionId) {
+      res.status(401).json({ message: 'Sesión sin organización.' });
+      return;
+    }
+    if (!esUuid(req.params.id)) {
+      res.status(400).json({ message: 'Identificador de comunidad inválido.' });
+      return;
+    }
+    try {
+      const expediente = await obtenerExpediente(
+        req.auth.organizacionId,
+        req.params.id,
+      );
+      if (!expediente) {
+        res.status(404).json({ message: 'Comunidad no encontrada.' });
+        return;
+      }
+      res.json({ expediente });
+    } catch (e) {
+      console.error('Error consultando expediente:', e);
+      res
+        .status(500)
+        .json({ message: 'No fue posible consultar el expediente.' });
+    }
+  };
+
+export const actualizarDiagnosticoExpediente: RequestHandler = async (req, res) => {
+    if (!req.auth?.organizacionId) {
+      res.status(401).json({ message: 'Sesión sin organización.' });
+      return;
+    }
+    if (
+      !esUuid(req.params.id) ||
+      !(
+        req.body?.diagnosticoAnteriorId === null ||
+        esUuid(req.body?.diagnosticoAnteriorId)
+      )
+    ) {
+      res
+        .status(400)
+        .json({
+          message:
+            'Identificador de comunidad o versión del diagnóstico inválido.',
+        });
+      return;
+    }
+    try {
+      const datos = validarExpediente({
+        ...req.body,
+        nombre: 'Diagnóstico',
+        municipio: 'Sin cambio',
+        departamento: 'Sin cambio',
+        zonaId: '00000000-0000-0000-0000-000000000000',
+        latitud: null,
+        longitud: null,
+      });
+      const comunidad = await guardarExpediente(
+        req.auth.organizacionId,
+        req.auth.sub,
+        datos,
+        undefined,
+        {
+          comunidadId: req.params.id,
+          diagnosticoAnteriorId: req.body.diagnosticoAnteriorId,
+        },
+      );
+      res.json({ comunidad });
+    } catch (e) {
+      if (e instanceof ErrorExpediente) {
+        res.status(e.status).json({ message: e.message });
+        return;
+      }
+      console.error('Error actualizando diagnóstico:', e);
+      res
+        .status(500)
+        .json({
+          message:
+            'No se pudo actualizar el diagnóstico. No se guardaron cambios parciales.',
+        });
     }
   };
