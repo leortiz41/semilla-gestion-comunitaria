@@ -101,6 +101,8 @@ test('ADR-006 Comunidades: listado y creación usan controladores sin SQL', () =
   const service = readFileSync(new URL(raiz + 'comunidades.service.ts', import.meta.url), 'utf8');
   assert.match(routes, /requirePermission\('comunidades\.ver'\), listarComunidades\)/);
   assert.match(routes, /requirePermission\('comunidades\.gestionar'\), crearComunidad\)/);
+  assert.match(routes, /requirePermission\('comunidades\.ver'\), obtenerDiagnosticoComunidad\)/);
+  assert.match(routes, /requirePermission\('comunidades\.gestionar'\), guardarDiagnosticoComunidad\)/);
   assert.equal(controller.includes('.query('), false);
   assert.equal(controller.includes('comunidades.repository'), false);
   assert.equal(service.includes('INSERT INTO comunidades ('), false);
