@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { Router, raw, type RequestHandler } from 'express';
 import { firmarObjetoR2, r2Disponible, verificarObjetoR2, cargarObjetoR2, leerObjetoR2, diagnosticarErrorR2 } from '../../services/r2-evidencias.service.js';
 import { databasePool } from '../../config/database.js';
-import { consultarAccesoEvidenciaAvance, consultarIndiceEvidencias, consultarResponsablesProyecto, consultarMetaActividad, consultarEvidenciasAvance, consultarClaveEvidencia, guardarProyectoEnRepositorio, registrarEvidenciaEnRepositorio, consultarLimiteDeValidacion } from './proyectos.repository.js';
+import { consultarAccesoEvidenciaAvance, consultarIndiceEvidencias, consultarResponsablesProyecto, consultarEvidenciasAvance, consultarClaveEvidencia, guardarProyectoEnRepositorio, registrarEvidenciaEnRepositorio } from './proyectos.repository.js';
 import { listarBrigadasRecursos, guardarRecursosBrigada } from './brigadas-recursos.repository.js';
 import { obtenerEstadoCierre, confirmarFinalizacionProyecto, confirmarReaperturaProyecto } from './cierre-proyecto.controller.js';
 import { listarCatalogoProyectos, listarAvancesPendientesRevision } from './consultas-proyectos.controller.js';
@@ -10,15 +10,9 @@ import { guardarActividadPlanificada } from './planificacion-actividad.controlle
 import { areasNecesidad } from '../../domain/necesidades.js';
 import { esUuid } from '../../domain/expediente.js';
 import { esFecha } from '../../domain/fecha.js';
-import { validarAvanceActividad } from './avances-actividad.domain.js';
 import { crearControladoresAvances } from './avances-actividad.controller.js';
 import { authenticateAccessToken, requirePermission } from '../../middleware/auth.middleware.js';
-import {
-  editarAvanceActividad,
-  listarActividadesProyecto,
-  registrarAvanceActividad,
-  transicionarAvanceActividad,
-} from './avances-actividad.service.js';
+import { listarActividadesProyecto } from './avances-actividad.service.js';
 
 export const proyectosRouter = Router();
 const estados = ['PLANIFICADO', 'EN_EJECUCION', 'PAUSADO', 'CANCELADO'];
