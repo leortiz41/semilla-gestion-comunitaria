@@ -4,7 +4,7 @@ import {capacidadesRouter} from './capacidades.routes.js';
 import { validarExpediente, esUuid, ErrorExpediente } from '../../domain/expediente.js';
 import { guardarExpediente, obtenerExpediente } from '../../services/expedientes.service.js';
 import { Router } from 'express';
-import { listarComunidades, crearComunidad } from './comunidades.controller.js';
+import { listarComunidades, crearComunidad, obtenerDiagnosticoComunidad, guardarDiagnosticoComunidad } from './comunidades.controller.js';
 import {
   authenticateAccessToken,
   requirePermission,
@@ -22,10 +22,6 @@ import {
 } from './comunidades.service.js';
 
 export const comunidadesRouter = Router();
-
-function esEnteroNoNegativoONulo(valor: unknown): valor is number | null {
-  return valor === null || (typeof valor === 'number' && Number.isInteger(valor) && valor >= 0);
-}
 
 const areasVisionDesarrollo: AreaVisionDesarrollo[] = [
   'EVANGELISMO',
@@ -48,103 +44,11 @@ comunidadesRouter.get('/', authenticateAccessToken,
 comunidadesRouter.post('/', authenticateAccessToken,
   requirePermission('comunidades.gestionar'), crearComunidad);
 
-comunidadesRouter.get(
-  '/:id/expediente/poblacion-vivienda',
-  authenticateAccessToken,
-  requirePermission('comunidades.ver'),
-  async (req, res) => {
-    const comunidadId = typeof req.params.id === 'string' ? req.params.id : null;
+comunidadesRouter.get('/:id/expediente/poblacion-vivienda', authenticateAccessToken,
+  requirePermission('comunidades.ver'), obtenerDiagnosticoComunidad);
 
-    if (!req.auth?.organizacionId) {
-      res.status(401).json({ message: 'La sesión no contiene una organización válida.' });
-      return;
-    }
-
-    if (!comunidadId) {
-      res.status(400).json({ message: 'El identificador de la comunidad no es válido.' });
-      return;
-    }
-
-    try {
-      const diagnostico = await obtenerDiagnosticoPoblacionVivienda(
-        req.auth.organizacionId,
-        comunidadId,
-      );
-
-      if (diagnostico === undefined) {
-        res.status(404).json({ message: 'La comunidad no existe en la organización activa.' });
-        return;
-      }
-
-      res.json({ diagnostico });
-    } catch (error) {
-      console.error('Error obteniendo diagnóstico comunitario:', error);
-      res.status(500).json({ message: 'No fue posible obtener el diagnóstico comunitario.' });
-    }
-  },
-);
-
-comunidadesRouter.put(
-  '/:id/expediente/poblacion-vivienda',
-  authenticateAccessToken,
-  requirePermission('comunidades.gestionar'),
-  async (req, res) => {
-    const comunidadId = typeof req.params.id === 'string' ? req.params.id : null;
-
-    if (!req.auth?.organizacionId) {
-      res.status(401).json({ message: 'La sesión no contiene una organización válida.' });
-      return;
-    }
-
-    if (!comunidadId) {
-      res.status(400).json({ message: 'El identificador de la comunidad no es válido.' });
-      return;
-    }
-
-    const poblacionAproximada = req.body?.poblacionAproximada ?? null;
-    const viviendasAproximadas = req.body?.viviendasAproximadas ?? null;
-    const viviendasIntervencion = req.body?.viviendasIntervencion ?? null;
-    const tiposVivienda =
-      typeof req.body?.tiposVivienda === 'string' ? req.body.tiposVivienda.trim() || null : null;
-
-    if (
-      !esEnteroNoNegativoONulo(poblacionAproximada) ||
-      !esEnteroNoNegativoONulo(viviendasAproximadas) ||
-      !esEnteroNoNegativoONulo(viviendasIntervencion)
-    ) {
-      res.status(400).json({ message: 'Las cantidades deben ser números enteros iguales o mayores a cero.' });
-      return;
-    }
-
-    if (tiposVivienda?.length > 2000) {
-      res.status(400).json({ message: 'La descripción de viviendas no puede superar 2000 caracteres.' });
-      return;
-    }
-
-    try {
-      const diagnostico = await guardarDiagnosticoPoblacionVivienda(
-        req.auth.organizacionId,
-        comunidadId,
-        {
-          poblacionAproximada,
-          viviendasAproximadas,
-          viviendasIntervencion,
-          tiposVivienda,
-        },
-      );
-
-      if (!diagnostico) {
-        res.status(404).json({ message: 'La comunidad no existe en la organización activa.' });
-        return;
-      }
-
-      res.json({ diagnostico });
-    } catch (error) {
-      console.error('Error guardando diagnóstico comunitario:', error);
-      res.status(500).json({ message: 'No fue posible guardar el diagnóstico comunitario.' });
-    }
-  },
-);
+comunidadesRouter.put('/:id/expediente/poblacion-vivienda', authenticateAccessToken,
+  requirePermission('comunidades.gestionar'), guardarDiagnosticoComunidad);
 
 comunidadesRouter.get(
   '/:id/expediente/vision-desarrollo',
