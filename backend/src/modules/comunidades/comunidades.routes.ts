@@ -1,10 +1,9 @@
 import { necesidadesRouter } from './necesidades.routes.js';
-import { validarMetasVision } from './metas-vision.domain.js';
 import {capacidadesRouter} from './capacidades.routes.js';
 import { validarExpediente, esUuid, ErrorExpediente } from '../../domain/expediente.js';
 import { guardarExpediente, obtenerExpediente } from '../../services/expedientes.service.js';
 import { Router } from 'express';
-import { listarComunidades, crearComunidad, obtenerDiagnosticoComunidad, guardarDiagnosticoComunidad } from './comunidades.controller.js';
+import { listarComunidades, crearComunidad, obtenerDiagnosticoComunidad, guardarDiagnosticoComunidad, obtenerVisionDesarrolloComunidad, guardarVisionDesarrolloComunidad } from './comunidades.controller.js';
 import {
   authenticateAccessToken,
   requirePermission,
@@ -23,21 +22,6 @@ import {
 
 export const comunidadesRouter = Router();
 
-const areasVisionDesarrollo: AreaVisionDesarrollo[] = [
-  'EVANGELISMO',
-  'EDUCACION_FORMAL',
-  'EDUCACION_COMUNITARIA',
-  'INFRAESTRUCTURA',
-];
-
-function esAreaVisionDesarrollo(valor: unknown): valor is AreaVisionDesarrollo {
-  return typeof valor === 'string' && areasVisionDesarrollo.includes(valor as AreaVisionDesarrollo);
-}
-
-function esPrioridadVision(valor: unknown): valor is 'ALTA' | 'MEDIA' | 'BAJA' | null {
-  return valor === null || valor === 'ALTA' || valor === 'MEDIA' || valor === 'BAJA';
-}
-
 comunidadesRouter.get('/', authenticateAccessToken,
   requirePermission('comunidades.ver'), listarComunidades);
 
@@ -50,99 +34,11 @@ comunidadesRouter.get('/:id/expediente/poblacion-vivienda', authenticateAccessTo
 comunidadesRouter.put('/:id/expediente/poblacion-vivienda', authenticateAccessToken,
   requirePermission('comunidades.gestionar'), guardarDiagnosticoComunidad);
 
-comunidadesRouter.get(
-  '/:id/expediente/vision-desarrollo',
-  authenticateAccessToken,
-  requirePermission('comunidades.ver'),
-  async (req, res) => {
-    const comunidadId = typeof req.params.id === 'string' ? req.params.id : null;
+comunidadesRouter.get('/:id/expediente/vision-desarrollo', authenticateAccessToken,
+  requirePermission('comunidades.ver'), obtenerVisionDesarrolloComunidad);
 
-    if (!req.auth?.organizacionId) {
-      res.status(401).json({ message: 'La sesión no contiene una organización válida.' });
-      return;
-    }
-
-    if (!comunidadId) {
-      res.status(400).json({ message: 'El identificador de la comunidad no es válido.' });
-      return;
-    }
-
-    try {
-      const visiones = await obtenerVisionesDesarrolloComunitaria(
-        req.auth.organizacionId,
-        comunidadId,
-      );
-
-      if (visiones === undefined) {
-        res.status(404).json({ message: 'La comunidad no existe en la organización activa.' });
-        return;
-      }
-
-      res.json({ visiones });
-    } catch (error) {
-      console.error('Error obteniendo visión de desarrollo:', error);
-      res.status(500).json({ message: 'No fue posible obtener la visión de desarrollo.' });
-    }
-  },
-);
-
-comunidadesRouter.put(
-  '/:id/expediente/vision-desarrollo/:area',
-  authenticateAccessToken,
-  requirePermission('comunidades.gestionar'),
-  async (req, res) => {
-    const comunidadId = typeof req.params.id === 'string' ? req.params.id : null;
-    const areaParametro = req.params.area;
-    const area = typeof areaParametro === 'string' ? areaParametro.toUpperCase() : null;
-
-    if (!req.auth?.organizacionId) {
-      res.status(401).json({ message: 'La sesión no contiene una organización válida.' });
-      return;
-    }
-
-    if (!esUuid(comunidadId) || !esAreaVisionDesarrollo(area)) {
-      res.status(400).json({ message: 'La comunidad o el área de desarrollo no son válidas.' });
-      return;
-    }
-
-    const situacionActual =
-      typeof req.body?.situacionActual === 'string' ? req.body.situacionActual.trim() || null : null;
-    const metaDesarrollo =
-      typeof req.body?.metaDesarrollo === 'string' ? req.body.metaDesarrollo.trim() || null : null;
-    const prioridad = req.body?.prioridad ?? null;
-
-    if (!esPrioridadVision(prioridad)) {
-      res.status(400).json({ message: 'La prioridad debe ser alta, media o baja.' });
-      return;
-    }
-
-    if (situacionActual?.length > 2000 || metaDesarrollo?.length > 2000) {
-      res.status(400).json({ message: 'Cada descripción puede contener hasta 2000 caracteres.' });
-      return;
-    }
-
-    try {
-      const metasValidadas = validarMetasVision(req.body?.metas, req.body?.revision);
-      const vision = await guardarVisionDesarrolloComunitaria(
-        req.auth.organizacionId,
-        comunidadId,
-        { area, situacionActual, prioridad, metaDesarrollo, ...metasValidadas },
-        req.auth.sub,
-      );
-
-      if (!vision) {
-        res.status(404).json({ message: 'La comunidad no existe en la organización activa.' });
-        return;
-      }
-
-      res.json({ vision });
-    } catch (error) {
-      if (error instanceof ErrorExpediente) { res.status(error.status).json({message: error.message}); return; }
-      console.error('Error guardando visión de desarrollo:', error);
-      res.status(500).json({ message: 'No fue posible guardar la visión de desarrollo.' });
-    }
-  },
-);
+comunidadesRouter.put('/:id/expediente/vision-desarrollo/:area', authenticateAccessToken,
+  requirePermission('comunidades.gestionar'), guardarVisionDesarrolloComunidad);
 
 comunidadesRouter.patch(
   '/:id',
