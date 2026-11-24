@@ -103,6 +103,10 @@ test('ADR-006 Comunidades: listado y creación usan controladores sin SQL', () =
   assert.match(routes, /requirePermission\('comunidades\.gestionar'\), crearComunidad\)/);
   assert.match(routes, /requirePermission\('comunidades\.ver'\), obtenerDiagnosticoComunidad\)/);
   assert.match(routes, /requirePermission\('comunidades\.gestionar'\), guardarDiagnosticoComunidad\)/);
+  assert.match(routes, /requirePermission\('comunidades\.gestionar'\), editarComunidad\)/);
+  assert.match(routes, /requirePermission\('comunidades\.gestionar'\), actualizarEstadoComunidad\)/);
+  assert.equal(routes.includes('editarComunidadBasica('), false);
+  assert.equal(routes.includes('cambiarEstadoComunidad('), false);
   assert.equal(controller.includes('.query('), false);
   assert.equal(controller.includes('comunidades.repository'), false);
   assert.equal(service.includes('INSERT INTO comunidades ('), false);
