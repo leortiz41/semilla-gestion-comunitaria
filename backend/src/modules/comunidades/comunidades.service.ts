@@ -1,5 +1,5 @@
 import type { Pool } from 'pg';
-import { consultarComunidadesPorOrganizacion, type ComunidadFila } from './comunidades.repository.js';
+import { consultarComunidadesPorOrganizacion, insertarComunidadBasica, actualizarComunidadBasica, actualizarEstadoComunidad, consultarDiagnosticoPoblacion, actualizarDiagnosticoPoblacion, type ComunidadFila, type DiagnosticoPoblacionViviendaFila } from './comunidades.repository.js';
 import { ErrorExpediente } from '../../domain/expediente.js';
 import { validarMetasVision, type MetaVision } from './metas-vision.domain.js';
 import { databasePool } from '../../config/database.js';
@@ -37,13 +37,6 @@ export interface VisionDesarrolloComunitaria {
   metaDesarrollo: string | null;
   metas: MetaVision[];
   revision: number;
-}
-
-interface DiagnosticoPoblacionViviendaFila {
-  poblacion_aproximada: number | null;
-  viviendas_aproximadas: number | null;
-  viviendas_intervencion: number | null;
-  tipos_vivienda: string | null;
 }
 
 interface VisionDesarrolloComunitariaFila {
@@ -121,53 +114,7 @@ export async function crearComunidadBasica(
 ): Promise<ComunidadListado | null> {
   const pool = obtenerPool();
 
-  const resultado = await pool.query<ComunidadFila>(
-    `WITH nueva_comunidad AS (
-       INSERT INTO comunidades (
-         organizacion_id,
-         zona_id,
-         nombre,
-         municipio,
-         departamento
-       )
-       SELECT $1, z.id, $3, $4, $5
-         FROM zonas z
-        WHERE z.id = $2
-          AND z.organizacion_id = $1
-          AND z.activo = TRUE
-       RETURNING
-         id,
-         zona_id,
-         nombre,
-         barrio_colonia,
-         localidad,
-         municipio,
-         departamento,
-         activo
-     )
-     SELECT
-       c.id,
-       c.zona_id,
-       c.nombre,
-       c.barrio_colonia,
-       c.localidad,
-       c.municipio,
-       c.departamento,
-       c.activo,
-       z.nombre AS nombre_zona,
-       z.activo AS zona_activa
-     FROM nueva_comunidad c
-     LEFT JOIN zonas z
-       ON z.id = c.zona_id
-      AND z.organizacion_id = $1`,
-    [
-      organizacionId,
-      datos.zonaId,
-      datos.nombre.trim(),
-      datos.municipio.trim(),
-      datos.departamento.trim(),
-    ],
-  );
+  const resultado = await insertarComunidadBasica(pool, organizacionId, datos);
 
   if (resultado.rowCount === 0) {
     return null;
@@ -188,54 +135,7 @@ export async function editarComunidadBasica(
 ): Promise<ComunidadListado | null> {
   const pool = obtenerPool();
 
-  const resultado = await pool.query<ComunidadFila>(
-    `WITH comunidad_actualizada AS (
-       UPDATE comunidades c
-          SET zona_id = z.id,
-              nombre = $4,
-              municipio = $5,
-              departamento = $6,
-              actualizado_en = NOW()
-         FROM zonas z
-        WHERE c.id = $1
-          AND c.organizacion_id = $2
-          AND z.id = $3
-          AND z.organizacion_id = $2
-          AND z.activo = TRUE
-       RETURNING
-         c.id,
-         c.zona_id,
-         c.nombre,
-         c.barrio_colonia,
-         c.localidad,
-         c.municipio,
-         c.departamento,
-         c.activo
-     )
-     SELECT
-       c.id,
-       c.zona_id,
-       c.nombre,
-       c.barrio_colonia,
-       c.localidad,
-       c.municipio,
-       c.departamento,
-       c.activo,
-       z.nombre AS nombre_zona,
-       z.activo AS zona_activa
-     FROM comunidad_actualizada c
-     LEFT JOIN zonas z
-       ON z.id = c.zona_id
-      AND z.organizacion_id = $2`,
-    [
-      comunidadId,
-      organizacionId,
-      datos.zonaId,
-      datos.nombre.trim(),
-      datos.municipio.trim(),
-      datos.departamento.trim(),
-    ],
-  );
+  const resultado = await actualizarComunidadBasica(pool, organizacionId, comunidadId, datos);
 
   if (resultado.rowCount === 0) {
     return null;
@@ -251,40 +151,7 @@ export async function cambiarEstadoComunidad(
 ): Promise<ComunidadListado | null> {
   const pool = obtenerPool();
 
-  const resultado = await pool.query<ComunidadFila>(
-    `WITH comunidad_actualizada AS (
-       UPDATE comunidades
-          SET activo = $3,
-              actualizado_en = NOW()
-        WHERE id = $1
-          AND organizacion_id = $2
-       RETURNING
-         id,
-         zona_id,
-         nombre,
-         barrio_colonia,
-         localidad,
-         municipio,
-         departamento,
-         activo
-     )
-     SELECT
-       c.id,
-       c.zona_id,
-       c.nombre,
-       c.barrio_colonia,
-       c.localidad,
-       c.municipio,
-       c.departamento,
-       c.activo,
-       z.nombre AS nombre_zona,
-       z.activo AS zona_activa
-     FROM comunidad_actualizada c
-     LEFT JOIN zonas z
-       ON z.id = c.zona_id
-      AND z.organizacion_id = $2`,
-    [comunidadId, organizacionId, activo],
-  );
+  const resultado = await actualizarEstadoComunidad(pool, organizacionId, comunidadId, activo);
 
   if (resultado.rowCount === 0) {
     return null;
@@ -299,20 +166,7 @@ export async function obtenerDiagnosticoPoblacionVivienda(
 ): Promise<DiagnosticoPoblacionVivienda | null | undefined> {
   const pool = obtenerPool();
 
-  const resultado = await pool.query<DiagnosticoPoblacionViviendaFila>(
-    `SELECT
-       d.poblacion_aproximada,
-       d.viviendas_aproximadas,
-       d.viviendas_intervencion,
-       d.tipos_vivienda
-     FROM comunidades c
-     LEFT JOIN diagnosticos_comunitarios d
-       ON d.comunidad_id = c.id
-      AND d.organizacion_id = c.organizacion_id
-     WHERE c.id = $1
-       AND c.organizacion_id = $2`,
-    [comunidadId, organizacionId],
-  );
+  const resultado = await consultarDiagnosticoPoblacion(pool, organizacionId, comunidadId);
 
   if (resultado.rowCount === 0) {
     return undefined;
@@ -338,39 +192,7 @@ export async function guardarDiagnosticoPoblacionVivienda(
 ): Promise<DiagnosticoPoblacionVivienda | null> {
   const pool = obtenerPool();
 
-  const resultado = await pool.query<DiagnosticoPoblacionViviendaFila>(
-    `INSERT INTO diagnosticos_comunitarios (
-       comunidad_id,
-       organizacion_id,
-       poblacion_aproximada,
-       viviendas_aproximadas,
-       viviendas_intervencion,
-       tipos_vivienda
-     )
-     SELECT c.id, c.organizacion_id, $3, $4, $5, $6
-       FROM comunidades c
-      WHERE c.id = $1
-        AND c.organizacion_id = $2
-     ON CONFLICT (comunidad_id) DO UPDATE
-       SET poblacion_aproximada = EXCLUDED.poblacion_aproximada,
-           viviendas_aproximadas = EXCLUDED.viviendas_aproximadas,
-           viviendas_intervencion = EXCLUDED.viviendas_intervencion,
-           tipos_vivienda = EXCLUDED.tipos_vivienda,
-           actualizado_en = NOW()
-     RETURNING
-       poblacion_aproximada,
-       viviendas_aproximadas,
-       viviendas_intervencion,
-       tipos_vivienda`,
-    [
-      comunidadId,
-      organizacionId,
-      datos.poblacionAproximada,
-      datos.viviendasAproximadas,
-      datos.viviendasIntervencion,
-      datos.tiposVivienda?.trim() || null,
-    ],
-  );
+  const resultado = await actualizarDiagnosticoPoblacion(pool, organizacionId, comunidadId, datos);
 
   if (resultado.rowCount === 0) {
     return null;
