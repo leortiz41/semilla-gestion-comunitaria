@@ -107,6 +107,13 @@ test('ADR-006 Comunidades: listado y creación usan controladores sin SQL', () =
   assert.match(routes, /requirePermission\('comunidades\.gestionar'\), actualizarEstadoComunidad\)/);
   assert.equal(routes.includes('editarComunidadBasica('), false);
   assert.equal(routes.includes('cambiarEstadoComunidad('), false);
+  for (const nombre of ['crearExpedienteComunidad', 'consultarExpedienteComunidad', 'actualizarDiagnosticoExpediente']) {
+    assert.ok(routes.includes(nombre));
+    assert.ok(controller.includes('export const ' + nombre + ': RequestHandler'));
+  }
+  assert.equal(routes.includes('validarExpediente('), false);
+  assert.equal(routes.includes('guardarExpediente('), false);
+  assert.equal(routes.includes('obtenerExpediente('), false);
   assert.equal(controller.includes('.query('), false);
   assert.equal(controller.includes('comunidades.repository'), false);
   assert.equal(service.includes('INSERT INTO comunidades ('), false);
