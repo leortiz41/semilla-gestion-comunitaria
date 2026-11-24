@@ -5,6 +5,7 @@ import { esUuid } from '../../domain/expediente.js';
 import { databasePool } from '../../config/database.js';
 import { firmarObjetoR2, r2Disponible } from '../../services/r2-evidencias.service.js';
 import { authenticateAccessToken, requirePermission, requireRole } from '../../middleware/auth.middleware.js';
+import { obtenerAdministracionDonantes, guardarFichaDonante, modificarEstadoDonante } from './administracion-donantes.controller.js';
 
 export const donantesRouter = Router();
 
@@ -300,47 +301,7 @@ administracionDonantes.post('/cuentas', async (req, res) => {
   }
 });
 
-administracionDonantes.get('/', async (req, res) => {
-  if (!databasePool) {
-    res.status(503).json({ message: 'La administración de donantes no está disponible.' });
-    return;
-  }
-  const parametros = [req.auth!.organizacionId];
-  try {
-    const [donantes, proyectos] = await Promise.all([
-      databasePool.query(
-        `SELECT u.id, u.email, u.activo
-           FROM usuarios u
-          WHERE u.organizacion_id = $1
-            AND EXISTS (
-              SELECT 1 FROM usuarios_roles ur JOIN roles r ON r.id = ur.rol_id
-              WHERE ur.usuario_id = u.id AND r.nombre = 'DONANTE' AND r.activo
-            )
-          ORDER BY u.email, u.id`, parametros,
-      ),
-      databasePool.query(
-        `SELECT p.id, p.nombre, p.comunidad_id AS "comunidadId",
-                ARRAY(SELECT pd.usuario_id FROM proyectos_donantes pd
-                      JOIN usuarios u ON u.id = pd.usuario_id AND u.organizacion_id = $1
-                      WHERE pd.proyecto_id = p.id) AS "donanteIds",
-                COALESCE((SELECT jsonb_agg(jsonb_build_object(
-                    'id', e.id, 'titulo', COALESCE(e.titulo, e.tipo_evidencia),
-                    'compartida', e.visible_para_donantes
-                  ) ORDER BY e.creado_en DESC, e.id)
-                  FROM evidencias e
-                  WHERE e.proyecto_id = p.id AND e.solicitud_pago_id IS NULL
-                    AND e.archivo_url LIKE 'https://%'), '[]'::jsonb) AS evidencias
-           FROM proyectos p JOIN comunidades c ON c.id = p.comunidad_id
-          WHERE c.organizacion_id = $1
-          ORDER BY p.nombre, p.id`, parametros,
-      ),
-    ]);
-    res.json({ donantes: donantes.rows, proyectos: proyectos.rows });
-  } catch (error) {
-    console.error('Error consultando administración de donantes:', error);
-    res.status(500).json({ message: 'No fue posible consultar los accesos.' });
-  }
-});
+administracionDonantes.get('/', obtenerAdministracionDonantes);
 
 administracionDonantes.put('/proyectos/:proyectoId/donantes/:donanteId', async (req, res) => {
   const { proyectoId, donanteId } = req.params;
@@ -469,26 +430,7 @@ administracionDonantes.get('/fichas', async (req, res) => {
   }
 });
 
-administracionDonantes.post('/fichas', async (req, res) => {
-  const nombre = typeof req.body?.nombre === 'string' ? req.body.nombre.trim() : '';
-  const correo = typeof req.body?.correo === 'string' ? req.body.correo.trim().toLowerCase() : '';
-  const telefono = typeof req.body?.telefono === 'string' ? req.body.telefono.trim() : '';
-  if (!nombre || nombre.length > 180 || correo.length > 150 ||
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo) || telefono.length > 50) {
-    res.status(400).json({ message: 'Revisá el nombre, el correo y el teléfono.' });
-    return;
-  }
-  try {
-    if (!databasePool) throw new Error('Base de datos no disponible');
-    await databasePool.query(
-      'INSERT INTO donantes (organizacion_id, nombre, correo, telefono) VALUES ($1, $2, $3, $4)',
-      [req.auth!.organizacionId, nombre, correo, telefono || null],
-    );
-    res.sendStatus(204);
-  } catch {
-    res.status(500).json({ message: 'No fue posible guardar el donante.' });
-  }
-});
+administracionDonantes.post('/fichas', guardarFichaDonante);
 
 function esFechaValida(valor: unknown): valor is string {
   if (typeof valor !== 'string' || !/^[1-9]\d{3}-\d{2}-\d{2}$/.test(valor)) return false;
@@ -608,37 +550,7 @@ const guardarBrigada: RequestHandler = async (req, res) => {
 administracionDonantes.post('/fichas/:id/brigadas', guardarBrigada);
 administracionDonantes.put('/fichas/:id/brigadas/:brigadaId', guardarBrigada);
 
-const actualizarEstadoFicha: RequestHandler = async (req, res) => {
-  const { id, brigadaId } = req.params;
-  const activo = req.body?.activo;
-  if (!esUuid(id) || (brigadaId !== undefined && !esUuid(brigadaId)) || typeof activo !== 'boolean') {
-    res.status(400).json({ message: 'Indicá un registro y un estado válidos.' });
-    return;
-  }
-  try {
-    if (!databasePool) throw new Error('Base de datos no disponible');
-    const parametros = [activo, id, req.auth!.organizacionId];
-    const resultado = brigadaId
-      ? await databasePool.query(
-        `UPDATE brigadas_donantes b SET activo = $1 FROM donantes d
-         WHERE d.id = $2 AND d.organizacion_id = $3 AND b.donante_id = d.id AND b.id = $4`,
-        [...parametros, brigadaId],
-      )
-      : await databasePool.query(
-        'UPDATE donantes SET activo = $1 WHERE id = $2 AND organizacion_id = $3',
-        parametros,
-      );
-    if (!resultado.rowCount) {
-      res.status(404).json({ message: 'No se encontró el registro.' });
-      return;
-    }
-    res.sendStatus(204);
-  } catch {
-    res.status(500).json({ message: 'No fue posible actualizar el estado.' });
-  }
-};
-
-administracionDonantes.put('/fichas/:id/estado', actualizarEstadoFicha);
-administracionDonantes.put('/fichas/:id/brigadas/:brigadaId/estado', actualizarEstadoFicha);
+administracionDonantes.put('/fichas/:id/estado', modificarEstadoDonante);
+administracionDonantes.put('/fichas/:id/brigadas/:brigadaId/estado', modificarEstadoDonante);
 
 donantesRouter.use('/administracion', administracionDonantes);
