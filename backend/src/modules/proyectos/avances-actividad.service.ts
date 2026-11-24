@@ -1,5 +1,6 @@
 import { consultarActividadesConAvances, insertarAvance, actualizarEstadoAvance, modificarAvance } from './avances-actividad.repository.js';
 import type { Pool } from 'pg';
+import { consultarMetaActividad, consultarLimiteDeValidacion } from './proyectos.repository.js';
 import type { DatosAvanceActividad } from './avances-actividad.domain.js';
 
 export interface HistorialAvance {
@@ -125,4 +126,24 @@ export async function editarAvanceActividad(
 ): Promise<boolean> {
   const { rowCount } = await modificarAvance(pool, proyectoId, actividadId, avanceId, organizacionId, usuarioId, datos, correccionValidada, motivoCorreccion);
   return rowCount === 1;
+}
+
+/** Reglas de preparación de avance: metadatos siempre limitados a la organización. */
+export async function comprobarTipoDeMetaAvance(
+  pool: Consultable, proyectoId: string, actividadId: string, organizacionId: string,
+  datos: DatosAvanceActividad,
+): Promise<'NO_ENCONTRADO' | 'TIPO_INCORRECTO' | 'OK'> {
+  const filas = await consultarMetaActividad(pool, proyectoId, actividadId, organizacionId);
+  if (!filas.length) return 'NO_ENCONTRADO';
+  return (filas[0].meta_cantidad !== null) !== (datos.cantidadReportada !== null)
+    ? 'TIPO_INCORRECTO' : 'OK';
+}
+
+/** Devuelve el detalle de un posible exceso sin duplicar consultas SQL en controladores. */
+export async function consultarExcesoDeMeta(
+  pool: Consultable, avanceId: string, actividadId: string,
+  proyectoId: string, organizacionId: string,
+) {
+  const limite = await consultarLimiteDeValidacion(pool, avanceId, actividadId, proyectoId, organizacionId);
+  return limite && limite.total > limite.meta ? limite : null;
 }
