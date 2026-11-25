@@ -5,6 +5,7 @@ import { hashPassword } from '../security/password.js';
 import { authenticateAccessToken } from '../middleware/auth.middleware.js';
 import { superadminActual } from '../modules/plataforma/plataforma.middleware.js';
 import { obtenerDashboardPlataforma, obtenerOrganizacionesPlataforma } from '../modules/plataforma/plataforma.controller.js';
+import { registrarOrganizacion, modificarEstadoOrganizacion } from '../modules/plataforma/organizaciones.controller.js';
 import {
   ErrorCredencialTemporal,
   reemitirCredencialTemporalAdministrador,
@@ -136,75 +137,10 @@ plataformaRouter.put('/organizaciones/:organizacionId/accesos/roles/:nombre/perm
 
 plataformaRouter.get('/organizaciones', obtenerOrganizacionesPlataforma);
 
-plataformaRouter.post('/organizaciones', async (req, res) => {
-  const nombre = typeof req.body?.nombre === 'string' ? req.body.nombre.trim() : '';
-  const slug = typeof req.body?.slug === 'string' ? req.body.slug.trim().toLowerCase() : '';
-  const emailContacto = typeof req.body?.emailContacto === 'string' ? req.body.emailContacto.trim().toLowerCase() : null;
-  if (!nombre || nombre.length > 150 || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) ||
-      slug.length > 80 || (emailContacto && !esCorreo(emailContacto))) {
-    res.status(400).json({ message: 'Nombre, slug o correo de contacto inválidos.' }); return;
-  }
-  const client = await databasePool!.connect();
-  try {
-    await client.query('BEGIN');
-    const { rows } = await client.query(
-      `INSERT INTO organizaciones(nombre,slug,email_contacto)
-       VALUES($1,$2,$3) RETURNING id,nombre,slug,activo,email_contacto AS "emailContacto"`,
-      [nombre,slug,emailContacto],
-    );
-    await client.query(
-      `INSERT INTO bitacora_auditoria(usuario_id,accion,nombre_entidad,entidad_id,valores_nuevos)
-       VALUES($1,'PLATAFORMA_CREAR_ORGANIZACION','organizaciones',$2,$3::jsonb)`,
-      [req.auth!.sub,rows[0].id,JSON.stringify({ nombre, slug })],
-    );
-    await client.query('COMMIT');
-    res.status(201).json({ organizacion: rows[0] });
-  } catch (error) {
-    await client.query('ROLLBACK');
-    if (nombreError(error)) { res.status(409).json({ message: 'Ya existe una organización con ese slug.' }); return; }
-    console.error('Error creando organización:', errorHttp(error));
-    res.status(500).json({ message: 'No fue posible crear la organización.' });
-  } finally { client.release(); }
-});
+plataformaRouter.post('/organizaciones', registrarOrganizacion);
 
 // Desactivar un tenant suspende su acceso sin borrar sus datos; reactivar lo restaura.
-plataformaRouter.patch('/organizaciones/:organizacionId/estado', async (req,res) => {
-  const organizacionId=req.params.organizacionId;
-  const activo=req.body?.activo;
-  if (!esUuid(organizacionId) || typeof activo!=='boolean') {
-    res.status(400).json({message:'Organización o estado inválido.'});return;
-  }
-  const client=await databasePool!.connect();
-  try {
-    await client.query('BEGIN');
-    const org=await client.query('SELECT id,activo FROM organizaciones WHERE id=$1 FOR UPDATE',[organizacionId]);
-    if(!org.rows.length) {
-      await client.query('ROLLBACK');res.status(404).json({message:'Organización no encontrada.'});return;
-    }
-    if (!activo) {
-      const propia=await client.query('SELECT 1 FROM usuarios WHERE id=$1 AND organizacion_id=$2',[req.auth!.sub,organizacionId]);
-      if(propia.rows.length) {
-        await client.query('ROLLBACK');res.status(409).json({message:'No podés desactivar la organización asociada a tu cuenta global.'});return;
-      }
-    }
-    if (org.rows[0].activo!==activo) {
-      await client.query('UPDATE organizaciones SET activo=$1 WHERE id=$2',[activo,organizacionId]);
-      if(!activo) {
-        await client.query(`UPDATE tokens_refresco SET revocado_en=COALESCE(revocado_en,NOW())
-          WHERE usuario_id IN (SELECT id FROM usuarios WHERE organizacion_id=$1)`,[organizacionId]);
-      }
-      await client.query(`INSERT INTO bitacora_auditoria(usuario_id,accion,nombre_entidad,entidad_id,valores_anteriores,valores_nuevos)
-        VALUES($1,'PLATAFORMA_CAMBIAR_ESTADO_ORGANIZACION','organizaciones',$2,$3::jsonb,$4::jsonb)`,
-        [req.auth!.sub,organizacionId,JSON.stringify({activo:org.rows[0].activo}),JSON.stringify({activo})]);
-    }
-    await client.query('COMMIT');
-    res.set('Cache-Control','no-store');res.json({id:organizacionId,activo});
-  } catch(error) {
-    await client.query('ROLLBACK');
-    console.error('Error actualizando estado de organización:',errorHttp(error));
-    res.status(500).json({message:'No se pudo modificar el estado de la organización.'});
-  } finally {client.release();}
-});
+plataformaRouter.patch('/organizaciones/:organizacionId/estado', modificarEstadoOrganizacion);
 
 // Suspender una cuenta conserva su historial, documentos y roles asignados.
 plataformaRouter.patch('/organizaciones/:organizacionId/cuentas/:usuarioId/estado', async (req,res) => {
