@@ -1,8 +1,10 @@
 import { randomBytes } from 'node:crypto';
-import { Router, type RequestHandler } from 'express';
+import { Router } from 'express';
 import { databasePool } from '../config/database.js';
 import { hashPassword } from '../security/password.js';
 import { authenticateAccessToken } from '../middleware/auth.middleware.js';
+import { superadminActual } from '../modules/plataforma/plataforma.middleware.js';
+import { obtenerDashboardPlataforma, obtenerOrganizacionesPlataforma } from '../modules/plataforma/plataforma.controller.js';
 import {
   ErrorCredencialTemporal,
   reemitirCredencialTemporalAdministrador,
@@ -22,80 +24,11 @@ const errorHttp = (error: unknown) => error instanceof Error ? error.message : '
 
 // No confiar únicamente en el JWT: los privilegios globales se confirman
 // contra la base de datos, por cada petición y sobre una cuenta activa.
-const superadminActual: RequestHandler = async (req, res, next) => {
-  if (!databasePool || !req.auth) {
-    res.status(503).json({ message: 'Gestión de plataforma no disponible.' }); return;
-  }
-  if (req.auth.debeCambiarContrasena) {
-    res.status(403).json({ message: 'Cambiá tu contraseña antes de administrar la plataforma.' }); return;
-  }
-  if (!req.auth.roles.includes('SUPERADMINISTRADOR')) {
-    res.status(403).json({ message: 'Acceso reservado al superadministrador.' }); return;
-  }
-  try {
-    const { rows } = await databasePool.query(
-      `SELECT 1 FROM usuarios u
-       JOIN organizaciones o ON o.id=u.organizacion_id AND o.activo
-       JOIN usuarios_roles ur ON ur.usuario_id=u.id
-       JOIN roles r ON r.id=ur.rol_id AND r.nombre='SUPERADMINISTRADOR' AND r.activo
-       WHERE u.id=$1 AND u.activo LIMIT 1`,
-      [req.auth.sub],
-    );
-    if (!rows.length) { res.status(403).json({ message: 'Privilegios de plataforma revocados.' }); return; }
-    next();
-  } catch (error) {
-    console.error('Error verificando permisos de plataforma:', errorHttp(error));
-    res.status(503).json({ message: 'No fue posible verificar acceso de plataforma.' });
-  }
-};
-
 plataformaRouter.use(authenticateAccessToken, superadminActual);
 
 // Resumen de la plataforma para superadministradores, con estadísticas reales.
 // Los conteos por tenant se derivan de sus relaciones y no incluyen datos personales.
-plataformaRouter.get('/dashboard', async (_req, res) => {
-  try {
-    const { rows } = await databasePool!.query(`
-      SELECT o.id, o.nombre, o.slug, o.activo, o.creado_en AS "creadoEn",
-        (SELECT count(*)::int FROM usuarios u WHERE u.organizacion_id=o.id
-          AND NOT EXISTS (SELECT 1 FROM bitacora_auditoria b WHERE b.entidad_id=u.id
-          AND b.nombre_entidad='usuarios' AND b.accion='RETIRAR_USUARIO_ORGANIZACION')) AS "usuariosVigentes",
-        (SELECT count(*)::int FROM usuarios u WHERE u.organizacion_id=o.id AND u.activo
-          AND NOT EXISTS (SELECT 1 FROM bitacora_auditoria b WHERE b.entidad_id=u.id
-          AND b.nombre_entidad='usuarios' AND b.accion='RETIRAR_USUARIO_ORGANIZACION')) AS "usuariosActivos",
-        (SELECT count(*)::int FROM usuarios u WHERE u.organizacion_id=o.id
-          AND EXISTS (SELECT 1 FROM bitacora_auditoria b WHERE b.entidad_id=u.id
-          AND b.nombre_entidad='usuarios' AND b.accion='RETIRAR_USUARIO_ORGANIZACION')) AS "usuariosRetirados",
-        (SELECT count(*)::int FROM comunidades c WHERE c.organizacion_id=o.id) AS "comunidades",
-        (SELECT count(*)::int FROM proyectos p JOIN comunidades c ON c.id=p.comunidad_id
-          WHERE c.organizacion_id=o.id) AS "proyectos",
-        (SELECT count(*)::int FROM evidencias e JOIN proyectos p ON p.id=e.proyecto_id
-          JOIN comunidades c ON c.id=p.comunidad_id WHERE c.organizacion_id=o.id) AS "evidencias",
-        (SELECT max(u.ultimo_acceso_en) FROM usuarios u
-          WHERE u.organizacion_id=o.id) AS "ultimoAcceso"
-      FROM organizaciones o ORDER BY o.nombre,o.id LIMIT 500
-    `);
-    const totales = rows.reduce((ac: {
-      organizaciones: number; activas: number; suspendidas: number;
-      usuariosVigentes: number; usuariosActivos: number; usuariosRetirados: number;
-      comunidades: number; proyectos: number; evidencias: number;
-    }, fila: Record<string,unknown>) => {
-      ac.organizaciones += 1;
-      if (fila.activo) ac.activas += 1; else ac.suspendidas += 1;
-      for (const campo of ['usuariosVigentes','usuariosActivos','usuariosRetirados','comunidades','proyectos','evidencias'] as const) {
-        ac[campo] += Number(fila[campo] ?? 0);
-      }
-      return ac;
-    }, {organizaciones:0,activas:0,suspendidas:0,usuariosVigentes:0,
-        usuariosActivos:0,usuariosRetirados:0,comunidades:0,proyectos:0,evidencias:0});
-    res.set('Cache-Control','no-store');
-    res.json({totales,organizaciones:rows,consultadoEn:new Date().toISOString()});
-  } catch(error) {
-    console.error('Error consultando métricas SaaS:',errorHttp(error));
-    res.status(500).json({message:'No fue posible consultar el dashboard de plataforma.'});
-  }
-});
-
+plataformaRouter.get('/dashboard', obtenerDashboardPlataforma);
 
 plataformaRouter.get('/organizaciones/:organizacionId/accesos',async(req,res)=>{
  const org=req.params.organizacionId;
@@ -201,24 +134,7 @@ plataformaRouter.put('/organizaciones/:organizacionId/accesos/roles/:nombre/perm
  }finally{client.release();}
 });
 
-plataformaRouter.get('/organizaciones', async (_req, res) => {
-  try {
-    const { rows } = await databasePool!.query(
-      `SELECT o.id,o.nombre,o.slug,o.activo,o.email_contacto AS "emailContacto",
-          (SELECT count(*)::int FROM usuarios u WHERE u.organizacion_id=o.id) AS "cantidadUsuarios",
-          (SELECT count(DISTINCT u.id)::int FROM usuarios u
-           JOIN usuarios_roles ur ON ur.usuario_id=u.id
-           JOIN roles r ON r.id=ur.rol_id AND r.nombre='ADMINISTRADOR'
-           WHERE u.organizacion_id=o.id AND u.activo) AS "cantidadAdministradores"
-       FROM organizaciones o ORDER BY o.nombre,o.id LIMIT 500`,
-    );
-    res.set('Cache-Control','no-store');
-    res.json({ organizaciones: rows });
-  } catch (error) {
-    console.error('Error consultando organizaciones:', errorHttp(error));
-    res.status(500).json({ message: 'No se pudieron consultar las organizaciones.' });
-  }
-});
+plataformaRouter.get('/organizaciones', obtenerOrganizacionesPlataforma);
 
 plataformaRouter.post('/organizaciones', async (req, res) => {
   const nombre = typeof req.body?.nombre === 'string' ? req.body.nombre.trim() : '';
