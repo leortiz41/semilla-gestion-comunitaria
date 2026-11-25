@@ -5,6 +5,7 @@ import { ErrorCredencialTemporal, reemitirCredencialTemporalAdministrador } from
 import { obtenerRolesUsuarios, obtenerCuentasUsuarios } from '../modules/usuarios/usuarios.controller.js';
 import { validarRoles, validarEmail, normalizarNombre } from '../modules/usuarios/usuarios.domain.js';
 import { registrarCuentaOrganizacion } from '../modules/usuarios/cuentas.controller.js';
+import { actualizarRolesUsuario } from '../modules/usuarios/roles.controller.js';
 
 export const usuariosRouter = Router();
 
@@ -22,12 +23,6 @@ const verificarAdministradorActual = async (usuarioId: string, organizacionId: s
   );
   return Boolean(result.rows.length);
 };
-const obtenerRolesActivos = async (roles: string[], client: { query: (...args: any[]) => Promise<any> }) => {
-  const { rows } = await client.query('SELECT id,nombre FROM roles WHERE activo AND nombre=ANY($1::text[])', [roles]);
-  if (rows.length !== roles.length) throw new Error('ROLES_NO_DISPONIBLES');
-  return rows as { id: string; nombre: string }[];
-};
-
 usuariosRouter.get('/cuentas', authenticateAccessToken, requireRole('ADMINISTRADOR'),
   requirePermission('usuarios.gestionar'), obtenerCuentasUsuarios);
 
@@ -243,72 +238,4 @@ usuariosRouter.put('/cuentas/:usuarioId/email', authenticateAccessToken,
   });
 
 usuariosRouter.put('/cuentas/:usuarioId/roles', authenticateAccessToken,
-  requireRole('ADMINISTRADOR'), requirePermission('usuarios.gestionar'), async (req, res) => {
-    const roles = validarRoles(req.body?.roles);
-    const usuarioId = req.params.usuarioId;
-    if (!roles || typeof usuarioId !== 'string' || !/^[0-9a-f-]{36}$/i.test(usuarioId)) {
-      res.status(400).json({ message: 'Usuario o roles no válidos.' }); return;
-    }
-    if (!databasePool) { res.status(503).json({ message: 'Gestión de cuentas no disponible.' }); return; }
-    if (usuarioId === req.auth!.sub && !roles.includes('ADMINISTRADOR')) {
-      res.status(409).json({ message: 'No podés quitarte tu propio rol de administrador.' }); return;
-    }
-    const client = await databasePool.connect();
-    try {
-      await client.query('BEGIN');
-      // El bloqueo de la organización serializa modificaciones de administradores.
-      const org = await client.query('SELECT id FROM organizaciones WHERE id=$1 AND activo FOR UPDATE',
-        [req.auth!.organizacionId]);
-      const usuario = await client.query('SELECT id FROM usuarios WHERE id=$1 AND organizacion_id=$2 AND activo FOR UPDATE',
-        [usuarioId, req.auth!.organizacionId]);
-      if (!org.rows.length || !usuario.rows.length) {
-        await client.query('ROLLBACK'); res.status(404).json({ message: 'Usuario no encontrado en tu organización.' }); return;
-      }
-      const cuentaPlataforma = await client.query(
-        `SELECT 1 FROM usuarios_roles upr JOIN roles rpr ON rpr.id=upr.rol_id
-         WHERE upr.usuario_id=$1 AND rpr.nombre='SUPERADMINISTRADOR' LIMIT 1`,
-        [usuarioId],
-      );
-      if (cuentaPlataforma.rows.length) {
-        await client.query('ROLLBACK');
-        res.status(403).json({ message: 'Las cuentas de plataforma no pueden administrarse desde una organización.' });
-        return;
-      }
-      const admin = await verificarAdministradorActual(req.auth!.sub, req.auth!.organizacionId);
-      const actuales = await client.query(
-        `SELECT r.nombre FROM usuarios_roles ur JOIN roles r ON r.id=ur.rol_id WHERE ur.usuario_id=$1`,
-        [usuarioId],
-      );
-      const rolesActivos = await obtenerRolesActivos(roles, client);
-      if (!admin) {
-        await client.query('ROLLBACK'); res.status(403).json({ message: 'Administración no autorizada.' }); return;
-      }
-      if (actuales.rows.some((r: { nombre: string }) => r.nombre === 'ADMINISTRADOR') &&
-          !roles.includes('ADMINISTRADOR')) {
-        const otros = await client.query(`SELECT count(DISTINCT u.id)::int AS total FROM usuarios u
-          JOIN usuarios_roles ur ON ur.usuario_id=u.id JOIN roles r ON r.id=ur.rol_id
-          WHERE u.organizacion_id=$1 AND u.activo AND r.nombre='ADMINISTRADOR' AND u.id<>$2`,
-          [req.auth!.organizacionId, usuarioId]);
-        if (otros.rows[0].total === 0) {
-          await client.query('ROLLBACK');
-          res.status(409).json({ message: 'La organización debe conservar al menos un administrador.' }); return;
-        }
-      }
-      await client.query('DELETE FROM usuarios_roles WHERE usuario_id=$1', [usuarioId]);
-      for (const rol of rolesActivos) {
-        await client.query('INSERT INTO usuarios_roles(usuario_id,rol_id) VALUES($1,$2)', [usuarioId, rol.id]);
-      }
-      await client.query(`INSERT INTO bitacora_auditoria(usuario_id,accion,nombre_entidad,entidad_id,valores_nuevos)
-        VALUES ($1,'CAMBIAR_ROLES_USUARIO','usuarios',$2,$3::jsonb)`,
-        [req.auth!.sub, usuarioId, JSON.stringify({ roles })]);
-      await client.query('COMMIT');
-      res.json({ roles });
-    } catch (error) {
-      await client.query('ROLLBACK');
-      if ((error as Error).message === 'ROLES_NO_DISPONIBLES') {
-        res.status(400).json({ message: 'Alguno de los roles no está activo.' }); return;
-      }
-      console.error('Error actualizando roles:', error);
-      res.status(500).json({ message: 'No fue posible actualizar los roles.' });
-    } finally { client.release(); }
-  });
+  requireRole('ADMINISTRADOR'), requirePermission('usuarios.gestionar'), actualizarRolesUsuario);
