@@ -1,16 +1,12 @@
-import { randomBytes } from 'node:crypto';
 import { Router } from 'express';
 import { databasePool } from '../config/database.js';
-import { hashPassword } from '../security/password.js';
 import { authenticateAccessToken } from '../middleware/auth.middleware.js';
 import { superadminActual } from '../modules/plataforma/plataforma.middleware.js';
 import { obtenerDashboardPlataforma, obtenerOrganizacionesPlataforma } from '../modules/plataforma/plataforma.controller.js';
 import { registrarOrganizacion, modificarEstadoOrganizacion } from '../modules/plataforma/organizaciones.controller.js';
 import { obtenerCuentasPlataforma, registrarCuentaPlataforma, modificarEstadoCuentaPlataforma } from '../modules/plataforma/cuentas-plataforma.controller.js';
-import {
-  ErrorCredencialTemporal,
-  reemitirCredencialTemporalAdministrador,
-} from '../services/credenciales-temporales.service.js';
+import { modificarRolesCuentaPlataforma } from '../modules/plataforma/roles-cuentas.controller.js';
+import { reemitirCredencialCuentaPlataforma } from '../modules/plataforma/credenciales-cuentas.controller.js';
 
 export const plataformaRouter = Router();
 const rolesPermitidos = ['ADMINISTRADOR', 'COORDINADOR', 'FINANZAS', 'CAMPO', 'DONANTE'];
@@ -151,27 +147,8 @@ plataformaRouter.get('/organizaciones/:organizacionId/cuentas', obtenerCuentasPl
 plataformaRouter.post('/organizaciones/:organizacionId/cuentas', registrarCuentaPlataforma);
 
 // Nunca se recupera una contraseña anterior: se invalida y se emite una nueva.
-plataformaRouter.post('/organizaciones/:organizacionId/cuentas/:usuarioId/credencial-temporal', async (req, res) => {
-  const { organizacionId, usuarioId } = req.params;
-  if (!esUuid(organizacionId) || !esUuid(usuarioId)) {
-    res.status(400).json({ message: 'Organización o cuenta inválida.' }); return;
-  }
-
-  try {
-    const respuesta = await reemitirCredencialTemporalAdministrador(
-      { organizacionId, usuarioId, superadministradorId: req.auth!.sub, permitirOtrosRoles: true },
-      databasePool!,
-    );
-    res.set('Cache-Control', 'no-store');
-    res.status(201).json(respuesta);
-  } catch (error) {
-    if (error instanceof ErrorCredencialTemporal) {
-      res.status(error.codigoEstado).json({ message: error.message }); return;
-    }
-    console.error('Error reemitiendo credencial temporal:', errorHttp(error));
-    res.status(500).json({ message: 'No fue posible emitir una nueva credencial temporal.' });
-  }
-});
+plataformaRouter.post('/organizaciones/:organizacionId/cuentas/:usuarioId/credencial-temporal',
+  reemitirCredencialCuentaPlataforma);
 
 // El superadministrador puede mantener la identidad visible de cualquier cuenta activa
 // de una organización sin cambiar su correo, fotografía ni credenciales.
@@ -293,57 +270,5 @@ plataformaRouter.put('/organizaciones/:organizacionId/cuentas/:usuarioId/email',
   } finally {client.release();}
 });
 
-plataformaRouter.put('/organizaciones/:organizacionId/cuentas/:usuarioId/roles', async (req,res) => {
-  const { organizacionId, usuarioId } = req.params;
-  const roles = req.body?.roles;
-  if (!esUuid(organizacionId) || !esUuid(usuarioId) || !rolesValidos(roles)) {
-    res.status(400).json({message:'Organización, usuario o roles inválidos.'}); return;
-  }
-  const client=await databasePool!.connect();
-  try {
-    await client.query('BEGIN');
-    const org=await client.query('SELECT id FROM organizaciones WHERE id=$1 AND activo FOR UPDATE',[organizacionId]);
-    const usuario=await client.query('SELECT id,activo FROM usuarios WHERE id=$1 AND organizacion_id=$2 FOR UPDATE',
-      [usuarioId,organizacionId]);
-    if(!org.rows.length || !usuario.rows.length || !usuario.rows[0].activo) {
-      await client.query('ROLLBACK');res.status(404).json({message:'La cuenta o su organización no están activas.'});return;
-    }
-    const actuales=await client.query(
-      `SELECT r.nombre FROM usuarios_roles ur JOIN roles r ON r.id=ur.rol_id
-       WHERE ur.usuario_id=$1`,[usuarioId]);
-    if(actuales.rows.some((rolAsignado:{nombre:string})=>rolAsignado.nombre==='SUPERADMINISTRADOR')) {
-      await client.query('ROLLBACK');res.status(403).json({message:'La cuenta de plataforma no admite edición desde este módulo.'});return;
-    }
-    if(actuales.rows.some((rolAsignado:{nombre:string})=>rolAsignado.nombre==='ADMINISTRADOR') && !roles.includes('ADMINISTRADOR')) {
-      const otros=await client.query(
-        `SELECT count(DISTINCT u.id)::int AS total FROM usuarios u
-         JOIN usuarios_roles ur ON ur.usuario_id=u.id
-         JOIN roles r ON r.id=ur.rol_id
-         WHERE u.organizacion_id=$1 AND u.activo AND r.nombre='ADMINISTRADOR' AND u.id<>$2`,
-        [organizacionId,usuarioId],
-      );
-      if(otros.rows[0].total===0) {
-        await client.query('ROLLBACK');
-        res.status(409).json({message:'No se puede quitar el último administrador de una organización.'});return;
-      }
-    }
-    const rs=await client.query('SELECT id,nombre FROM roles WHERE nombre=ANY($1::text[]) AND activo',[roles]);
-    if(rs.rows.length!==roles.length){
-      await client.query('ROLLBACK');res.status(400).json({message:'Hay roles no disponibles.'});return;
-    }
-    await client.query('DELETE FROM usuarios_roles WHERE usuario_id=$1',[usuarioId]);
-    for(const rol of rs.rows) await client.query('INSERT INTO usuarios_roles(usuario_id,rol_id) VALUES($1,$2)',
-      [usuarioId,rol.id]);
-    // Revocar refresh tokens: la sesión anterior no debe conservar permisos ampliados.
-    await client.query('UPDATE tokens_refresco SET revocado_en=COALESCE(revocado_en,NOW()) WHERE usuario_id=$1',[usuarioId]);
-    await client.query(`INSERT INTO bitacora_auditoria(usuario_id,accion,nombre_entidad,entidad_id,valores_nuevos)
-      VALUES($1,'PLATAFORMA_CAMBIAR_ROLES','usuarios',$2,$3::jsonb)`,
-      [req.auth!.sub,usuarioId,JSON.stringify({organizacionId,roles})]);
-    await client.query('COMMIT');
-    res.json({roles});
-  }catch(error){
-    await client.query('ROLLBACK');
-    console.error('Error cambiando roles desde plataforma:',errorHttp(error));
-    res.status(500).json({message:'No fue posible cambiar los perfiles de la cuenta.'});
-  }finally{client.release();}
-});
+plataformaRouter.put('/organizaciones/:organizacionId/cuentas/:usuarioId/roles',
+  modificarRolesCuentaPlataforma);
