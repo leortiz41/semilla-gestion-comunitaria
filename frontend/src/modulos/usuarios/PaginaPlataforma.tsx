@@ -391,7 +391,7 @@ export default function PaginaPlataforma({ token }: { token: string }) {
             </button>
           </div>
         )}
-        {confirmacion && (
+        {confirmacion?.tipo === 'organizacion' && (
           <div className="cuentas-org__confirmacion" role="alert">
             <p><strong>{confirmacion.activo?'Confirmar activación':'Confirmar desactivación'}:</strong> {confirmacion.nombre}.</p>
             {!confirmacion.activo && <p>Se revocarán las sesiones renovables. No se eliminarán datos, cuentas ni roles.</p>}
@@ -555,6 +555,7 @@ export default function PaginaPlataforma({ token }: { token: string }) {
                               )}
                               <button type="button" disabled={ocupado} onClick={() => {
                                 setConfirmacion({ tipo: 'cuenta', id: cuenta.id, nombre: cuenta.email, activo: !cuenta.activo });
+                                setError(''); setMensaje('');
                                 setEdicionNombre(null);setEdicionId(null);setEdicionCorreo(null);setMenuCuenta(null);
                               }}>{cuenta.activo ? 'Desactivar cuenta' : 'Activar cuenta'}</button>
                               <button type="button" disabled={ocupado} onClick={() => {
@@ -566,6 +567,22 @@ export default function PaginaPlataforma({ token }: { token: string }) {
                         </div>
                       ) : <span className="plataforma-directorio__sin-acciones">Solo historial</span>}
                     </div>
+                    {confirmacion?.tipo === 'cuenta' && confirmacion.id === cuenta.id && (
+                      <div className="cuentas-org__confirmacion plataforma-directorio__editor" role="alert" aria-live="assertive">
+                        <p><strong>{confirmacion.activo ? 'Confirmar activación' : 'Confirmar desactivación'}:</strong> {cuenta.nombreVisible || cuenta.email}.</p>
+                        <p>{confirmacion.activo
+                          ? 'Se habilitará nuevamente el acceso de esta cuenta suspendida.'
+                          : 'Se desactivará la cuenta y se revocarán sus sesiones renovables.'}</p>
+                        {error && <p className="cuentas-org__error" role="alert">{error}</p>}
+                        <div className="cuentas-org__acciones">
+                          <button type="button" disabled={ocupado} onClick={() => void cambiarEstadoConfirmado()}>
+                            {ocupado ? 'Procesando…' : confirmacion.activo ? 'Sí, activar' : 'Sí, desactivar'}
+                          </button>
+                          <button type="button" className="cuentas-org__secundario" disabled={ocupado}
+                            onClick={() => { setConfirmacion(null); setError(''); }}>Cancelar</button>
+                        </div>
+                      </div>
+                    )}
                     {confirmandoCredencial === cuenta.id && !cuenta.retirado && (
                       <div className="cuentas-org__confirmacion plataforma-directorio__editor" role="alert">
                         <p>¿Reemitir contraseña temporal para {cuenta.email}? La anterior dejará de funcionar y se cerrarán sus sesiones renovables.</p>
