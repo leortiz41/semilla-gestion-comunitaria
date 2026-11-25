@@ -9,7 +9,7 @@ export function listarNecesidades(
   return consultarNecesidadesEnRepositorio(organizacionId, comunidadId, pool);
 }
 
-export function registrarNecesidad(
+export async function registrarNecesidad(
   organizacionId: string, comunidadId: string, usuarioId: string,
   entrada: DatosNecesidad, pool: Pool | null = databasePool,
 ) {
