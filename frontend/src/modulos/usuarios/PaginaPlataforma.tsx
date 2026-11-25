@@ -48,6 +48,7 @@ export default function PaginaPlataforma({ token }: { token: string }) {
   const [filtroRol, setFiltroRol] = useState('TODOS');
   const [filtroEstado, setFiltroEstado] = useState('TODOS');
   const [confirmacion, setConfirmacion] = useState<{tipo:'organizacion'|'cuenta';id:string;nombre:string;activo:boolean}|null>(null);
+  const [resultadoEstadoCuenta, setResultadoEstadoCuenta] = useState<{ id: string; texto: string } | null>(null);
 
   useEffect(() => {
     let vigente = true;
@@ -214,6 +215,7 @@ export default function PaginaPlataforma({ token }: { token: string }) {
         await cambiarEstadoCuentaPlataforma(token,organizacionId,confirmacion.id,confirmacion.activo);
         setCuentas((actual)=>actual.map((u)=>u.id===confirmacion.id?{...u,activo:confirmacion.activo}:u));
         setMensaje(confirmacion.activo?'Cuenta activada.':'Cuenta desactivada.');
+        setResultadoEstadoCuenta({ id: confirmacion.id, texto: confirmacion.activo ? 'Cuenta activada correctamente.' : 'Cuenta desactivada correctamente.' });
       }
       setConfirmacion(null);
       setVersion((v)=>v+1);
@@ -555,7 +557,7 @@ export default function PaginaPlataforma({ token }: { token: string }) {
                               )}
                               <button type="button" disabled={ocupado} onClick={() => {
                                 setConfirmacion({ tipo: 'cuenta', id: cuenta.id, nombre: cuenta.email, activo: !cuenta.activo });
-                                setError(''); setMensaje('');
+                                setError(''); setMensaje(''); setResultadoEstadoCuenta(null);
                                 setEdicionNombre(null);setEdicionId(null);setEdicionCorreo(null);setMenuCuenta(null);
                               }}>{cuenta.activo ? 'Desactivar cuenta' : 'Activar cuenta'}</button>
                               <button type="button" disabled={ocupado} onClick={() => {
@@ -567,6 +569,11 @@ export default function PaginaPlataforma({ token }: { token: string }) {
                         </div>
                       ) : <span className="plataforma-directorio__sin-acciones">Solo historial</span>}
                     </div>
+                    {resultadoEstadoCuenta?.id === cuenta.id && confirmacion?.id !== cuenta.id && (
+                      <p className="cuentas-org__mensaje plataforma-directorio__editor" role="status">
+                        {resultadoEstadoCuenta.texto}
+                      </p>
+                    )}
                     {confirmacion?.tipo === 'cuenta' && confirmacion.id === cuenta.id && (
                       <div className="cuentas-org__confirmacion plataforma-directorio__editor" role="alert" aria-live="assertive">
                         <p><strong>{confirmacion.activo ? 'Confirmar activación' : 'Confirmar desactivación'}:</strong> {cuenta.nombreVisible || cuenta.email}.</p>
