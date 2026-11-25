@@ -120,3 +120,32 @@ test('ADR-006 Comunidades: listado y creación usan controladores sin SQL', () =
   assert.equal(service.includes('UPDATE comunidades c'), false);
   assert.equal(service.includes('INSERT INTO diagnosticos_comunitarios'), false);
 });
+
+test('ADR-006 Comunidades: expedientes, necesidades y capacidades separan ruta, controlador, servicio y SQL', () => {
+  const leer = (nombre: string) =>
+    readFileSync(new URL('../src/modules/comunidades/' + nombre, import.meta.url), 'utf8');
+  const expedienteServicio = readFileSync(new URL('../src/services/expedientes.service.ts', import.meta.url), 'utf8');
+  const expedienteRepo = leer('expedientes.repository.ts');
+  assert.equal(expedienteServicio.includes('.query('), false);
+  assert.match(expedienteRepo, /BEGIN/);
+  assert.match(expedienteRepo, /ROLLBACK/);
+  assert.match(expedienteRepo, /bitacora_auditoria/);
+  assert.match(expedienteRepo, /organizacion_id/);
+  for (const area of ['necesidades', 'capacidades']) {
+    const routes = leer(area + '.routes.ts');
+    const controller = leer(area + '.controller.ts');
+    const service = leer(area + '.service.ts');
+    const repository = leer(area + '.repository.ts');
+    assert.equal(routes.includes('async (req, res)'), false, area);
+    assert.equal(routes.includes('.query('), false, area);
+    assert.equal(controller.includes('.query('), false, area);
+    assert.equal(service.includes('.query('), false, area);
+    assert.match(repository, /BEGIN/);
+    assert.match(repository, /COMMIT/);
+    assert.match(repository, /ROLLBACK/);
+    assert.match(repository, /organizacion_id/);
+    assert.match(repository, /bitacora_auditoria/);
+    assert.match(routes, /requirePermission\('comunidades\.ver'\)/);
+    assert.match(routes, /requirePermission\('comunidades\.gestionar'\)/);
+  }
+});
