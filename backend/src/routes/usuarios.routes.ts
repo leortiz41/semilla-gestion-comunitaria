@@ -4,38 +4,11 @@ import { hashPassword } from '../security/password.js';
 import { databasePool } from '../config/database.js';
 import { authenticateAccessToken, requirePermission, requireRole } from '../middleware/auth.middleware.js';
 import { ErrorCredencialTemporal, reemitirCredencialTemporalAdministrador } from '../services/credenciales-temporales.service.js';
+import { obtenerRolesUsuarios, obtenerCuentasUsuarios } from '../modules/usuarios/usuarios.controller.js';
 
 export const usuariosRouter = Router();
 
-usuariosRouter.get('/roles', authenticateAccessToken, requirePermission('usuarios.ver'), async (_req, res) => {
-  try {
-    if (!databasePool) {
-      res.status(503).json({ message: 'El catálogo de roles no está disponible.' });
-      return;
-    }
-
-    const { rows } = await databasePool.query(`
-      SELECT CASE WHEN r.nombre = 'CONSULTA' THEN 'DONANTE' ELSE r.nombre END AS nombre, r.activo,
-        COALESCE(
-          jsonb_agg(jsonb_build_object('codigo', p.codigo, 'descripcion', p.descripcion)
-                    ORDER BY p.codigo) FILTER (WHERE p.id IS NOT NULL AND (
-                      r.nombre NOT IN ('DONANTE', 'CONSULTA')
-                      OR p.codigo IN ('proyectos.ver', 'evidencias.ver')
-                    )),
-          '[]'::jsonb
-        ) AS permisos
-      FROM roles r
-      LEFT JOIN roles_permisos rp ON rp.rol_id = r.id
-      LEFT JOIN permisos p ON p.id = rp.permiso_id
-      WHERE r.nombre IN ('ADMINISTRADOR', 'COORDINADOR', 'FINANZAS', 'CAMPO', 'CONSULTA', 'DONANTE')
-      GROUP BY r.id, r.nombre, r.activo
-    `);
-    res.json({ roles: rows });
-  } catch (error) {
-    console.error('Error consultando catálogo de roles:', error);
-    res.status(500).json({ message: 'No fue posible consultar los roles.' });
-  }
-});
+usuariosRouter.get('/roles', authenticateAccessToken, requirePermission('usuarios.ver'), obtenerRolesUsuarios);
 
 // Cada administrador gestiona solamente cuentas de su propia organización.
 // Los roles son perfiles del catálogo existente, no permisos globales editables.
@@ -70,32 +43,7 @@ const obtenerRolesActivos = async (roles: string[], client: { query: (...args: a
 };
 
 usuariosRouter.get('/cuentas', authenticateAccessToken, requireRole('ADMINISTRADOR'),
-  requirePermission('usuarios.gestionar'), async (req, res) => {
-    if (!databasePool) { res.status(503).json({ message: 'Gestión de cuentas no disponible.' }); return; }
-    try {
-      const { rows } = await databasePool.query(
-        `SELECT u.id, u.email, u.activo, u.debe_cambiar_contrasena AS "debeCambiarContrasena",
-           (SELECT pf.nombre_visible FROM perfiles_usuarios pf
-             WHERE pf.usuario_id=u.id AND pf.organizacion_id=u.organizacion_id) AS "nombreVisible",
-           EXISTS (SELECT 1 FROM bitacora_auditoria b WHERE b.entidad_id=u.id
-             AND b.nombre_entidad='usuarios' AND b.accion='RETIRAR_USUARIO_ORGANIZACION') AS retirado,
-           COALESCE(array_agg(r.nombre ORDER BY r.nombre) FILTER (WHERE r.id IS NOT NULL), '{}'::text[]) AS roles
-         FROM usuarios u LEFT JOIN usuarios_roles ur ON ur.usuario_id=u.id
-         LEFT JOIN roles r ON r.id=ur.rol_id
-         WHERE u.organizacion_id=$1 AND NOT EXISTS (
-           SELECT 1 FROM usuarios_roles upr JOIN roles rpr ON rpr.id=upr.rol_id
-           WHERE upr.usuario_id=u.id AND rpr.nombre='SUPERADMINISTRADOR'
-         ) GROUP BY u.id
-         ORDER BY u.email LIMIT 500`,
-        [req.auth!.organizacionId],
-      );
-      res.set('Cache-Control', 'no-store');
-      res.json({ cuentas: rows });
-    } catch (error) {
-      console.error('Error consultando cuentas de la organización:', error);
-      res.status(500).json({ message: 'No fue posible consultar las cuentas.' });
-    }
-  });
+  requirePermission('usuarios.gestionar'), obtenerCuentasUsuarios);
 
 usuariosRouter.post('/cuentas', authenticateAccessToken, requireRole('ADMINISTRADOR'),
   requirePermission('usuarios.gestionar'), async (req, res) => {
