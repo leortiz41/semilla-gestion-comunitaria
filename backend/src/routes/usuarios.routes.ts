@@ -1,10 +1,10 @@
 import { Router } from 'express';
-import { randomBytes } from 'node:crypto';
-import { hashPassword } from '../security/password.js';
 import { databasePool } from '../config/database.js';
 import { authenticateAccessToken, requirePermission, requireRole } from '../middleware/auth.middleware.js';
 import { ErrorCredencialTemporal, reemitirCredencialTemporalAdministrador } from '../services/credenciales-temporales.service.js';
 import { obtenerRolesUsuarios, obtenerCuentasUsuarios } from '../modules/usuarios/usuarios.controller.js';
+import { validarRoles, validarEmail, normalizarNombre } from '../modules/usuarios/usuarios.domain.js';
+import { registrarCuentaOrganizacion } from '../modules/usuarios/cuentas.controller.js';
 
 export const usuariosRouter = Router();
 
@@ -12,20 +12,6 @@ usuariosRouter.get('/roles', authenticateAccessToken, requirePermission('usuario
 
 // Cada administrador gestiona solamente cuentas de su propia organización.
 // Los roles son perfiles del catálogo existente, no permisos globales editables.
-const perfilesAsignables = ['ADMINISTRADOR', 'COORDINADOR', 'CAMPO', 'FINANZAS', 'DONANTE'];
-const validarRoles = (valor: unknown): string[] | null => {
-  if (!Array.isArray(valor) || !valor.length || valor.length > perfilesAsignables.length ||
-      !valor.every((rol) => typeof rol === 'string' && perfilesAsignables.includes(rol)) ||
-      new Set(valor).size !== valor.length || (valor.includes('DONANTE') && valor.length !== 1)) return null;
-  return valor as string[];
-};
-const validarEmail = (valor: unknown) => typeof valor === 'string' &&
-  valor.length <= 150 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valor);
-const normalizarNombre = (valor: unknown): string =>
-  typeof valor === 'string' ? valor.trim().replace(/\s+/g, ' ') : '';
-const validarNombre = (valor: string): boolean =>
-  valor.length >= 2 && valor.length <= 100 && !/[\x00-\x1f\x7f]/.test(valor);
-
 const verificarAdministradorActual = async (usuarioId: string, organizacionId: string) => {
   const result = await databasePool!.query(
     `SELECT 1 FROM usuarios u JOIN usuarios_roles ur ON ur.usuario_id=u.id
@@ -46,62 +32,7 @@ usuariosRouter.get('/cuentas', authenticateAccessToken, requireRole('ADMINISTRAD
   requirePermission('usuarios.gestionar'), obtenerCuentasUsuarios);
 
 usuariosRouter.post('/cuentas', authenticateAccessToken, requireRole('ADMINISTRADOR'),
-  requirePermission('usuarios.gestionar'), async (req, res) => {
-    const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
-    const roles = validarRoles(req.body?.roles);
-    const nombre = normalizarNombre(req.body?.nombre);
-    const apellido = normalizarNombre(req.body?.apellido);
-    const nombreVisible = [nombre, apellido].join(' ');
-    if (!validarEmail(email) || !roles || !validarNombre(nombre) ||
-        !validarNombre(apellido) || nombreVisible.length > 140) {
-      res.status(400).json({ message: 'Revisá nombre, apellido, correo y roles seleccionados.' }); return;
-    }
-    if (!databasePool) { res.status(503).json({ message: 'Gestión de cuentas no disponible.' }); return; }
-    try {
-      if (!await verificarAdministradorActual(req.auth!.sub, req.auth!.organizacionId)) {
-        res.status(403).json({ message: 'El administrador debe estar activo en su organización.' }); return;
-      }
-      const contrasenaTemporal = 'Aa1-' + randomBytes(18).toString('base64url');
-      const hash = await hashPassword(contrasenaTemporal);
-      const client = await databasePool.connect();
-      try {
-        await client.query('BEGIN');
-        const rolesActivos = await obtenerRolesActivos(roles, client);
-        const { rows } = await client.query(
-          `INSERT INTO usuarios (email, hash_contrasena, organizacion_id, debe_cambiar_contrasena)
-           VALUES ($1,$2,$3,TRUE) RETURNING id,email,activo`,
-          [email, hash, req.auth!.organizacionId],
-        );
-        for (const rol of rolesActivos) {
-          await client.query('INSERT INTO usuarios_roles (usuario_id,rol_id) VALUES ($1,$2)',
-            [rows[0].id, rol.id]);
-        }
-        await client.query(
-          'INSERT INTO perfiles_usuarios (usuario_id,organizacion_id,nombre_visible) VALUES ($1,$2,$3)',
-          [rows[0].id, req.auth!.organizacionId, nombreVisible],
-        );
-        await client.query(
-          `INSERT INTO bitacora_auditoria (usuario_id,accion,nombre_entidad,entidad_id,valores_nuevos)
-           VALUES ($1,'CREAR_USUARIO','usuarios',$2,$3::jsonb)`,
-          [req.auth!.sub, rows[0].id, JSON.stringify({ email, roles, nombreVisible })],
-        );
-        await client.query('COMMIT');
-        res.set('Cache-Control', 'no-store');
-        res.status(201).json({ cuenta: { ...rows[0], roles, nombreVisible }, contrasenaTemporal });
-      } catch (error) {
-        await client.query('ROLLBACK'); throw error;
-      } finally { client.release(); }
-    } catch (error) {
-      if ((error as { code?: string }).code === '23505') {
-        res.status(409).json({ message: 'Ese correo ya tiene una cuenta registrada.' }); return;
-      }
-      if ((error as Error).message === 'ROLES_NO_DISPONIBLES') {
-        res.status(400).json({ message: 'Alguno de los roles seleccionados no está activo.' }); return;
-      }
-      console.error('Error creando usuario de la organización:', error);
-      res.status(500).json({ message: 'No fue posible crear la cuenta.' });
-    }
-  });
+  requirePermission('usuarios.gestionar'), registrarCuentaOrganizacion);
 
 // Retirada lógica: preserva datos relacionados e impide reactivar desde paneles.
 usuariosRouter.post('/cuentas/:usuarioId/retirar', authenticateAccessToken,
