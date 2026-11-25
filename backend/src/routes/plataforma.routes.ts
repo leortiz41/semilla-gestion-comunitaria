@@ -6,6 +6,7 @@ import { authenticateAccessToken } from '../middleware/auth.middleware.js';
 import { superadminActual } from '../modules/plataforma/plataforma.middleware.js';
 import { obtenerDashboardPlataforma, obtenerOrganizacionesPlataforma } from '../modules/plataforma/plataforma.controller.js';
 import { registrarOrganizacion, modificarEstadoOrganizacion } from '../modules/plataforma/organizaciones.controller.js';
+import { obtenerCuentasPlataforma, registrarCuentaPlataforma, modificarEstadoCuentaPlataforma } from '../modules/plataforma/cuentas-plataforma.controller.js';
 import {
   ErrorCredencialTemporal,
   reemitirCredencialTemporalAdministrador,
@@ -143,116 +144,13 @@ plataformaRouter.post('/organizaciones', registrarOrganizacion);
 plataformaRouter.patch('/organizaciones/:organizacionId/estado', modificarEstadoOrganizacion);
 
 // Suspender una cuenta conserva su historial, documentos y roles asignados.
-plataformaRouter.patch('/organizaciones/:organizacionId/cuentas/:usuarioId/estado', async (req,res) => {
-  const {organizacionId,usuarioId}=req.params;
-  const activo=req.body?.activo;
-  if(!esUuid(organizacionId)||!esUuid(usuarioId)||typeof activo!=='boolean') {
-    res.status(400).json({message:'Organización, usuario o estado inválidos.'});return;
-  }
-  const client=await databasePool!.connect();
-  try {
-    await client.query('BEGIN');
-    const org=await client.query('SELECT id,activo FROM organizaciones WHERE id=$1 FOR UPDATE',[organizacionId]);
-    const usuario=await client.query('SELECT id,activo FROM usuarios WHERE id=$1 AND organizacion_id=$2 FOR UPDATE',[usuarioId,organizacionId]);
-    if(!org.rows.length||!usuario.rows.length) {
-      await client.query('ROLLBACK');res.status(404).json({message:'Cuenta u organización no encontrada.'});return;
-    }
-    const retirada=await client.query(`SELECT 1 FROM bitacora_auditoria
-      WHERE entidad_id=$1 AND nombre_entidad='usuarios' AND accion='RETIRAR_USUARIO_ORGANIZACION' LIMIT 1`,[usuarioId]);
-    if(retirada.rowCount){await client.query('ROLLBACK');res.status(409).json({message:'Cuenta retirada: no puede reactivarse.'});return;}
-    const global=await client.query(`SELECT 1 FROM usuarios_roles ur JOIN roles r ON r.id=ur.rol_id
-      WHERE ur.usuario_id=$1 AND r.nombre='SUPERADMINISTRADOR' LIMIT 1`,[usuarioId]);
-    if(global.rows.length||usuarioId===req.auth!.sub) {
-      await client.query('ROLLBACK');res.status(403).json({message:'No se puede cambiar el estado de una cuenta global desde este módulo.'});return;
-    }
-    if(usuario.rows[0].activo!==activo) {
-      await client.query('UPDATE usuarios SET activo=$1,actualizado_en=NOW() WHERE id=$2',[activo,usuarioId]);
-      if(!activo) {
-        await client.query('UPDATE tokens_refresco SET revocado_en=COALESCE(revocado_en,NOW()) WHERE usuario_id=$1',[usuarioId]);
-      }
-      await client.query(`INSERT INTO bitacora_auditoria(usuario_id,accion,nombre_entidad,entidad_id,valores_anteriores,valores_nuevos)
-        VALUES($1,'PLATAFORMA_CAMBIAR_ESTADO_CUENTA','usuarios',$2,$3::jsonb,$4::jsonb)`,
-        [req.auth!.sub,usuarioId,JSON.stringify({organizacionId,activo:usuario.rows[0].activo}),JSON.stringify({organizacionId,activo})]);
-    }
-    await client.query('COMMIT');
-    res.set('Cache-Control','no-store');res.json({id:usuarioId,activo});
-  } catch(error) {
-    await client.query('ROLLBACK');
-    console.error('Error actualizando estado de cuenta:',errorHttp(error));
-    res.status(500).json({message:'No se pudo modificar el estado de la cuenta.'});
-  } finally {client.release();}
-});
+plataformaRouter.patch('/organizaciones/:organizacionId/cuentas/:usuarioId/estado', modificarEstadoCuentaPlataforma);
 
-plataformaRouter.get('/organizaciones/:organizacionId/cuentas', async (req,res) => {
-  if (!esUuid(req.params.organizacionId)) { res.status(400).json({message:'Organización inválida.'});return; }
-  try {
-    const org=await databasePool!.query('SELECT id FROM organizaciones WHERE id=$1', [req.params.organizacionId]);
-    if (!org.rows.length) { res.status(404).json({message:'Organización no encontrada.'});return; }
-    const {rows}=await databasePool!.query(
-      `SELECT u.id,u.email,u.activo,u.debe_cambiar_contrasena AS "debeCambiarContrasena",
-         (SELECT pf.nombre_visible FROM perfiles_usuarios pf
-           WHERE pf.usuario_id=u.id AND pf.organizacion_id=u.organizacion_id) AS "nombreVisible",
-         EXISTS (SELECT 1 FROM bitacora_auditoria b
-           WHERE b.entidad_id=u.id AND b.nombre_entidad='usuarios'
-             AND b.accion='RETIRAR_USUARIO_ORGANIZACION') AS retirado,
-         COALESCE(array_agg(r.nombre ORDER BY r.nombre) FILTER(WHERE r.id IS NOT NULL),'{}'::text[]) AS roles
-       FROM usuarios u LEFT JOIN usuarios_roles ur ON ur.usuario_id=u.id
-       LEFT JOIN roles r ON r.id=ur.rol_id
-       WHERE u.organizacion_id=$1 GROUP BY u.id ORDER BY u.email LIMIT 500`, [req.params.organizacionId],
-    );
-    res.set('Cache-Control','no-store'); res.json({cuentas:rows});
-  } catch(error) {
-    console.error('Error consultando cuentas de plataforma:',errorHttp(error));
-    res.status(500).json({message:'No se pudieron consultar las cuentas.'});
-  }
-});
+plataformaRouter.get('/organizaciones/:organizacionId/cuentas', obtenerCuentasPlataforma);
 
-plataformaRouter.post('/organizaciones/:organizacionId/cuentas',async (req,res) => {
-  const organizacionId=req.params.organizacionId;
-  const email=typeof req.body?.email==='string'?req.body.email.trim().toLowerCase():'';
-  const nombre=typeof req.body?.nombre==='string'?req.body.nombre.trim().replace(/\s+/g,' '):'';
-  const apellido=typeof req.body?.apellido==='string'?req.body.apellido.trim().replace(/\s+/g,' '):'';
-  const nombreVisible=`${nombre} ${apellido}`.trim();
-  const nombreValido=(valor:string)=>valor.length>=2 && valor.length<=100 && !/[\x00-\x1f\x7f]/.test(valor);
-  const roles=req.body?.roles;
-  if (!esUuid(organizacionId) || !esCorreo(email) || !rolesValidos(roles) ||
-      !nombreValido(nombre) || !nombreValido(apellido) || nombreVisible.length>140) {
-    res.status(400).json({message:'Revisá organización, nombre, apellido, correo y roles.'});return;
-  }
-  const temporal='Aa1-'+randomBytes(18).toString('base64url');
-  const hash=await hashPassword(temporal);
-  const client=await databasePool!.connect();
-  try {
-    await client.query('BEGIN');
-    const org=await client.query('SELECT id FROM organizaciones WHERE id=$1 AND activo FOR UPDATE',[organizacionId]);
-    if (!org.rows.length) {await client.query('ROLLBACK');res.status(404).json({message:'Organización no encontrada o inactiva.'});return;}
-    const rs=await client.query('SELECT id,nombre FROM roles WHERE nombre=ANY($1::text[]) AND activo',[roles]);
-    if (rs.rows.length!==roles.length) {await client.query('ROLLBACK');res.status(400).json({message:'Hay roles no disponibles.'});return;}
-    const {rows}=await client.query(
-      `INSERT INTO usuarios(email,hash_contrasena,organizacion_id,debe_cambiar_contrasena)
-       VALUES($1,$2,$3,TRUE) RETURNING id,email,activo`,[email,hash,organizacionId]);
-    for(const rol of rs.rows) await client.query(
-      'INSERT INTO usuarios_roles(usuario_id,rol_id) VALUES($1,$2)',[rows[0].id,rol.id]);
-    await client.query(
-      'INSERT INTO perfiles_usuarios(usuario_id,organizacion_id,nombre_visible) VALUES($1,$2,$3)',
-      [rows[0].id,organizacionId,nombreVisible]);
-    await client.query(
-      `INSERT INTO bitacora_auditoria(usuario_id,accion,nombre_entidad,entidad_id,valores_nuevos)
-       VALUES($1,'PLATAFORMA_CREAR_CUENTA','usuarios',$2,$3::jsonb)`,
-      [req.auth!.sub,rows[0].id,JSON.stringify({ organizacionId,email,roles,nombreVisible })]);
-    await client.query('COMMIT');
-    res.set('Cache-Control','no-store');
-    res.status(201).json({cuenta:{...rows[0],roles,nombreVisible},contrasenaTemporal:temporal});
-  } catch(error) {
-    await client.query('ROLLBACK');
-    if(nombreError(error)){res.status(409).json({message:'El correo ya está registrado.'});return;}
-    console.error('Error creando cuenta desde plataforma:',errorHttp(error));
-    res.status(500).json({message:'No fue posible crear la cuenta.'});
-  } finally {client.release();}
-});
+plataformaRouter.post('/organizaciones/:organizacionId/cuentas', registrarCuentaPlataforma);
 
-// Nunca se recupera una contraseña anterior: se invalida y se emite una nueva,
-// limitada al administrador de la organización indicada por su identificador.
+// Nunca se recupera una contraseña anterior: se invalida y se emite una nueva.
 plataformaRouter.post('/organizaciones/:organizacionId/cuentas/:usuarioId/credencial-temporal', async (req, res) => {
   const { organizacionId, usuarioId } = req.params;
   if (!esUuid(organizacionId) || !esUuid(usuarioId)) {
