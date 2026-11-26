@@ -144,7 +144,7 @@ test('H-03: permisos multitenant reales A/B, auditoría, rechazo y acceso HTTP',
     assert.equal(auditoria.rows.filter(r=>r.accion==='PLATAFORMA_RESTRINGIR_PERMISOS').length,2);
     assert.equal(auditoria.rows.filter(r=>r.accion==='PLATAFORMA_PERMISOS_ROL_TENANT').length,2);
     assert.equal((await db.query(
-      'SELECT id FROM organizaciones_roles_permisos_restringidos WHERE organizacion_id=$1',
+      'SELECT 1 FROM organizaciones_roles_permisos_restringidos WHERE organizacion_id=$1',
       [orgB],
     )).rows.length,0);
     assert.equal((await pedir('/consulta',tokenB)).status,200);
