@@ -4,6 +4,7 @@ export type ResultadoEstadoCuenta =
   | { estado: 'NO_ENCONTRADA' }
   | { estado: 'RETIRADA' }
   | { estado: 'PROTEGIDA' }
+  | { estado: 'ULTIMO_ADMINISTRADOR' }
   | { estado: 'ACTUALIZADA'; id: string; activo: boolean };
 
 export type ResultadoAltaCuenta =
@@ -95,6 +96,29 @@ export async function cambiarEstadoCuentaPlataforma(pool: Pool, datos: {
     if(global.rows.length||datos.usuarioId===datos.operadorId) {
       await client.query('ROLLBACK');
       return {estado:'PROTEGIDA'};
+    }
+    // El bloqueo FOR UPDATE de la organización serializa los cambios de estado
+    // con las operaciones de roles y retiro que usan el mismo bloqueo.
+    if (!datos.activo && usuario.rows[0].activo) {
+      const asignado = await client.query(
+        `SELECT 1 FROM usuarios_roles ur
+         JOIN roles r ON r.id=ur.rol_id AND r.activo
+         WHERE ur.usuario_id=$1 AND r.nombre='ADMINISTRADOR' LIMIT 1`,
+        [datos.usuarioId],
+      );
+      if (asignado.rows.length) {
+        const otros = await client.query(
+          `SELECT COUNT(DISTINCT u.id)::int AS total FROM usuarios u
+           JOIN usuarios_roles ur ON ur.usuario_id=u.id
+           JOIN roles r ON r.id=ur.rol_id AND r.activo
+           WHERE u.organizacion_id=$1 AND u.activo AND r.nombre='ADMINISTRADOR' AND u.id<>$2`,
+          [datos.organizacionId, datos.usuarioId],
+        );
+        if (Number(otros.rows[0]?.total ?? 0) === 0) {
+          await client.query('ROLLBACK');
+          return { estado: 'ULTIMO_ADMINISTRADOR' };
+        }
+      }
     }
     if(usuario.rows[0].activo!==datos.activo) {
       await client.query('UPDATE usuarios SET activo=$1,actualizado_en=NOW() WHERE id=$2',
