@@ -22,7 +22,7 @@
 | Autenticación y autorización actualizadas | Conforme en diseño revisado | `plataforma.middleware.ts` y `usuarios/autorizacion.repository.ts` recalculan privilegios efectivos |
 | Auditoría/atomicidad | Conforme en rutas sensibles inspeccionadas | Transacciones BEGIN/COMMIT/ROLLBACK, auditoría de cambios de estado, roles y restricciones |
 | Contratos/inyección de repositorios | Parcial | Los servicios importan implementaciones concretas de repositorios; ADR-006 promueve interfaces y ensamblaje |
-| Pruebas de aislamiento y regresión | Parcial | Pruebas unitarias con dobles de pool, sin evidencia suficiente de tests E2E con dos tenants y BD real |
+| Pruebas de aislamiento y regresión | Parcial (mejorada) | Prueba PGlite + HTTP de dos tenants añadida; falta validación manual y router real de plataforma |
 | Validación funcional específica de matriz | Pendiente | Probar restricción/restauración de permiso individual y por rol en dos organizaciones |
 | Frontend por funcionalidades | En transición | Pantalla `PaginaPlataforma.tsx` y cliente HTTP compartido `lib/api.ts` aún concentran responsabilidades |
 
@@ -48,13 +48,15 @@ Los repositorios no se limitan a persistencia: toman decisiones sobre cuándo bl
 
 **Acción propuesta:** refactor incremental por operación; crear funciones de dominio puras para invariantes, y contratos tipados de repositorio. No dividir una comprobación transaccional de modo que introduzca TOCTOU; mantener el guardado y la validación crítica atómicos.
 
-### H-03 — Media — Faltan pruebas de integración multitenant y del circuito HTTP completo
+### H-03 — Media — Pruebas de integración multitenant y circuito HTTP (cobertura automatizada incorporada; validación manual pendiente)
 
 **Archivos:** `backend/tests/plataforma-*.test.ts`.
 
 Las pruebas revisadas usan pools simulados y validan SQL esperado, rollback, códigos lógicos y protecciones. No demuestran por sí solas que las operaciones realmente modifiquen solo la organización A en PostgreSQL, que la sesión de B conserve sus permisos o que una cuenta retirada se rechace en todos los flujos.
 
 **Acción propuesta:** añadir escenario reproducible con dos organizaciones aisladas y datos de prueba descartables: superadmin gestiona rol CAMPO en A, B permanece sin cambios; permisos fuera del rol se rechazan; usuario no global no accede a `/plataforma`; comprobar auditoría e integridad con transacciones reales.
+
+**Seguimiento del 26 de noviembre de 2026:** incorporada la prueba `backend/tests/plataforma-aislamiento-multitenant-integration.test.ts`, basada en PGlite con migraciones SQL existentes y un servidor Express temporal. La prueba crea organizaciones A y B y usuarios CAMPO independientes, comprueba que la matriz no mezcla cuentas, restringe y restaura permisos individuales y por rol en A sin afectar B, rechaza permisos ajenos al rol base y verifica la auditoría. También confirma acceso HTTP 403 al endpoint protegido de plataforma para cuentas CAMPO con roles de JWT falsificados; el middleware global permite inyección de `Pool` para probarlo sin conexión a Neon, conservando su dependencia de producción por defecto. **CI backend #1049 y frontend #750 aprobados, Vercel correcto**, en commit `8d6092a`. Son pruebas contra PostgreSQL embebido, no contra Neon ni un despliegue real. Permanecen pendientes las pruebas manuales en dos organizaciones y una prueba de extremo a extremo contra el router real de plataforma si se requiere aceptación más estricta.
 
 ### H-04 — Baja — Contratos de módulos e interfaz React aún en transición
 
@@ -77,7 +79,7 @@ Se inyecta ocasionalmente un `Pool` para pruebas, pero no se usan interfaces de 
 ## Condiciones de cierre
 
 - H-01: corrección y pruebas unitarias incorporadas; realizar comprobación funcional del rechazo 409 antes de cerrar.
-- Completar pruebas funcionales de permisos para dos organizaciones.
+- La prueba automatizada PGlite/HTTP entre A y B está aprobada; completar validación funcional manual en dos organizaciones y registrar resultados.
 - Registrar H-02/H-04 como deuda arquitectónica con plan de migración acotado; cerrar solo si se acepta expresamente una excepción transitoria al ADR.
 - Ejecutar CI y validación manual en `develop`.
 - **No fusionar a `main` ni modificar esquema/productivo por esta auditoría.**
