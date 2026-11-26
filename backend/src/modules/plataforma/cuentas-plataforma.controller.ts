@@ -71,6 +71,9 @@ export const modificarEstadoCuentaPlataforma: RequestHandler=async(req,res)=>{
     if(resultado.estado==='PROTEGIDA'){
       res.status(403).json({message:'No se puede cambiar el estado de una cuenta global desde este módulo.'});return;
     }
+    if(resultado.estado==='ULTIMO_ADMINISTRADOR'){
+      res.status(409).json({message:'La organización debe conservar al menos un administrador activo.'});return;
+    }
     res.set('Cache-Control','no-store');res.json({id:usuarioId,activo});
   } catch(error) {
     console.error('Error actualizando estado de cuenta:',errorHttp(error));
