@@ -28,7 +28,7 @@
 
 ## Hallazgos priorizados
 
-### H-01 — Alta — Desactivación del último administrador activo
+### H-01 — Alta — Desactivación del último administrador activo (corregido en código; validación funcional pendiente)
 
 **Archivo:** `backend/src/modules/plataforma/cuentas-plataforma.repository.ts`, función `cambiarEstadoCuentaPlataforma`.
 
@@ -37,6 +37,8 @@ La operación de suspensión comprueba que la cuenta pertenezca a la organizaci�
 **Riesgo:** una organización puede quedar sin administrador activo por suspensión, aunque las operaciones de retiro y de cambio de roles sí protegen ese invariante.
 
 **Acción propuesta:** agregar verificación del último ADMINISTRADOR en la misma transacción, bajo bloqueo de organización, conservando contrato y devolución HTTP coherente (409). Probar también concurrencia con dos administradores y que no se revocan tokens ni se registra auditoría ante el rechazo.
+
+**Seguimiento del 26 de noviembre de 2026:** se implementó una verificación del último administrador en `cambiarEstadoCuentaPlataforma` bajo `FOR UPDATE` de la organización, y se añadió respuesta HTTP 409 con mensaje explícito. La comprobación precede a la desactivación, revocación de sesiones y auditoría. Nuevas pruebas unitarias cubren último administrador, otro administrador disponible, cuenta no administradora, reactivación y rollback por error. **No implica aún validación E2E con Neon ni cierre formal H-03.**
 
 ### H-02 — Media — Reglas de caso de uso alojadas en repositorios
 
@@ -74,7 +76,7 @@ Se inyecta ocasionalmente un `Pool` para pruebas, pero no se usan interfaces de 
 
 ## Condiciones de cierre
 
-- Resolver H-01 y cubrirlo con pruebas.
+- H-01: corrección y pruebas unitarias incorporadas; realizar comprobación funcional del rechazo 409 antes de cerrar.
 - Completar pruebas funcionales de permisos para dos organizaciones.
 - Registrar H-02/H-04 como deuda arquitectónica con plan de migración acotado; cerrar solo si se acepta expresamente una excepción transitoria al ADR.
 - Ejecutar CI y validación manual en `develop`.
