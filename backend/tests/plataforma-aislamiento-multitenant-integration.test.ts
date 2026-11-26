@@ -7,7 +7,7 @@ import express from 'express';
 import { PGlite } from '@electric-sql/pglite';
 import type { Pool } from 'pg';
 import { crearAutenticacion, requireRole, requirePermission } from '../src/middleware/auth.middleware.js';
-import { superadminActual } from '../src/modules/plataforma/plataforma.middleware.js';
+import { crearSuperadminActual } from '../src/modules/plataforma/plataforma.middleware.js';
 import { createAccessToken } from '../src/security/token.js';
 import {
   actualizarRestriccionesUsuario,
@@ -77,7 +77,7 @@ test('H-03: permisos multitenant reales A/B, auditoría, rechazo y acceso HTTP',
     app.use(crearAutenticacion(pool));
     app.get('/consulta',requireRole('CAMPO'),requirePermission('comunidades.ver'),
       (_req,res)=>res.json({ok:true}));
-    app.get('/plataforma/protegida',superadminActual,(_req,res)=>res.json({ok:true}));
+    app.get('/plataforma/protegida',crearSuperadminActual(pool),(_req,res)=>res.json({ok:true}));
     servidor.on('request',app);
     await new Promise<void>((resolve,reject)=>{
       servidor.once('error',reject);servidor.listen(0,resolve);
