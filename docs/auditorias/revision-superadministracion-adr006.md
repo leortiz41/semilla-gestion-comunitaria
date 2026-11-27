@@ -48,6 +48,8 @@ Los repositorios no se limitan a persistencia: toman decisiones sobre cuándo bl
 
 **Acción propuesta:** refactor incremental por operación; crear funciones de dominio puras para invariantes, y contratos tipados de repositorio. No dividir una comprobación transaccional de modo que introduzca TOCTOU; mantener el guardado y la validación crítica atómicos.
 
+**Seguimiento del 27 de noviembre de 2026 — primera operación de H-02:** el cambio de estado de cuentas se reorganizó sin modificar sus rutas ni respuestas HTTP. `estado-cuentas.domain.ts` contiene las reglas puras de protección, última administración e idempotencia; `cuentas-plataforma.service.ts` coordina las decisiones del caso de uso; `cuentas-plataforma.repository.ts` ofrece un puerto de persistencia transaccional que mantiene `BEGIN`, `FOR UPDATE`, `COMMIT/ROLLBACK`, revocación de sesiones y auditoría sobre la misma conexión. Los tests originales ahora ejercitan el caso de uso completo y se añadieron pruebas del dominio y de ausencia de escrituras para cambios idempotentes. **H-02 sigue abierta:** roles, edición/retiro y restricciones por tenant aún requieren extracción gradual de políticas. La inyección del `Pool` continúa siendo un mecanismo transitorio; contratos e interfaces de composición uniformes corresponden a H-04.
+
 ### H-03 — Media — Pruebas de integración multitenant y circuito HTTP (cobertura automatizada incorporada; validación manual pendiente)
 
 **Archivos:** `backend/tests/plataforma-*.test.ts`.
