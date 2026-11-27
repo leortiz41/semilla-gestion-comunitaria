@@ -1,0 +1,32 @@
+/* Brigadas y recursos: estilos aislados del resto de Proyectos. */
+.proyecto-brigadas-recursos{display:grid;gap:1.25rem;min-width:0}
+.proyecto-brigadas-recursos__lista{grid-template-columns:minmax(0,1fr)}
+.proyecto-brigadas-recursos__tarjeta{min-width:0;overflow-wrap:anywhere}
+.proyecto-brigadas-recursos__tarjeta h4{margin:0 0 .6rem}
+.proyecto-brigadas-recursos__tarjeta p{margin:.45rem 0;line-height:1.55}
+.proyecto-brigadas-recursos__formulario{width:100%;min-width:0;box-sizing:border-box}
+.proyecto-brigadas-recursos__formulario fieldset{display:grid;gap:1.25rem;min-width:0;border:0;margin:0;padding:0}
+.proyecto-brigadas-recursos__formulario legend{font-size:1.08rem;font-weight:750;color:#255a37;padding:0 0 .85rem}
+.proyecto-brigadas-recursos__campos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1.05rem 1.25rem;width:100%;min-width:0}
+.proyecto-brigadas-recursos__campo{display:flex;flex-direction:column;align-items:stretch;gap:.45rem;min-width:0;color:#2d4937;font-size:.91rem;font-weight:650}
+.proyecto-brigadas-recursos__campo--completo{grid-column:1/-1}
+.proyecto-brigadas-recursos__campo>input,
+.proyecto-brigadas-recursos__campo>select,
+.proyecto-brigadas-recursos__campo>textarea{display:block;box-sizing:border-box;width:100%;min-width:0;max-width:100%;margin:0;padding:.75rem .85rem;border:1px solid #c7d8c8;border-radius:.7rem;background:#fff;color:#253c2c;font:inherit;font-weight:450;line-height:1.4}
+.proyecto-brigadas-recursos__campo>input,
+.proyecto-brigadas-recursos__campo>select{min-height:46px}
+.proyecto-brigadas-recursos__campo>textarea{min-height:100px;resize:vertical}
+.proyecto-brigadas-recursos__campo>small{display:block;font-size:.78rem;line-height:1.5;font-weight:450;color:#657b69}
+.proyecto-brigadas-recursos__campo>input:focus-visible,
+.proyecto-brigadas-recursos__campo>select:focus-visible,
+.proyecto-brigadas-recursos__campo>textarea:focus-visible{outline:2px solid #47865d;outline-offset:2px}
+.proyecto-brigadas-recursos__actividades{display:grid;gap:.6rem;min-width:0;padding:1rem;border:1px solid #d5e2d1;border-radius:.9rem;background:#fbfdf9}
+.proyecto-brigadas-recursos__actividades h4{margin:0;color:#2a613c}
+.proyecto-brigadas-recursos__actividades p{margin:0 0 .35rem;color:#617665;line-height:1.5}
+.proyecto-brigadas-recursos__actividad{display:flex;align-items:center;gap:.7rem;min-height:44px;width:100%;box-sizing:border-box;padding:.55rem .75rem;border:1px solid #e0e8dc;border-radius:.6rem;background:#fff;cursor:pointer;font-size:.91rem;color:#2b4936}
+.proyecto-brigadas-recursos__actividad>input[type=checkbox]{appearance:auto;flex:0 0 auto;width:18px;height:18px;margin:0;accent-color:#2f7949}
+.proyecto-brigadas-recursos__observaciones{width:100%}
+.proyecto-brigadas-recursos__acciones{display:flex;align-items:center;justify-content:flex-start;flex-wrap:wrap;gap:.75rem;margin-top:.25rem}
+.proyecto-brigadas-recursos__acciones button{min-height:44px}
+@media(min-width:1050px){.proyecto-brigadas-recursos__campos{grid-template-columns:repeat(3,minmax(0,1fr))}.proyecto-brigadas-recursos__campo--completo{grid-column:1/-1}}
+@media(max-width:700px){.proyecto-brigadas-recursos__campos{grid-template-columns:minmax(0,1fr)}.proyecto-brigadas-recursos__campo--completo{grid-column:auto}.proyecto-brigadas-recursos__acciones button{flex:1 1 100%}}

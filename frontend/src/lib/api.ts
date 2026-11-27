@@ -835,6 +835,8 @@ export async function subirFotoAvance(
 }
 
 export interface AvancePendienteRevision {
+  metaCantidad: number | null;
+  cantidadValidada: number;
   id: string;
   actividadId: string;
   proyectoId: string;
@@ -863,6 +865,38 @@ export function guardarProyectoAdministrativo(token: string, datos: DatosProyect
     method: id ? 'PUT' : 'POST',
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify(datos),
+  });
+}
+
+export interface VerificacionCierreProyecto {
+  puedeReabrir: boolean;
+  estado: string;
+  actividades: number;
+  metasCumplidas: number;
+  pendientes: number;
+  sinEvidencia: number;
+  listo: boolean;
+}
+
+export function obtenerVerificacionCierre(token: string, proyectoId: string) {
+  return request<VerificacionCierreProyecto>(`/proyectos/${proyectoId}/cierre`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function finalizarProyectoAdministrativo(token: string, proyectoId: string) {
+  return request<void>(`/proyectos/${proyectoId}/finalizar`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ evidenciasRevisadas: true, recursosRevisados: true }),
+  });
+}
+
+export function reabrirProyectoAdministrativo(token: string, proyectoId: string, motivo: string) {
+  return request<void>(`/proyectos/${proyectoId}/reabrir`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ motivo }),
   });
 }
 
@@ -996,5 +1030,49 @@ export function corregirAvanceValidadoProyecto(token: string, proyectoId: string
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify({ ...datos, motivoCorreccion }),
+  });
+}
+
+
+export interface BrigadaRecursoProyecto {
+  id: string;
+  donante: string;
+  lider: string;
+  miembros: number;
+  vinculada: boolean;
+  montoComprometido: number;
+  montoRecibido: number;
+  voluntariosPrevistos: number;
+  materialesComprometidos: string | null;
+  materialesEntregados: string | null;
+  observaciones: string | null;
+  actividadIds: string[];
+}
+
+export interface DatosBrigadaRecursoProyecto {
+  vinculada: boolean;
+  montoComprometido: number;
+  montoRecibido: number;
+  voluntariosPrevistos: number;
+  materialesComprometidos: string | null;
+  materialesEntregados: string | null;
+  observaciones: string | null;
+  actividadIds: string[];
+}
+
+export function obtenerBrigadasRecursosProyecto(token: string, proyectoId: string) {
+  return request<{ brigadas: BrigadaRecursoProyecto[] }>(
+    `/proyectos/${proyectoId}/brigadas-recursos`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+}
+
+export function guardarBrigadaRecursoProyecto(
+  token: string, proyectoId: string, brigadaId: string, datos: DatosBrigadaRecursoProyecto,
+) {
+  return request<void>(`/proyectos/${proyectoId}/brigadas-recursos/${brigadaId}`, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(datos),
   });
 }

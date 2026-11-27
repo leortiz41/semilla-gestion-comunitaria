@@ -3,6 +3,8 @@
 **Proyecto:** Semilla — Recursos que generan desarrollo  
 **Versión de referencia:** Semana 6, 21 de noviembre de 2026.
 
+**Estándar arquitectónico vigente:** [ADR-006 — Arquitectura modular por capas](decisiones/006-arquitectura-modular-por-capas.md), aceptada el 23 de noviembre de 2026. Este documento distingue la estructura actual del objetivo progresivo; la aprobación del estándar no implica migración completa.
+
 ## 1. Contexto y alcance
 
 Semilla centraliza la gestión de programas de desarrollo comunitario. La solución relaciona organizaciones, comunidades, familias, proyectos, recursos, donantes y evidencias. El sistema permite que cada organización gestione su propia información y que los donantes consulten únicamente los proyectos autorizados.
@@ -60,6 +62,27 @@ flowchart TD
 
 La organización actual separa presentación, comunicación HTTP, autorización, dominio y servicios. La modularización es incremental: comunidades agrupa sus rutas y servicio, y extrae su consulta de listado a un repositorio. Las reglas de dominio de metas y necesidades, así como los servicios de capacidades y necesidades, ahora también se agrupan en el módulo, conservando adaptadores de importación para sus consumidores anteriores. Otras operaciones de comunidades y otras rutas todavía contienen SQL en servicios o controladores; por tanto, aún no existe una capa de repositorios uniforme. Se utiliza el controlador pg para las consultas de negocio y se mantienen dependencias y utilidades de Prisma. Los cambios del esquema se versionan en scripts SQL.
 
+### Estructura objetivo y dependencias (ADR-006)
+
+La representación anterior describe la implementación histórica y sus dependencias directas al pool. **No es el flujo objetivo.** La estructura de destino aprobada es:
+
+```mermaid
+flowchart TD
+    UI["React: features y componentes"] --> API["HTTP client compartido"]
+    API --> RT["Routes y middleware"]
+    RT --> CT["Controllers"]
+    CT --> SV["Services / casos de uso"]
+    SV --> DM["Domain"]
+    SV --> RP["Contratos de repositorios"]
+    PG["Repositorios PostgreSQL"] -.-> RP
+    PG --> DB[("PostgreSQL / Neon")]
+    R2["Adaptador privado R2"] --> OBJ[("Cloudflare R2")]
+    SV --> ST["Contrato de almacenamiento"]
+    R2 -.-> ST
+```
+
+Las rutas no deben contener SQL ni reglas de negocio; los controladores solo adaptan HTTP; los servicios ejecutan reglas y coordinan casos de uso sin Express; los repositorios manejan persistencia y filtran por organización. Los contratos entre módulos son públicos y tipados; se prohíben dependencias a implementaciones internas de persistencia. En React, `modulos/` migra gradualmente a una organización por funcionalidades con cliente HTTP compartido y API/hook por módulo. Los detalles, criterios y excepciones transitorias se establecen en [ADR-006](decisiones/006-arquitectura-modular-por-capas.md).
+
 ## 4. Organización del repositorio
 
 ```text
@@ -78,6 +101,12 @@ semilla-gestion-comunitaria/
 │   │   ├── domain/                    # Dominio compartido / en transición
 │   │   ├── middleware/                # Autenticación y permisos
 │   │   ├── modules/
+│   │   │   ├── proyectos/
+│   │   │   │   ├── proyectos.routes.ts
+│   │   │   │   ├── proyectos.repository.ts
+│   │   │   │   ├── avances-actividad.service.ts
+│   │   │   │   ├── avances-actividad.repository.ts
+│   │   │   │   └── avances-actividad.domain.ts
 │   │   │   └── comunidades/
 │   │   │       ├── comunidades.routes.ts
 │   │   │       ├── comunidades.service.ts
@@ -119,6 +148,12 @@ flowchart TD
 ```
 
 La extracción de operaciones de escritura al repositorio, y la migración de `proyectos` y `donantes`, son pasos futuros condicionados por pruebas de integración. No se crea una nueva conexión ni se cambia la estructura de las tablas. Véase [ADR 004](decisiones/004-migracion-modular-comunidades.md).
+
+### Proyectos — primera etapa modular
+
+El módulo `src/modules/proyectos/` centraliza el router existente, el servicio de avances por actividad y sus validaciones. `server.ts` monta el mismo router en `/api/proyectos`. Los antiguos archivos `routes/proyectos.routes.ts`, `services/avances-actividad.service.ts` y `domain/avances-actividad.ts` son adaptadores `export *`, conservando referencias de los consumidores y las pruebas HU-12.
+
+**Persistencia reorganizada:** `proyectos.routes.ts` no contiene consultas SQL directas. `proyectos.repository.ts` agrupa listado, permisos documentales, bandeja, responsables, presupuestos, guardado de proyectos y evidencias bajo transacciones. `avances-actividad.repository.ts` contiene las cuatro operaciones SQL para listar, registrar, revisar y corregir avances. `avances-actividad.service.ts` mantiene el resultado ponderado y la coordinación de la lógica de aplicación. Las consultas SQL preservan filtros por `organizacion_id`, auditoría y bloqueos. La autenticación, almacenamiento R2 y conexiones a PostgreSQL siguen compartidos; el router coordina la verificación y subida de fotografías por el servicio R2. Mapa de Impacto y Donantes siguen fuera de este módulo. Antes del merge se requiere validación funcional de Proyectos. Véase [ADR 005](decisiones/005-modularizacion-proyectos.md).
 
 ## 5. Segundo flujo de negocio: seguimiento y validación de proyectos
 

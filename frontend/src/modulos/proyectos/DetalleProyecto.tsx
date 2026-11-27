@@ -1,5 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import FotografiasAvance from './FotografiasAvance';
+import BrigadasRecursosProyecto from './BrigadasRecursosProyecto';
+import CierreProyecto from './CierreProyecto';
+import ReporteProyecto from './ReporteProyecto';
 import '../../estilos/modulos/proyectos/ejecucion.css';
 import {
   corregirAvanceValidadoProyecto,
@@ -48,20 +51,30 @@ const nuevaClaveIdempotencia = () => globalThis.crypto.randomUUID();
 export default function DetalleProyecto({
   token,
   proyectoId,
+  nombreProyecto,
+  comunidadProyecto,
+  estadoProyecto,
+  onCambioEstado,
   usuarioEmail,
   presupuestoProyecto,
   moneda,
   puedeGestionar,
+  puedeAdministrarCierre,
   puedeRegistrarAvance,
   puedeRevisarAvance,
   puedeCorregirAvance,
 }: {
   token: string;
   proyectoId: string;
+  nombreProyecto: string;
+  comunidadProyecto: string;
+  estadoProyecto: string;
+  onCambioEstado: (accion: 'finalizado' | 'reabierto') => void;
   usuarioEmail: string;
   presupuestoProyecto: number;
   moneda: string;
   puedeGestionar: boolean;
+  puedeAdministrarCierre: boolean;
   puedeRegistrarAvance: boolean;
   puedeRevisarAvance: boolean;
   puedeCorregirAvance: boolean;
@@ -70,7 +83,7 @@ export default function DetalleProyecto({
   const [porcentajeProyecto, setPorcentajeProyecto] = useState<number | null>(null);
   const [pesoConfigurado, setPesoConfigurado] = useState(0);
   const [responsables, setResponsables] = useState<{ id: string; nombre: string }[]>([]);
-  const [vista, setVista] = useState<'resumen' | 'planificacion' | 'ejecucion' | 'resultados'>('resumen');
+  const [vista, setVista] = useState<'resumen' | 'planificacion' | 'brigadas' | 'ejecucion' | 'resultados'>('resumen');
   const [formularioActividad, setFormularioActividad] = useState<ActividadProyecto | 'nueva' | null>(null);
   const [avanceFormulario, setAvanceFormulario] = useState<{ actividad: ActividadProyecto; avance?: AvanceActividadProyecto; corregir?: boolean } | null>(null);
   const [devolucion, setDevolucion] = useState<{ actividad: ActividadProyecto; avance: AvanceActividadProyecto } | null>(null);
@@ -229,6 +242,7 @@ export default function DetalleProyecto({
     if (!avanceFormulario || guardando ||
         (!puedeRegistrarAvance && !(avanceFormulario.corregir && puedeCorregirAvance))) return;
     const campos = new FormData(evento.currentTarget);
+    const enviarDirectamente = (evento.nativeEvent as SubmitEvent).submitter?.getAttribute('value') === 'enviar';
     const meta = avanceFormulario.actividad.metaCantidad;
     const datos: DatosAvanceActividadProyecto = {
       cantidadReportada: meta === null ? null : Number(campos.get('cantidadReportada')),
@@ -252,16 +266,23 @@ export default function DetalleProyecto({
         await editarAvanceActividadProyecto(
           token, proyectoId, avanceFormulario.actividad.id, avanceFormulario.avance.id, datos,
         );
-        setMensaje('Borrador actualizado.');
+        if (enviarDirectamente) {
+          await enviarAvanceActividadProyecto(token, proyectoId, avanceFormulario.actividad.id, avanceFormulario.avance.id);
+        }
+        setMensaje(enviarDirectamente ? 'Avance enviado a revisión.' : 'Guardado en Mis avances pendientes.');
       } else {
-        await registrarAvanceActividadProyecto(token, proyectoId, avanceFormulario.actividad.id, datos);
-        setMensaje('Borrador guardado. Envíalo a revisión cuando esté listo.');
+        const creado = await registrarAvanceActividadProyecto(token, proyectoId, avanceFormulario.actividad.id, datos);
+        if (enviarDirectamente) {
+          await enviarAvanceActividadProyecto(token, proyectoId, avanceFormulario.actividad.id, creado.id);
+        }
+        setMensaje(enviarDirectamente ? 'Avance enviado a revisión.' : 'Guardado en Mis avances pendientes.');
       }
       setAvanceFormulario(null);
       if (!avanceFormulario.avance) setClaveIdempotencia(nuevaClaveIdempotencia());
       refrescar();
     } catch (fallo) {
-      setError(fallo instanceof Error ? fallo.message : 'No fue posible guardar el avance.');
+      setError(fallo instanceof Error ? `${fallo.message} Si el avance se guardó pero no pudo enviarse, encontrarás el borrador en el historial de ejecución.` : 'No fue posible guardar o enviar el avance. Revisá el historial antes de intentarlo nuevamente.');
+      refrescar();
     } finally {
       setGuardando(false);
     }
@@ -306,7 +327,7 @@ export default function DetalleProyecto({
       <form className="actividad-plan-form" key={actividad?.id ?? 'nueva'} onSubmit={guardarActividad} noValidate>
         <fieldset disabled={guardando}>
           <legend>{actividad ? 'Editar planificación' : 'Nueva actividad del proyecto'}</legend>
-          <p className="actividad-plan-form__intro">Definí el trabajo, la meta que se espera lograr y cómo contribuye al proyecto.</p>
+          <p className="actividad-plan-form__intro">Definí qué trabajo se realizará, quién lo hará y cuál es la meta a alcanzar. Semilla calcula el progreso con los avances validados.</p>
           {errorPlanificacion && <p className="actividad-plan-form__error" role="alert">{errorPlanificacion}</p>}
           <section className="actividad-plan-form__grupo" aria-labelledby="grupo-trabajo">
             <h4 id="grupo-trabajo">1. ¿Qué actividad vamos a realizar?</h4>
@@ -376,7 +397,7 @@ export default function DetalleProyecto({
             <small>Ejemplo: meta de 3 viviendas. El avance físico será la cantidad terminada y validada respecto a esas 3 viviendas.</small>
           </section>
           <section className="actividad-plan-form__grupo" aria-labelledby="grupo-recursos">
-            <h4 id="grupo-recursos">3. ¿Qué recursos y contribución tendrá?</h4>
+            <h4 id="grupo-recursos">3. ¿Qué presupuesto necesita esta actividad?</h4>
             <div className="donantes-campos">
               <label>Presupuesto estimado de la actividad ({moneda})
                 <input name="presupuestoEstimado" type="text" inputMode="decimal" value={presupuestoBorrador}
@@ -385,15 +406,15 @@ export default function DetalleProyecto({
                 {erroresCamposPlan.presupuestoEstimado && <small className="actividad-plan-form__campo-error">{erroresCamposPlan.presupuestoEstimado}</small>}
                 <small>Disponible para esta actividad: {formatoCantidad(presupuestoDisponible)} {moneda}.</small>
               </label>
-              <label>Contribución al avance global del proyecto (%)
+              <details className="actividad-plan-form__descripcion"><summary>Configuración avanzada: peso de esta actividad en los resultados</summary><label>Importancia relativa de la actividad (%)
                 <input name="pesoResultado" type="text" inputMode="decimal" value={pesoBorrador}
                   onChange={(evento) => setPesoBorrador(evento.target.value)}
                   aria-invalid={Boolean(erroresCamposPlan.pesoResultado)} placeholder="Ej. 75" />
                 {erroresCamposPlan.pesoResultado && <small className="actividad-plan-form__campo-error">{erroresCamposPlan.pesoResultado}</small>}
-                <small>Es la importancia relativa de la actividad, no el porcentaje ejecutado ni el dinero asignado.</small>
-              </label>
+                <small>No es un aporte de brigadas ni el porcentaje ejecutado. Déjalo vacío para el cálculo automático cuando ninguna actividad tenga pesos manuales.</small>
+              </label></details>
             </div>
-            <div className="actividad-plan-form__sugerencias">
+            <details className="actividad-plan-form__sugerencias"><summary>Opciones de ponderación manual (avanzado)</summary>
               <span>Ponderación manual asistida</span>
               <button type="button" className="brigadas-accion" onClick={() => setPesoBorrador(String(sugerenciaRestante))}>
                 Asignar porcentaje restante ({formatoCantidad(sugerenciaRestante)}%)
@@ -402,12 +423,11 @@ export default function DetalleProyecto({
                 onClick={() => setPesoBorrador(String(Math.round(10000 / Math.max(1, (actividades?.length ?? 0) + (actividad ? 0 : 1))) / 100))}>
                 Sugerir reparto equitativo
               </button>
-            </div>
             <p className={Math.abs(pesoProyectado - 100) < 0.001 ? 'actividad-plan-form__balance actividad-plan-form__balance--completo' : 'actividad-plan-form__balance'}>
               Ponderación prevista del proyecto: <strong>{formatoCantidad(pesoProyectado)}%</strong> de 100%.
               {Math.abs(pesoProyectado - 100) >= 0.001 && ' Revisá los pesos antes de publicar indicadores globales.'}
             </p>
-            <small>El backend actualmente normaliza los pesos entre actividades. Estas sugerencias no cambian otras actividades ni guardan automáticamente.</small>
+            <small>En proyectos con una sola actividad no se necesita ponderación. Si todas las actividades carecen de peso manual, Semilla reparte el avance por igual. Una configuración parcial queda pendiente.</small></details>
           </section>
           <div className="actividad-plan-form__acciones">
             <button type="submit" disabled={guardando}>{guardando ? 'Guardando…' : 'Guardar planificación'}</button>
@@ -452,11 +472,16 @@ export default function DetalleProyecto({
               </label>
             )}
           </div>
-          <p>El usuario de la sesión queda como responsable del registro. Un avance guardado como borrador no afecta resultados.</p>
+          <p>Tu avance se contará en los resultados solo después de que coordinación lo valide. Si aún faltan datos o fotografías, guardalo para continuar después desde el historial de ejecución.</p>
           <div className="actividad-avance-form__acciones">
-            <button type="submit" disabled={guardando}>
-              {guardando ? 'Guardando…' : corregir ? 'Guardar corrección y enviar' : avance ? 'Guardar cambios' : 'Guardar borrador'}
+            <button type="submit" name="accionAvance" value="enviar" disabled={guardando}>
+              {guardando ? 'Procesando…' : corregir ? 'Guardar corrección y enviar' : 'Enviar avance a revisión'}
             </button>
+            {!corregir && (
+              <button type="submit" name="accionAvance" value="guardar" className="brigadas-accion" disabled={guardando}>
+                Guardar para continuar después
+              </button>
+            )}
             <button type="button" className="brigadas-accion" disabled={guardando}
               onClick={() => setAvanceFormulario(null)}>Cancelar</button>
           </div>
@@ -485,7 +510,7 @@ export default function DetalleProyecto({
               <div><dt>Responsable</dt><dd>{actividad.responsableAsignado ?? 'Sin asignar'}</dd></div>
               <div><dt>Meta</dt><dd>{actividad.metaCantidad === null ? 'No cuantificable' : `${actividad.metaCantidad} ${actividad.unidadMedida}`}</dd></div>
               <div><dt>Recursos</dt><dd>{actividad.presupuestoEstimado === null ? 'Sin asignación' : `${actividad.presupuestoEstimado.toLocaleString('es-HN')} ${moneda}`}</dd></div>
-              <div><dt>Contribución</dt><dd>{actividad.pesoResultado === null ? 'Pendiente' : `${actividad.pesoResultado}%`}</dd></div>
+              {actividad.pesoResultado !== null && <div><dt>Peso de resultados (avanzado)</dt><dd>{actividad.pesoResultado}%</dd></div>}
             </dl>
             {puedeGestionar && !formularioActividad && (
               <button type="button" className="brigadas-accion" onClick={() => abrirPlanificacion(actividad)}>
@@ -504,7 +529,7 @@ export default function DetalleProyecto({
                 aria-label={`Avance validado de ${actividad.nombre}`} />
             </div>
             <section className="actividad-avances" aria-label={`Historial de avances de ${actividad.nombre}`}>
-              <header className="actividad-avances__encabezado"><h5>Registro de ejecución</h5><span>{actividad.avances.length}</span></header>
+              <header className="actividad-avances__encabezado"><h5>Historial de ejecución y mis avances pendientes</h5><span>{actividad.avances.length}</span></header>
               {!actividad.avances.length && <p className="actividad-avances__vacio">Aún no hay avances registrados.</p>}
               <ol className="actividad-avances__lista">
                 {actividad.avances.map((avance) => (
@@ -581,11 +606,18 @@ export default function DetalleProyecto({
                 ))}
               </ol>
             </section>
-            {puedeRegistrarAvance && !avanceFormulario && (
+            {puedeRegistrarAvance && !avanceFormulario && actividad.porcentajeResultado < 100 &&
+              actividad.estado !== 'COMPLETADA' && actividad.estado !== 'CANCELADA' && (
               <button type="button" className="brigadas-accion"
                 onClick={() => { setClaveIdempotencia(nuevaClaveIdempotencia()); setAvanceFormulario({ actividad }); }}>
                 + Registrar avance
               </button>
+            )}
+            {puedeRegistrarAvance && actividad.porcentajeResultado >= 100 && (
+              <p role="status" className="actividad-avance__meta-alcanzada">
+                Meta alcanzada (100% validado). No se permiten nuevos avances físicos;
+                los reportes existentes siguen disponibles para revisión y corrección autorizada.
+              </p>
             )}
             {avanceFormulario?.actividad.id === actividad.id && (
               <div>{formularioAvanceUI(actividad, avanceFormulario.avance, avanceFormulario.corregir)}</div>
@@ -612,6 +644,7 @@ export default function DetalleProyecto({
             {([
               ['resumen', 'Resumen'],
               ['planificacion', 'Planificación'],
+              ...(puedeGestionar ? [['brigadas', 'Brigadas y recursos'] as const] : []),
               ['ejecucion', 'Ejecución'],
               ['resultados', 'Resultados'],
             ] as const).map(([id, etiqueta]) => (
@@ -641,7 +674,7 @@ export default function DetalleProyecto({
                 </div>
                 {porcentajeProyecto !== null && porcentajeProyecto >= 100 && (
                   <p className="proyecto-resumen__cierre">
-                    Las metas ponderadas alcanzaron el 100 %. Revisá las evidencias, los recursos y las obligaciones
+                    Las actividades alcanzaron el 100 % de avance validado. Revisá las evidencias, los recursos y las obligaciones
                     antes de marcar administrativamente el proyecto como finalizado.
                   </p>
                 )}
@@ -673,6 +706,10 @@ export default function DetalleProyecto({
                 </div>
               </>
             )}
+            {vista === 'brigadas' && puedeGestionar && (
+              <BrigadasRecursosProyecto token={token} proyectoId={proyectoId}
+                actividades={actividades} moneda={moneda} puedeGestionar={puedeGestionar} />
+            )}
             {vista === 'ejecucion' && (
               <>
                 <h3>Ejecución</h3>
@@ -698,7 +735,7 @@ export default function DetalleProyecto({
                   <div className="ejecucion-progreso__pie">
                     <span>{actividades.length} actividades planificadas</span>
                     <span>{actividades.filter((a) => a.estado === 'EN_PROCESO').length} en proceso</span>
-                    {porcentajeProyecto === null && <span>Definí los pesos de las actividades para obtener el porcentaje global.</span>}
+                    {porcentajeProyecto === null && <span>Hay pesos configurados parcialmente. Complétalos o quítalos para usar un reparto automático.</span>}
                   </div>
                 </section>
                 <p>Las cantidades son incrementales. Las estimaciones no cuantificables son acumuladas y justificadas.</p>
@@ -711,9 +748,9 @@ export default function DetalleProyecto({
               <>
                 <h3>Resultados</h3>
                 <article className="resultado-proyecto">
-                  <span>Avance ponderado del proyecto</span>
-                  <strong>{porcentajeProyecto === null ? 'Pendiente de ponderación' : `${porcentajeProyecto.toLocaleString('es-HN', { maximumFractionDigits: 2 })}%`}</strong>
-                  <p>Peso configurado: {pesoConfigurado.toLocaleString('es-HN', { maximumFractionDigits: 2 })}. Las actividades canceladas conservan su peso con resultado cero.</p>
+                  <span>Avance validado del proyecto</span>
+                  <strong>{porcentajeProyecto === null ? 'Pendiente de configuración' : `${porcentajeProyecto.toLocaleString('es-HN', { maximumFractionDigits: 2 })}%`}</strong>
+                  <p>{actividades.length === 1 ? 'Progreso de la única actividad, sin ponderación.' : pesoConfigurado === 0 ? 'Promedio de actividades con reparto equitativo automático.' : 'Se usan pesos manuales cuando están configurados en todas las actividades.'} Los avances solo cuentan después de ser validados.</p>
                 </article>
                 {!actividades.length && <p>El proyecto todavía no tiene actividades.</p>}
                 <div className="proyecto-detalle__lista">
@@ -730,10 +767,15 @@ export default function DetalleProyecto({
                         <progress value={actividad.porcentajeResultado} max={100} />
                         <strong>{actividad.porcentajeResultado.toLocaleString('es-HN', { maximumFractionDigits: 2 })}%</strong>
                       </label>
-                      <p>Contribución al resultado global · {actividad.pesoResultado === null ? 'Pendiente' : `${actividad.pesoResultado}%`}</p>
+                      {actividad.pesoResultado !== null && <p>Peso configurado (avanzado) · {actividad.pesoResultado}%</p>}
                     </article>
                   ))}
                 </div>
+                <CierreProyecto token={token} proyectoId={proyectoId}
+                  estado={estadoProyecto} puedeGestionar={puedeAdministrarCierre}
+                  onCambio={onCambioEstado} />
+                <ReporteProyecto nombre={nombreProyecto} comunidad={comunidadProyecto}
+                  actividades={actividades} estado={estadoProyecto} />
               </>
             )}
           </section>

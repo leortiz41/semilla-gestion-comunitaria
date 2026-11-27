@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import type { Pool } from 'pg';
 import { comunidadesRouter as routerAnterior } from '../src/routes/comunidades.routes.js';
 import { comunidadesRouter as routerModular } from '../src/modules/comunidades/comunidades.routes.js';
@@ -58,4 +59,93 @@ test('Módulo comunidades: el repositorio limita la consulta a la organización 
   const registros = await consultarComunidadesPorOrganizacion(pool, organizacionId);
   assert.deepEqual(registros, [fila]);
   assert.equal(llamadas, 1);
+});
+
+test('ADR-006 Comunidades: altas, ediciones y diagnósticos delegan SQL a repositorio tenant', async () => {
+  const {
+    insertarComunidadBasica, actualizarComunidadBasica, actualizarEstadoComunidad,
+    consultarDiagnosticoPoblacion, actualizarDiagnosticoPoblacion,
+  } = await import('../src/modules/comunidades/comunidades.repository.js');
+  const organizacionId = 'a63f86ca-318e-492b-8bc6-d5e2700062ba';
+  const comunidadId = 'f9e9eb43-5e5f-437f-a7d8-bc7dc288644b';
+  const zonaId = '676d0e2b-fd6b-4709-8d1d-fd49c72d9aab';
+  const consultas: Array<{ sql: string; parametros: unknown[] }> = [];
+  const pool = { query: async (sql: string, parametros: unknown[]) => {
+    consultas.push({ sql, parametros }); return { rows: [], rowCount: 0 };
+  } } as unknown as Pool;
+  const datos = { nombre: 'Agua Azul Rancho', zonaId, municipio: 'Santa Cruz de Yojoa', departamento: 'Cortés' };
+  await insertarComunidadBasica(pool, organizacionId, datos);
+  await actualizarComunidadBasica(pool, organizacionId, comunidadId, datos);
+  await actualizarEstadoComunidad(pool, organizacionId, comunidadId, false);
+  await consultarDiagnosticoPoblacion(pool, organizacionId, comunidadId);
+  await actualizarDiagnosticoPoblacion(pool, organizacionId, comunidadId, {
+    poblacionAproximada: 100, viviendasAproximadas: 30,
+    viviendasIntervencion: 10, tiposVivienda: null,
+  });
+  assert.equal(consultas.length, 5);
+  for (const {sql, parametros} of consultas) {
+    assert.ok(parametros.includes(organizacionId));
+    assert.match(sql, /organizacion_id/);
+  }
+  assert.match(consultas[0].sql, /z\.organizacion_id = \$1/);
+  assert.match(consultas[1].sql, /c\.organizacion_id = \$2/);
+  assert.match(consultas[2].sql, /organizacion_id = \$2/);
+  assert.match(consultas[3].sql, /c\.organizacion_id = \$2/);
+  assert.match(consultas[4].sql, /c\.organizacion_id = \$2/);
+});
+
+test('ADR-006 Comunidades: listado y creación usan controladores sin SQL', () => {
+  const raiz = '../src/modules/comunidades/';
+  const routes = readFileSync(new URL(raiz + 'comunidades.routes.ts', import.meta.url), 'utf8');
+  const controller = readFileSync(new URL(raiz + 'comunidades.controller.ts', import.meta.url), 'utf8');
+  const service = readFileSync(new URL(raiz + 'comunidades.service.ts', import.meta.url), 'utf8');
+  assert.match(routes, /requirePermission\('comunidades\.ver'\), listarComunidades\)/);
+  assert.match(routes, /requirePermission\('comunidades\.gestionar'\), crearComunidad\)/);
+  assert.match(routes, /requirePermission\('comunidades\.ver'\), obtenerDiagnosticoComunidad\)/);
+  assert.match(routes, /requirePermission\('comunidades\.gestionar'\), guardarDiagnosticoComunidad\)/);
+  assert.match(routes, /requirePermission\('comunidades\.gestionar'\), editarComunidad\)/);
+  assert.match(routes, /requirePermission\('comunidades\.gestionar'\), actualizarEstadoComunidad\)/);
+  assert.equal(routes.includes('editarComunidadBasica('), false);
+  assert.equal(routes.includes('cambiarEstadoComunidad('), false);
+  for (const nombre of ['crearExpedienteComunidad', 'consultarExpedienteComunidad', 'actualizarDiagnosticoExpediente']) {
+    assert.ok(routes.includes(nombre));
+    assert.ok(controller.includes('export const ' + nombre + ': RequestHandler'));
+  }
+  assert.equal(routes.includes('validarExpediente('), false);
+  assert.equal(routes.includes('guardarExpediente('), false);
+  assert.equal(routes.includes('obtenerExpediente('), false);
+  assert.equal(controller.includes('.query('), false);
+  assert.equal(controller.includes('comunidades.repository'), false);
+  assert.equal(service.includes('INSERT INTO comunidades ('), false);
+  assert.equal(service.includes('UPDATE comunidades c'), false);
+  assert.equal(service.includes('INSERT INTO diagnosticos_comunitarios'), false);
+});
+
+test('ADR-006 Comunidades: expedientes, necesidades y capacidades separan ruta, controlador, servicio y SQL', () => {
+  const leer = (nombre: string) =>
+    readFileSync(new URL('../src/modules/comunidades/' + nombre, import.meta.url), 'utf8');
+  const expedienteServicio = readFileSync(new URL('../src/services/expedientes.service.ts', import.meta.url), 'utf8');
+  const expedienteRepo = leer('expedientes.repository.ts');
+  assert.equal(expedienteServicio.includes('.query('), false);
+  assert.match(expedienteRepo, /BEGIN/);
+  assert.match(expedienteRepo, /ROLLBACK/);
+  assert.match(expedienteRepo, /bitacora_auditoria/);
+  assert.match(expedienteRepo, /organizacion_id/);
+  for (const area of ['necesidades', 'capacidades']) {
+    const routes = leer(area + '.routes.ts');
+    const controller = leer(area + '.controller.ts');
+    const service = leer(area + '.service.ts');
+    const repository = leer(area + '.repository.ts');
+    assert.equal(routes.includes('async (req, res)'), false, area);
+    assert.equal(routes.includes('.query('), false, area);
+    assert.equal(controller.includes('.query('), false, area);
+    assert.equal(service.includes('.query('), false, area);
+    assert.match(repository, /BEGIN/);
+    assert.match(repository, /COMMIT/);
+    assert.match(repository, /ROLLBACK/);
+    assert.match(repository, /organizacion_id/);
+    assert.match(repository, /bitacora_auditoria/);
+    assert.match(routes, /requirePermission\('comunidades\.ver'\)/);
+    assert.match(routes, /requirePermission\('comunidades\.gestionar'\)/);
+  }
 });
