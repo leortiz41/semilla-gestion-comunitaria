@@ -90,6 +90,19 @@ test('ADR-006 Plataforma cuentas: suspensión revoca refresh tokens y audita',as
   assert.ok(db.llamadas.some(x=>x.sql.includes('PLATAFORMA_CAMBIAR_ESTADO_CUENTA')));
   assert.equal(db.llamadas.at(-1)?.sql,'COMMIT');
 });
+test('ADR-006 H-02: estado sin cambios no modifica tokens ni bitácora',async()=>{
+  const db=crearMock({cambia:false,administradorCuenta:true,otrosAdministradores:0});
+  const resultado=await cambiarEstadoCuentaPlataforma(db.pool,{
+    organizacionId:org,usuarioId:usuario,activo:false,operadorId:admin,
+  });
+  assert.deepEqual(resultado,{estado:'ACTUALIZADA',id:usuario,activo:false});
+  assert.equal(db.llamadas.some(c=>c.sql.includes('COUNT(DISTINCT u.id)::int AS total')),false);
+  assert.equal(db.llamadas.some(c=>c.sql.includes('UPDATE usuarios SET activo=')),false);
+  assert.equal(db.llamadas.some(c=>c.sql.includes('UPDATE tokens_refresco')),false);
+  assert.equal(db.llamadas.some(c=>c.sql.includes('PLATAFORMA_CAMBIAR_ESTADO_CUENTA')),false);
+  assert.equal(db.llamadas.at(-1)?.sql,'COMMIT');
+});
+
 test('ADR-006 H-01: prohíbe suspender al último administrador activo',async()=>{
   const db=crearMock({administradorCuenta:true,otrosAdministradores:0});
   const resultado=await cambiarEstadoCuentaPlataforma(db.pool,{
