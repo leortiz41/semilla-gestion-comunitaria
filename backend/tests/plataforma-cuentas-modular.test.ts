@@ -2,8 +2,14 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import type { Pool } from 'pg';
-import { consultarCuentasPlataforma, insertarCuentaPlataforma,
-  cambiarEstadoCuentaPlataforma } from '../src/modules/plataforma/cuentas-plataforma.repository.js';
+import { consultarCuentasPlataforma, insertarCuentaPlataforma } from '../src/modules/plataforma/cuentas-plataforma.repository.js';
+import { actualizarEstadoCuentaPlataforma } from '../src/modules/plataforma/cuentas-plataforma.service.js';
+import type { ResultadoEstadoCuenta } from '../src/modules/plataforma/cuentas-plataforma.repository.js';
+
+const cambiarEstadoCuentaPlataforma = (
+  pool: Pool,
+  datos: {organizacionId:string;usuarioId:string;activo:boolean;operadorId:string},
+): Promise<ResultadoEstadoCuenta> => actualizarEstadoCuentaPlataforma(datos,pool);
 
 const org='1f260c3c-7155-4aa1-a6b7-e3c6cc9e2b4b';
 const usuario='8e0b8753-897b-458b-b59f-603b1b5b79c6';
